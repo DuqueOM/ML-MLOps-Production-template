@@ -1,0 +1,50 @@
+# RBAC — Role-Based Access Control for ML service
+# Principle of least privilege: the service account can only read
+# ConfigMaps and Secrets in its own namespace.
+#
+# For enterprise environments (fintech, healthcare), RBAC is mandatory.
+#
+# TODO: Replace {service} and {namespace} with your values.
+# TODO: Adjust permissions based on what your service actually needs.
+
+---
+# Role — defines what actions are allowed
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {service}-role
+  namespace: ml-services
+  labels:
+    app: {service}
+    managed-by: kustomize
+rules:
+  # Read ConfigMaps (e.g., feature flags, config)
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch"]
+
+  # Read Secrets (e.g., API keys injected by external-secrets)
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get"]
+
+  # No write access — pods should never modify K8s resources
+
+---
+# RoleBinding — binds the Role to the ServiceAccount
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {service}-rolebinding
+  namespace: ml-services
+  labels:
+    app: {service}
+    managed-by: kustomize
+subjects:
+  - kind: ServiceAccount
+    name: {service}-sa
+    namespace: ml-services
+roleRef:
+  kind: Role
+  name: {service}-role
+  apiGroup: rbac.authorization.k8s.io

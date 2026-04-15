@@ -1,0 +1,49 @@
+---
+description: MLOps Production Template — core conventions for Cursor
+globs: **/*
+---
+
+# ML-MLOps Production Template — Cursor Rules
+
+## Critical Invariants
+
+- NEVER use `uvicorn --workers N` in Kubernetes — 1 worker, HPA manages horizontal scale
+- NEVER use memory as HPA metric for ML pods — CPU only
+- ALWAYS use `asyncio.run_in_executor()` + `ThreadPoolExecutor` for CPU-bound inference
+- ALWAYS use `KernelExplainer` for SHAP with ensemble/pipeline models (never TreeExplainer)
+- ALWAYS use compatible release pinning (`~=`) for ML dependencies
+- NEVER bake model artifacts into Docker images — use Init Container + emptyDir
+- ALWAYS use IRSA (AWS) / Workload Identity (GCP) — no hardcoded credentials
+- ALWAYS run quality gates (metric threshold, fairness DIR >= 0.80, leakage check) before promotion
+- ALWAYS create an ADR for non-trivial architectural decisions
+
+## Anti-Patterns (detect and correct)
+
+- D-01: `uvicorn --workers N` → single worker + ThreadPoolExecutor
+- D-02: Memory HPA → CPU-only HPA
+- D-03: `model.predict()` in async endpoint → `run_in_executor`
+- D-04: `shap.TreeExplainer` with ensembles → KernelExplainer
+- D-05: `==` pinning → `~=` compatible release
+- D-06: Unrealistically high metric → investigate leakage
+- D-08: PSI with uniform bins → quantile-based bins
+- D-09: Drift detection without heartbeat → add AlertManager alert
+- D-11: Model in Docker image → Init Container pattern
+- D-12: No quality gates → add all gates before deploy
+
+## Code Style
+
+- Python 3.11+ with type hints on all public functions
+- Google-style docstrings
+- black (line-length=120), isort (profile=black), flake8, mypy
+- 90% line coverage, 80% branch coverage
+- Compatible release pinning (`~=`) for all ML packages
+
+## Stack
+
+Python 3.11+, scikit-learn, XGBoost, LightGBM, FastAPI, Pandera, SHAP KernelExplainer,
+Prometheus, Grafana, Evidently, MLflow, Docker, Kubernetes (GKE + EKS), Terraform, GitHub Actions, DVC
+
+## Reference
+
+See `AGENTS.md` for the full architecture, anti-pattern table, and engineering calibration principle.
+See `.windsurf/` for skills and workflows (compatible with Windsurf Cascade).

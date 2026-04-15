@@ -1,0 +1,100 @@
+# NetworkPolicy — Restrict traffic to/from ML service pods
+# Enterprise requirement for regulated environments (fintech, healthcare).
+#
+# This policy:
+#   1. Allows ingress only from pods with label app: ingress-nginx (or your ingress controller)
+#   2. Allows ingress from Prometheus for /metrics scraping
+#   3. Allows egress to DNS, cloud storage (model download), and MLflow
+#   4. Denies all other traffic by default
+#
+# TODO: Replace {service} with your service name.
+# TODO: Adjust namespaceSelector and podSelector for your cluster layout.
+# TODO: Add CIDR blocks for your cloud provider's storage endpoints if needed.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {service}-network-policy
+  namespace: ml-services
+  labels:
+    app: {service}
+    managed-by: kustomize
+spec:
+  podSelector:
+    matchLabels:
+      app: {service}
+  policyTypes:
+    - Ingress
+    - Egress
+
+  ingress:
+    # Allow traffic from ingress controller
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8000
+
+    # Allow Prometheus scraping on /metrics
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: monitoring
+          podSelector:
+            matchLabels:
+              app: prometheus
+      ports:
+        - protocol: TCP
+          port: 8000
+
+  egress:
+    # Allow DNS resolution
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+
+    # Allow egress to MLflow tracking server
+    - to:
+        - podSelector:
+            matchLabels:
+              app: mlflow
+      ports:
+        - protocol: TCP
+          port: 5000
+
+    # Allow egress to Prometheus Pushgateway (drift metrics)
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: monitoring
+          podSelector:
+            matchLabels:
+              app: pushgateway
+      ports:
+        - protocol: TCP
+          port: 9091
+
+    # Allow egress to cloud storage (GCS/S3 for model download)
+    # TODO: Replace with your cloud provider's CIDR ranges or use
+    # a more permissive egress rule if using Workload Identity/IRSA
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+      ports:
+        - protocol: TCP
+          port: 443

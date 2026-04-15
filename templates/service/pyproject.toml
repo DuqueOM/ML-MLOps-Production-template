@@ -1,0 +1,90 @@
+# pyproject.toml — ML Service Template
+# Modern Python project configuration. Use alongside or instead of requirements.txt.
+#
+# Install: pip install -e ".[dev]"
+# Test:    pytest tests/ -v
+#
+# TODO: Replace {service}, {ServiceName}, and author info.
+
+[build-system]
+requires = ["setuptools >= 68.0", "wheel"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "{service}"
+version = "1.0.0"
+description = "{ServiceName} — ML prediction service"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">= 3.11"
+authors = [
+    {name = "Your Name", email = "your-email@example.com"},
+]
+
+dependencies = [
+    # ML Core
+    "scikit-learn ~= 1.5.0",
+    "pandas ~= 2.2.0",
+    "numpy ~= 1.26.0",         # numpy 2.x silently corrupts joblib models
+    "scipy ~= 1.14.0",
+    "optuna ~= 4.1.0",
+    "joblib ~= 1.4.0",
+    # Serving
+    "fastapi ~= 0.115.0",
+    "uvicorn ~= 0.32.0",
+    "pydantic ~= 2.10.0",
+    # Data Validation
+    "pandera ~= 0.21.0",
+    # Explainability
+    "shap ~= 0.46.0",
+    # Monitoring
+    "prometheus-client ~= 0.21.0",
+    "evidently ~= 0.5.0",
+    # MLflow
+    "mlflow ~= 2.18.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest ~= 8.3.0",
+    "pytest-cov ~= 6.0.0",
+    "locust ~= 2.32.0",
+    "httpx ~= 0.28.0",
+    "black ~= 24.4.0",
+    "isort ~= 5.13.0",
+    "flake8 ~= 7.0.0",
+    "mypy ~= 1.10.0",
+    "bandit ~= 1.7.0",
+    "pre-commit ~= 3.7.0",
+]
+
+# Optional heavy ML dependencies — uncomment if needed
+# xgboost = ["xgboost ~= 2.1.0"]
+# lightgbm = ["lightgbm ~= 4.5.0"]
+
+[tool.black]
+line-length = 120
+target-version = ["py311"]
+exclude = '''
+/(
+    \.git
+  | \.venv
+  | data
+  | models
+  | mlruns
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 120
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+warn_return_any = true
+warn_unused_configs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"

@@ -112,13 +112,13 @@ reconcile differences before using in production to avoid silent behavior drift.
 | **Serving** | FastAPI + uvicorn (1 worker) | `asyncio.run_in_executor()` for inference |
 | **Explainability** | SHAP KernelExplainer | Always in original feature space |
 | **Data Validation** | Pandera DataFrameModel | Training, API, and drift checkpoints |
-| **Drift Detection** | PSI (quantile-based bins) | CronJob + Pushgateway + heartbeat alert |
+| **Drift Detection** | PSI (quantile bins) + Evidently | CronJob + Pushgateway + heartbeat alert |
 | **Experiment Tracking** | MLflow | Self-hosted on K8s |
 | **Containers** | Docker (multi-stage, non-root) | Model via Init Container, never baked in |
 | **Orchestration** | Kubernetes (GKE + EKS) | CPU-only HPA, Kustomize overlays |
 | **Infrastructure** | Terraform >= 1.7 | Remote state, tfsec + Checkov scanning |
 | **CI/CD** | GitHub Actions | Lint → Test → Build → Deploy → Drift → Retrain |
-| **Monitoring** | Prometheus + Grafana + AlertManager | P1–P4 severity levels per service |
+| **Monitoring** | Prometheus + Grafana + AlertManager + Evidently | P1–P4 severity levels per service |
 | **Data Versioning** | DVC (GCS + S3 remotes) | Tracked in git, stored in cloud |
 | **Clouds** | GCP (primary) + AWS (parity) | Workload Identity / IRSA — no hardcoded creds |
 
@@ -200,10 +200,23 @@ kubectl apply -k k8s/overlays/aws/
 ML-MLOps-Production-template/
 │
 ├── AGENTS.md                              # Agent architecture, invariants, anti-patterns
+├── CLAUDE.md                              # Claude Code project context
+├── .cursor/rules/                         # Cursor IDE rules
+│   └── mlops-conventions.mdc             #   Core invariants + anti-patterns
 ├── README.md                              # This file
-├── description_project.md                 # Detailed project specification
+├── SECURITY.md                            # Vulnerability reporting policy
+├── CONTRIBUTING.md                        # Contribution guidelines
+├── CODE_OF_CONDUCT.md                     # Contributor Covenant v2.0
+├── CHANGELOG.md                           # Semantic versioning changelog
+├── .gitattributes                         # Git LFS + line ending config
 │
-├── .windsurf/                             # Agentic system configuration
+├── .github/                               # GitHub community health files
+│   ├── ISSUE_TEMPLATE/                    #   Bug report + feature request templates
+│   ├── pull_request_template.md           #   PR checklist with anti-pattern verification
+│   ├── dependabot.yml                     #   Automated dependency updates
+│   └── workflows/validate-templates.yml   #   CI: Python lint, K8s validate, TF validate
+│
+├── .windsurf/                             # Agentic system configuration (Windsurf Cascade)
 │   ├── rules/                             # 9 behavioral constraint files
 │   │   ├── 01-mlops-conventions.md        #   always_on — core stack + ADR patterns
 │   │   ├── 02-kubernetes.md               #   glob: k8s/**/*.yaml
@@ -249,6 +262,7 @@ ML-MLOps-Production-template/
     │   ├── Dockerfile                     #   Multi-stage, non-root, HEALTHCHECK
     │   ├── .dockerignore                  #   Excludes models, data, tests
     │   ├── requirements.txt               #   Pinned with ~= (compatible release)
+    │   ├── pyproject.toml                 #   Modern Python project config (alternative)
     │   └── README.md                      #   Service-specific documentation
     │
     ├── common_utils/                      # Shared utility library
@@ -264,6 +278,8 @@ ML-MLOps-Production-template/
     │   ├── service.yaml                   #   ClusterIP service
     │   ├── cronjob-drift.yaml             #   Daily drift detection CronJob
     │   ├── serviceaccount.yaml            #   Workload Identity / IRSA annotations
+    │   ├── networkpolicy.yaml             #   Ingress/egress traffic restrictions
+    │   ├── rbac.yaml                      #   Role + RoleBinding (least privilege)
     │   ├── kustomization.yaml             #   Base Kustomize config
     │   ├── argo-rollout.yaml              #   Canary deployment + AnalysisTemplate
     │   └── overlays/                      #   Environment-specific patches
@@ -297,18 +313,35 @@ ML-MLOps-Production-template/
     ├── docs/                              # Documentation templates
     │   ├── decisions/adr-template.md      #   ADR with Options, Rationale, Revisit When
     │   ├── runbooks/runbook-template.md   #   P1–P4 incident response procedures
-    │   └── service-readme-template.md     #   Service README with measured data slots
+    │   ├── service-readme-template.md     #   Service README with measured data slots
+    │   ├── model-card-template.md         #   ML transparency model card
+    │   └── dependency-analysis-template.md#   Dependency conflict documentation
     │
-    └── monitoring/                        # Observability templates
-        ├── prometheus/alerts-template.yaml #   P1–P4 alerts, drift heartbeat, resource alerts
-        └── grafana/dashboard-template.json #   Request rate, latency, PSI, HPA, resources
+    ├── monitoring/                        # Observability templates
+    │   ├── prometheus/alerts-template.yaml #   P1–P4 alerts, drift heartbeat, resource alerts
+    │   ├── prometheus/prometheus-demo.yml  #   Prometheus config for demo stack
+    │   └── grafana/dashboard-template.json #   Request rate, latency, PSI, HPA, resources
+    │
+    ├── docker-compose.demo.yml            # Demo stack: service + MLflow + Pushgateway
+    ├── Makefile                           # Standard DX targets: train, test, serve, build
+    ├── .pre-commit-config.yaml            # black, isort, flake8, mypy, bandit, gitleaks
+    ├── .gitleaks.toml                     # Secret detection config
+    └── .env.example                       # Environment variable documentation
 ```
 
 ---
 
 ## Agentic System
 
-The `.windsurf/` directory configures AI coding assistants to follow production best practices automatically.
+This template supports **three AI coding assistants** out of the box:
+
+| IDE / Agent | Config Location | Format |
+|-------------|----------------|--------|
+| **Windsurf Cascade** | `.windsurf/rules/`, `.windsurf/skills/`, `.windsurf/workflows/` | Markdown with glob triggers |
+| **Claude Code** | `CLAUDE.md` | Single-file project context |
+| **Cursor** | `.cursor/rules/mlops-conventions.mdc` | MDC with frontmatter globs |
+
+All three share the same invariants from `AGENTS.md`. The `.windsurf/` directory has the richest configuration (9 rules, 8 skills, 8 workflows).
 
 ### Rules (Behavioral Constraints)
 
