@@ -2,16 +2,16 @@
 
 > Agent-driven framework for building and maintaining production-grade ML systems with multi-cloud deployment, comprehensive observability, and enterprise CI/CD.
 
-[![Release](https://img.shields.io/github/v/release/DuqueOM/ML-MLOps-Production-template.svg)](https://github.com/DuqueOM/ML-MLOps-Production-template/releases)
+[![Release](https://img.shields.io/github/v/release/DuqueOM/ML-MLOps-Production-Template.svg)](https://github.com/DuqueOM/ML-MLOps-Production-Template/releases)
 [![Python 3.11 | 3.12](https://img.shields.io/badge/python-3.11_%7C_3.12-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Terraform >= 1.7](https://img.shields.io/badge/terraform-%3E%3D1.7-blueviolet.svg)](https://www.terraform.io/)
 [![Kubernetes](https://img.shields.io/badge/k8s-GKE%20%2B%20EKS-326CE5.svg)](https://kubernetes.io/)
 
-[![Validate Templates](https://github.com/DuqueOM/ML-MLOps-Production-template/actions/workflows/validate-templates.yml/badge.svg)](https://github.com/DuqueOM/ML-MLOps-Production-template/actions/workflows/validate-templates.yml)
-[![codecov](https://codecov.io/gh/DuqueOM/ML-MLOps-Production-template/branch/main/graph/badge.svg)](https://codecov.io/gh/DuqueOM/ML-MLOps-Production-template)
+[![Validate Templates](https://github.com/DuqueOM/ML-MLOps-Production-Template/actions/workflows/validate-templates.yml/badge.svg)](https://github.com/DuqueOM/ML-MLOps-Production-Template/actions/workflows/validate-templates.yml)
+[![codecov](https://codecov.io/gh/DuqueOM/ML-MLOps-Production-Template/branch/main/graph/badge.svg)](https://codecov.io/gh/DuqueOM/ML-MLOps-Production-Template)
 
-[![Template](https://img.shields.io/badge/use%20as-template-brightgreen.svg)](https://github.com/DuqueOM/ML-MLOps-Production-template/generate)
+[![Template](https://img.shields.io/badge/use%20as-template-brightgreen.svg)](https://github.com/DuqueOM/ML-MLOps-Production-Template/generate)
 [![Anti-Patterns](https://img.shields.io/badge/anti--patterns-12%20encoded-red.svg)](#anti-pattern-detection)
 [![Clouds](https://img.shields.io/badge/clouds-GCP%20%2B%20AWS-orange.svg)](#technology-stack)
 [![Agentic](https://img.shields.io/badge/agentic-Windsurf_%7C_Claude_Code_%7C_Cursor-blueviolet.svg)](#agentic-system)
@@ -169,8 +169,8 @@ A **complete, opinionated template** for shipping ML models to production — no
 ### 1. Clone the template
 
 ```bash
-git clone https://github.com/DuqueOM/ML-MLOps-Production-template.git
-cd ML-MLOps-Production-template
+git clone https://github.com/DuqueOM/ML-MLOps-Production-Template.git
+cd ML-MLOps-Production-Template
 ```
 
 ### 2. Create a new ML service
@@ -235,7 +235,7 @@ kubectl apply -k k8s/overlays/aws/
 ## Repository Structure
 
 ```
-ML-MLOps-Production-template/
+ML-MLOps-Production-Template/
 │
 ├── AGENTS.md                              # Agent architecture, invariants, anti-patterns
 ├── CLAUDE.md                              # Claude Code project context

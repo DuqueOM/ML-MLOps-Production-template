@@ -18,7 +18,7 @@ If you discover a security vulnerability in this template, please report it priv
 - Use the subject line: `Security Vulnerability Report - ML-MLOps-Template`
 
 **Alternative Methods:**
-- GitHub's private vulnerability reporting: [Report Vulnerability](https://github.com/DuqueOM/ML-MLOps-Production-template/security/advisories/new)
+- GitHub's private vulnerability reporting: [Report Vulnerability](https://github.com/DuqueOM/ML-MLOps-Production-Template/security/advisories/new)
 
 ### What to Include
 
