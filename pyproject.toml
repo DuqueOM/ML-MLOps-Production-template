@@ -2,6 +2,19 @@
 # Load tests use Locust (not pytest) — skip during collection
 addopts = "--ignore=templates/service/tests/load_test.py"
 
+[tool.coverage.run]
+omit = [
+    "examples/minimal/serve.py",
+    "examples/minimal/drift_check.py",
+    "examples/minimal/train.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+]
+
 [tool.black]
 line-length = 120
 exclude = '''

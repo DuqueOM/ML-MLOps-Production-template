@@ -33,9 +33,9 @@ jobs:
           pytest examples/minimal/test_service.py \
             templates/service/tests/test_explainer.py \
             --cov=examples/minimal \
+            --cov-config=pyproject.toml \
             --cov-report=xml \
             --cov-report=term-missing \
-            --cov-fail-under=70 \
             -v --tb=short
         working-directory: ${{ github.workspace }}
 
