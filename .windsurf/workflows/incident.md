@@ -4,16 +4,32 @@ description: ML service incident response — diagnose, mitigate, resolve, docum
 
 # /incident Workflow
 
-## 1. Identify Severity
+## 0. Classify Severity (DO THIS FIRST — 30 seconds)
 
-| Severity | Symptoms | SLA |
-|----------|----------|-----|
-| **P1** | >5% error rate, service down | 15 min |
-| **P2** | Metric degradation, drift alert | 4 hours |
-| **P3** | High PSI on critical feature | 24 hours |
-| **P4** | Incipient drift, minor anomaly | 1 week |
+Answer these questions to determine severity:
 
-## 2. P1 — Immediate Rollback
+```
+Error rate > 5% in last 5 min?
+  YES → P1 → Go to Step 1 (rollback NOW, investigate later)
+
+AUC < 0.75 in recently labeled data?
+  YES → P2 → Go to Step 2 (model degraded, 4h to fix)
+
+PSI > 0.20 on any critical feature?
+  YES → P3 → Go to Step 3 (drift confirmed, 24h)
+
+PSI 0.10–0.20 or minor anomaly?
+  YES → P4 → Go to Step 4 (monitor, 1 week)
+```
+
+| Severity | Symptoms | SLA | First Action |
+|----------|----------|-----|-------------|
+| **P1** | >5% error rate, service down | 15 min | Rollback immediately |
+| **P2** | AUC < 0.75, metric degradation | 4 hours | Investigate + retrain |
+| **P3** | PSI > 0.20 on critical feature | 24 hours | Analyze drift + plan retrain |
+| **P4** | PSI 0.10-0.20, minor anomaly | 1 week | Monitor, increase frequency |
+
+## 1. P1 — Immediate Rollback (SLA: 15 min)
 
 ```bash
 # Step 1: Rollback deployment

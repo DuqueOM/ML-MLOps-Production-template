@@ -89,14 +89,16 @@ def generate_synthetic_data(n_samples: int = N_SAMPLES, seed: int = SEED) -> pd.
     prob = 1 / (1 + np.exp(-logit))
     is_fraud = (rng.random(size=n_samples) < prob).astype(int)
 
-    df = pd.DataFrame({
-        "amount": np.round(amount, 2),
-        "hour": hour,
-        "is_foreign": is_foreign,
-        "merchant_risk": np.round(merchant_risk, 4),
-        "distance_from_home": np.round(distance, 2),
-        "is_fraud": is_fraud,
-    })
+    df = pd.DataFrame(
+        {
+            "amount": np.round(amount, 2),
+            "hour": hour,
+            "is_foreign": is_foreign,
+            "merchant_risk": np.round(merchant_risk, 4),
+            "distance_from_home": np.round(distance, 2),
+            "is_fraud": is_fraud,
+        }
+    )
 
     logger.info("Generated %d samples (fraud rate: %.1f%%)", n_samples, is_fraud.mean() * 100)
     return df
@@ -117,15 +119,20 @@ def build_pipeline() -> Pipeline:
         ]
     )
 
-    return Pipeline([
-        ("preprocessor", preprocessor),
-        ("classifier", GradientBoostingClassifier(
-            n_estimators=100,
-            max_depth=4,
-            learning_rate=0.1,
-            random_state=SEED,
-        )),
-    ])
+    return Pipeline(
+        [
+            ("preprocessor", preprocessor),
+            (
+                "classifier",
+                GradientBoostingClassifier(
+                    n_estimators=100,
+                    max_depth=4,
+                    learning_rate=0.1,
+                    random_state=SEED,
+                ),
+            ),
+        ]
+    )
 
 
 def run_quality_gates(
@@ -166,12 +173,14 @@ def run_quality_gates(
 
     gates["disparate_impact_ratio"] = round(dir_value, 4)
     gates["fairness_gate_passed"] = dir_value >= FAIRNESS_THRESHOLD
-    gates["all_passed"] = all([
-        gates["primary_gate_passed"],
-        gates["leakage_check_passed"],
-        gates["predicts_both_classes"],
-        gates["fairness_gate_passed"],
-    ])
+    gates["all_passed"] = all(
+        [
+            gates["primary_gate_passed"],
+            gates["leakage_check_passed"],
+            gates["predicts_both_classes"],
+            gates["fairness_gate_passed"],
+        ]
+    )
 
     return gates
 
@@ -230,7 +239,12 @@ def main() -> None:
 
     # Save metrics
     elapsed = time.perf_counter() - start
-    metrics = {**gates, "training_time_seconds": round(elapsed, 2), "train_size": len(X_train), "test_size": len(X_test)}
+    metrics = {
+        **gates,
+        "training_time_seconds": round(elapsed, 2),
+        "train_size": len(X_train),
+        "test_size": len(X_test),
+    }
     Path(output_dir / "metrics.json").write_text(json.dumps(metrics, indent=2))
     logger.info("Training completed in %.1fs — all gates passed", elapsed)
 

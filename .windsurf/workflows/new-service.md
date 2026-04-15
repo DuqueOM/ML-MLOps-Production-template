@@ -18,11 +18,19 @@ Before creating any files, determine:
 ## 2. Scaffold from Template
 
 ```bash
-export SVC_NAME="ServiceName-Purpose"
-export SVC_SLUG="servicename"
+# Automated scaffolding (recommended)
+bash templates/scripts/new-service.sh "${SVC_NAME}" "${SVC_SLUG}"
+
+# Verify: no remaining placeholders
+grep -r "{ServiceName}\|{service}\|{SERVICE}" ${SVC_NAME}/ --include="*.py" --include="*.yaml" | head -10
+```
+
+If `new-service.sh` is unavailable, manual fallback:
+```bash
 cp -r templates/service/ ${SVC_NAME}/
-find ${SVC_NAME}/ -type f -exec sed -i "s/{service}/${SVC_SLUG}/g" {} +
 find ${SVC_NAME}/ -type f -exec sed -i "s/{ServiceName}/${SVC_NAME}/g" {} +
+find ${SVC_NAME}/ -type f -exec sed -i "s/{service}/${SVC_SLUG}/g" {} +
+mv ${SVC_NAME}/src/\{service\} ${SVC_NAME}/src/${SVC_SLUG}
 ```
 
 ## 3. Data Validation

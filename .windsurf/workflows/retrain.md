@@ -41,11 +41,33 @@ python src/${SERVICE_SLUG}/training/train.py \
 
 ## 5. Evaluate Quality Gates
 
-Run quality gate checks. ALL must pass:
-- Primary metric >= minimum threshold
-- No regression > 5% vs current production
-- Fairness DIR >= 0.80 per protected attribute
-- P95 latency <= 1.2x current
+Run quality gate checks. **ALL must pass — no exceptions**:
+
+| Gate | Condition | Typical Threshold |
+|------|-----------|------------------|
+| Primary metric | `new_auc >= MIN_THRESHOLD` | ROC-AUC >= 0.80 |
+| No regression | `new_auc >= prod_auc * 0.95` | < 5% drop |
+| Fairness | `DIR >= 0.80` per protected attribute | Four-fifths rule |
+| Latency | `new_p95 <= prod_p95 * 1.20` | No more than 20% slower |
+| Leakage check | `auc < 0.99` | Suspiciously high = investigate |
+
+```bash
+# Verify quality gates programmatically
+python -c "
+import joblib, pandas as pd
+from sklearn.metrics import roc_auc_score
+
+pipe = joblib.load('models/model.joblib')
+X_test = pd.read_csv('data/test_features.csv')
+y_test = pd.read_csv('data/test_labels.csv').squeeze()
+y_prob = pipe.predict_proba(X_test)[:, 1]
+auc = roc_auc_score(y_test, y_prob)
+print(f'ROC-AUC: {auc:.4f}')
+assert auc >= 0.80, f'FAIL: {auc:.4f} < 0.80'
+assert auc < 0.99, f'LEAKAGE?: {auc:.4f} suspiciously high'
+print('All gates passed')
+"
+```
 
 ## 6a. If ALL PASS — Promote
 

@@ -107,6 +107,37 @@ OVER-ENGINEERING: Full orchestrator for 2 models, GE for simple DataFrames
 | D-11 | Models included in Docker image | Remove, implement init container pattern |
 | D-12 | No quality gates before model promotion | Add all gates before deploy |
 
+## Session Initialization Protocol
+
+When starting a new session in a project derived from this template:
+
+1. **READ** this AGENTS.md fully before writing any code
+2. **CONFIRM** the project has completed scaffold: check that `{ServiceName}` placeholders have been replaced
+3. **CHECK** invariants: `grep -r "TODO\|{ServiceName}\|{service}" . --include="*.py" --include="*.yaml"`
+4. **IDENTIFY** the current phase: **Build** (new service) vs **Operate** (existing service)
+5. **SELECT** the appropriate skill or workflow based on the task
+
+## How to Invoke Skills and Workflows
+
+**Skills** (multi-step procedures — invoked by the agent when task matches):
+- `new-service` — scaffold a new ML service using `templates/scripts/new-service.sh`
+- `debug-ml-inference` — diagnose serving issues (starts with D-01→D-12 checklist)
+- `drift-detection` — analyze PSI drift and trigger retraining
+- `model-retrain` — execute retraining with quality gates
+- `deploy-gke` / `deploy-aws` — deploy to GKE or EKS with Kustomize overlays
+- `release-checklist` — full multi-cloud release process
+- `cost-audit` — monthly cloud cost review
+
+**Workflows** (user-triggered via slash commands):
+- `/new-service` — end-to-end service creation
+- `/retrain` — model retraining with quality gates
+- `/incident` — classify severity (P1-P4) → execute runbook
+- `/drift-check` — run PSI analysis for one or all services
+- `/release` — multi-cloud deploy with rollback plan
+- `/cost-review` — monthly FinOps analysis
+- `/load-test` — Locust load tests against ML services
+- `/new-adr` — create Architecture Decision Record
+
 ## Agentic Configuration
 
 ```
@@ -115,12 +146,14 @@ OVER-ENGINEERING: Full orchestrator for 2 models, GE for simple DataFrames
 │   ├── 01-mlops-conventions.md         # always_on — core stack + ADR patterns
 │   ├── 02-kubernetes.md                # glob: k8s/**/*.yaml, helm/**/*.yaml
 │   ├── 03-terraform.md                 # glob: **/*.tf
-│   ├── 04-python-ml.md                # glob: **/*.py
+│   ├── 04a-python-serving.md           # glob: **/app/*.py, **/api/*.py
+│   ├── 04b-python-training.md          # glob: **/training/*.py, **/models/*.py
 │   ├── 05-github-actions.md            # glob: .github/workflows/*.yml
 │   ├── 06-documentation.md             # glob: docs/**/*.md
 │   ├── 07-docker.md                    # glob: **/Dockerfile*, docker-compose*.yml
 │   ├── 08-data-validation.md           # glob: **/schemas.py, **/validate*.py
-│   └── 09-monitoring.md               # glob: monitoring/**/*
+│   ├── 09-monitoring.md               # glob: monitoring/**/*
+│   └── 10-examples.md                 # glob: examples/**/*
 ├── skills/                             # Multi-step operational procedures
 │   ├── debug-ml-inference/SKILL.md
 │   ├── deploy-gke/SKILL.md
@@ -154,6 +187,20 @@ OVER-ENGINEERING: Full orchestrator for 2 models, GE for simple DataFrames
 | New ML service request | `new-service` | `/new-service` |
 | Monthly cost review | `cost-audit` | `/cost-review` |
 
+## Multi-IDE Support
+
+```
+.claude/rules/          # Claude Code — paths: frontmatter for context-aware rules
+├── 01-serving.md       # paths: **/app/*.py, **/api/*.py
+├── 02-training.md      # paths: **/training/*.py, **/models/*.py
+├── 03-kubernetes.md    # paths: k8s/**/*.yaml
+├── 04-terraform.md     # paths: **/*.tf
+└── 05-examples.md      # paths: examples/**/*
+
+.cursor/rules/          # Cursor IDE — globs: frontmatter
+└── mlops-conventions.mdc  # globs: **/*
+```
+
 ## Template System
 
 ```
@@ -165,10 +212,12 @@ templates/
 │   ├── Dockerfile
 │   ├── requirements.txt
 │   └── README.md
-├── k8s/                # Kubernetes manifest templates
+├── k8s/                # Kubernetes manifest templates (base/ + overlays/)
 ├── infra/              # Terraform IaC templates (GCP + AWS)
+├── scripts/            # new-service.sh, deploy.sh, promote_model.sh
 ├── cicd/               # GitHub Actions workflow templates
 ├── docs/               # ADR, runbook, README templates
+├── common_utils/       # Shared utilities (seed, logging, persistence)
 └── monitoring/         # Grafana dashboard + Prometheus alert templates
 ```
 

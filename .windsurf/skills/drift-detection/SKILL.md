@@ -21,12 +21,13 @@ arguments:
 
 ## Step 1: Understand the Drift Metric
 
-**PSI (Population Stability Index)** with quantile-based bins:
-```
-PSI < 0.10:  No significant change → no action
-0.10 ≤ PSI < 0.20: Moderate change → monitor closely
-PSI ≥ 0.20:  Significant change → action required
-```
+### PSI Interpretation Guide
+
+| PSI Value | Status | Action | Exit Code |
+|-----------|--------|--------|-----------|
+| < 0.10 | Stable | No action | 0 |
+| 0.10 – 0.20 | Warning | Monitor, increase check frequency | 1 |
+| > 0.20 | Alert | Trigger retraining | 2 |
 
 ALWAYS use quantile-based bins (not uniform):
 ```python
@@ -34,6 +35,20 @@ breakpoints = np.percentile(reference, np.linspace(0, 100, bins + 1))
 ```
 
 Uniform bins can produce empty bins at extremes → PSI dominated by epsilon noise.
+
+### Special Cases — When PSI Doesn't Apply
+
+| Feature Type | Problem with PSI | Alternative |
+|-------------|-----------------|-------------|
+| **Time series** (seasonal) | PSI flags every seasonal change as "drift" | Year-over-Year comparison (same period last year) |
+| **Text/NLP** features | PSI not meaningful for text | OOV (Out-of-Vocabulary) rate: warning > 20%, alert > 35% |
+| **Low-cardinality categorical** | Quantile bins don't work with 3-5 categories | Categorical PSI variant: bins = unique categories |
+| **Boolean** features | Only 2 bins → unstable PSI | Simple proportion test (chi-squared) |
+
+### Exit Codes for CronJob Integration
+- `exit 0` → all features stable
+- `exit 1` → warning-level drift (monitor)
+- `exit 2` → alert-level drift (retraining needed, GitHub Issue created)
 
 ## Step 2: Run Drift Detection Manually
 

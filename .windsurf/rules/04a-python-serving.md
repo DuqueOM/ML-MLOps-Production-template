@@ -1,10 +1,10 @@
 ---
 trigger: glob
-globs: ["**/*.py"]
-description: Python ML conventions — async inference, SHAP wrappers, training pipelines
+globs: ["**/app/*.py", "**/api/*.py"]
+description: Python ML serving — async inference, SHAP wrappers, Prometheus metrics, FastAPI conventions
 ---
 
-# Python ML Rules
+# Python ML Serving Rules
 
 ## Async Inference (MANDATORY)
 
@@ -58,33 +58,7 @@ explainer = shap.KernelExplainer(
 
 ALWAYS verify the consistency property:
 ```
-base_value + sum(shap_values) ≈ predict_proba(input)  (tolerance < 0.001)
-```
-
-## Training Pipeline Structure
-
-Every trainer MUST follow this sequence:
-1. `load_data()` + Pandera validation
-2. `engineer_features()`
-3. `split_train_val_test()` — no temporal leakage if dates exist
-4. `cross_validate()`
-5. `evaluate()` with optimal threshold search
-6. `fairness_check()` — DIR >= 0.80 per protected attribute
-7. `save_artifacts()` with SHA256 checksum
-8. `log_to_mlflow()` — parameters, metrics, artifacts, tags
-9. `quality_gates()` — must ALL pass before promotion
-
-## Quality Gates
-
-```python
-def should_promote(new_metrics: dict, current_prod_metrics: dict) -> bool:
-    return all([
-        new_metrics["primary_metric"] >= current_prod_metrics["primary_metric"] * 0.95,
-        new_metrics["primary_metric"] >= MINIMUM_THRESHOLD,
-        new_metrics["secondary_metric"] >= SECONDARY_THRESHOLD,
-        new_metrics["p95_latency_ms"] <= current_prod_metrics["p95_latency_ms"] * 1.20,
-        new_metrics["dir_attribute"] >= 0.80,  # Fairness
-    ])
+base_value + sum(shap_values) ≈ predict_proba(input)  (tolerance < 0.01)
 ```
 
 ## FastAPI Conventions
@@ -93,6 +67,7 @@ def should_promote(new_metrics: dict, current_prod_metrics: dict) -> bool:
 - `/predict?explain=true` — SHAP explanation (opt-in)
 - `/health` — liveness + readiness
 - `/metrics` — Prometheus metrics
+- Model loaded ONCE at startup (lifespan handler), never per-request
 
 ## Prometheus Metrics (MANDATORY per service)
 
@@ -100,9 +75,8 @@ def should_promote(new_metrics: dict, current_prod_metrics: dict) -> bool:
 from prometheus_client import Counter, Histogram, Gauge
 
 predictions_total = Counter('{service}_predictions_total', '...', ['risk_level', 'model_version'])
-prediction_latency = Histogram('{service}_prediction_latency_seconds', '...', ['endpoint'])
+prediction_latency = Histogram('{service}_request_duration_seconds', '...', ['endpoint'])
 prediction_score_distribution = Histogram('{service}_prediction_score', '...')
-psi_score_per_feature = Gauge('{service}_psi_score', '...', ['feature'])
 ```
 
 ## Type Hints
@@ -116,12 +90,7 @@ class PredictionRequest(BaseModel):
     feature_b: str = Field(..., description="Category")
 ```
 
-## Testing Requirements
-
-- `test_no_data_leakage()` — primary metric below suspicion threshold
-- `test_shap_values_not_all_zero()` — SHAP returning zeros is a known failure
-- `test_shap_consistency()` — base_value + sum = prediction
-- `test_feature_space_is_original()` — SHAP in original, not transformed space
-- `test_model_meets_quality_gate()` — metric above production threshold
-- `test_inference_latency()` — within SLA
-- `test_fairness_disparate_impact()` — DIR >= 0.80
+## When NOT to Apply
+- Test files (`test_*.py`) — test conventions are different
+- Training scripts — use `04b-python-training` rules instead
+- One-off scripts, migrations, CLI tools

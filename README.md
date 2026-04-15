@@ -101,8 +101,9 @@ A **complete, opinionated template** for shipping ML models to production — no
 │                                                                          │
 │  AGENTS.md          → Root-level invariants + anti-pattern rules         │
 │  CLAUDE.md          → Claude Code project context                        │
+│  .claude/rules/     → Claude Code context-aware rules (paths: globs)     │
 │  .cursor/rules/     → Cursor IDE rules                                   │
-│  .windsurf/rules/   → 9 context-aware behavioral constraints             │
+│  .windsurf/rules/   → 10 context-aware behavioral constraints            │
 │  .windsurf/skills/  → 8 multi-step operational procedures                │
 │  .windsurf/workflows/→ 8 prompt-triggered structured workflows           │
 │                                                                          │
@@ -251,17 +252,26 @@ ML-MLOps-Production-template/
 │   ├── dependabot.yml                     #   Automated dependency updates
 │   └── workflows/validate-templates.yml   #   CI: Python lint, K8s validate, TF validate
 │
+├── .claude/rules/                         # Claude Code context-aware rules (paths: globs)
+│   ├── 01-serving.md                      #   paths: **/app/*.py, **/api/*.py
+│   ├── 02-training.md                     #   paths: **/training/*.py, **/models/*.py
+│   ├── 03-kubernetes.md                   #   paths: k8s/**/*.yaml
+│   ├── 04-terraform.md                    #   paths: **/*.tf
+│   └── 05-examples.md                     #   paths: examples/**/*
+│
 ├── .windsurf/                             # Agentic system configuration (Windsurf Cascade)
-│   ├── rules/                             # 9 behavioral constraint files
-│   │   ├── 01-mlops-conventions.md        #   always_on — core stack + ADR patterns
+│   ├── rules/                             # 10 behavioral constraint files
+│   │   ├── 01-mlops-conventions.md        #   always_on — core stack + skill references
 │   │   ├── 02-kubernetes.md               #   glob: k8s/**/*.yaml
 │   │   ├── 03-terraform.md                #   glob: **/*.tf
-│   │   ├── 04-python-ml.md                #   glob: **/*.py
+│   │   ├── 04a-python-serving.md          #   glob: **/app/*.py — async, SHAP, metrics
+│   │   ├── 04b-python-training.md         #   glob: **/training/*.py — pipeline, gates
 │   │   ├── 05-github-actions.md           #   glob: .github/workflows/*.yml
 │   │   ├── 06-documentation.md            #   glob: docs/**/*.md
 │   │   ├── 07-docker.md                   #   glob: **/Dockerfile*
 │   │   ├── 08-data-validation.md          #   glob: **/schemas.py
-│   │   └── 09-monitoring.md               #   glob: monitoring/**/*
+│   │   ├── 09-monitoring.md               #   glob: monitoring/**/*
+│   │   └── 10-examples.md                 #   glob: examples/**/*
 │   │
 │   ├── skills/                            # 8 multi-step operational procedures
 │   │   ├── debug-ml-inference/SKILL.md    #   Diagnose inference issues
@@ -383,26 +393,28 @@ This template supports **three AI coding assistants** out of the box:
 | IDE / Agent | Config Location | Format |
 |-------------|----------------|--------|
 | **Windsurf Cascade** | `.windsurf/rules/`, `.windsurf/skills/`, `.windsurf/workflows/` | Markdown with glob triggers |
-| **Claude Code** | `CLAUDE.md` | Single-file project context |
+| **Claude Code** | `CLAUDE.md`, `.claude/rules/` | Context-aware rules with `paths:` frontmatter |
 | **Cursor** | `.cursor/rules/mlops-conventions.mdc` | MDC with frontmatter globs |
 
-All three share the same invariants from `AGENTS.md`. The `.windsurf/` directory has the richest configuration (9 rules, 8 skills, 8 workflows).
+All three share the same invariants from `AGENTS.md` (canonical source). The `.windsurf/` directory has the richest configuration (10 rules, 8 skills, 8 workflows).
 
 ### Rules (Behavioral Constraints)
 
-Rules activate based on file context. When you edit a Kubernetes YAML, `02-kubernetes.md` activates and enforces single-worker pods, CPU-only HPA, init containers, etc. When you edit Python, `04-python-ml.md` activates and enforces async inference, KernelExplainer, quality gates, etc.
+Rules activate based on file context. When you edit a Kubernetes YAML, `02-kubernetes.md` activates and enforces single-worker pods, CPU-only HPA, init containers, etc. When you edit serving code, `04a-python-serving.md` activates with async inference and SHAP rules. Training code gets `04b-python-training.md` instead — reducing unnecessary context.
 
 | Rule | Trigger | Enforces |
 |------|---------|----------|
-| `01-mlops-conventions` | Always on | Stack, pinning, ADRs, file org |
+| `01-mlops-conventions` | Always on | Stack, pinning, ADRs, calibration |
 | `02-kubernetes` | `k8s/**/*.yaml` | 1 worker, CPU HPA, init containers |
 | `03-terraform` | `**/*.tf` | Remote state, no secrets, lifecycle rules |
-| `04-python-ml` | `**/*.py` | Async inference, SHAP, quality gates |
+| `04a-python-serving` | `**/app/*.py` | Async inference, SHAP, Prometheus |
+| `04b-python-training` | `**/training/*.py` | Pipeline structure, quality gates, fairness |
 | `05-github-actions` | `.github/workflows/*.yml` | Workflow org, required secrets |
 | `06-documentation` | `docs/**/*.md` | ADR structure, measured data |
 | `07-docker` | `**/Dockerfile*` | Multi-stage, non-root, no model |
 | `08-data-validation` | `**/schemas.py` | Pandera at 3 validation points |
 | `09-monitoring` | `monitoring/**/*` | Mandatory metrics, PSI, heartbeat |
+| `10-examples` | `examples/**/*` | Simplified, self-contained demos |
 
 ### Skills (Operational Procedures)
 

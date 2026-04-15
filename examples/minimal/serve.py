@@ -34,6 +34,7 @@ from starlette.responses import Response
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s — %(message)s")
 logger = logging.getLogger(__name__)
 
+
 # ---------------------------------------------------------------------------
 # Pydantic schemas
 # ---------------------------------------------------------------------------
@@ -67,15 +68,16 @@ _executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="ml-infer")
 # ---------------------------------------------------------------------------
 # Prometheus metrics
 # ---------------------------------------------------------------------------
-predictions_total = Counter(
-    "fraud_predictions_total", "Total predictions", ["risk_level"]
-)
+predictions_total = Counter("fraud_predictions_total", "Total predictions", ["risk_level"])
 request_latency = Histogram(
-    "fraud_request_duration_seconds", "Inference latency",
-    ["endpoint"], buckets=[0.05, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0],
+    "fraud_request_duration_seconds",
+    "Inference latency",
+    ["endpoint"],
+    buckets=[0.05, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0],
 )
 score_distribution = Histogram(
-    "fraud_prediction_score", "Score distribution",
+    "fraud_prediction_score",
+    "Score distribution",
     buckets=[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
 )
 model_info_gauge = Gauge("fraud_model_info", "Model loaded", ["version"])
@@ -144,10 +146,7 @@ def _sync_predict(input_dict: dict, explain: bool) -> dict:
         try:
             shap_values = _explainer.shap_values(df.values, nsamples=100)
             base_value = float(_explainer.expected_value)
-            contribs = {
-                _feature_names[i]: round(float(shap_values[0][i]), 6)
-                for i in range(len(_feature_names))
-            }
+            contribs = {_feature_names[i]: round(float(shap_values[0][i]), 6) for i in range(len(_feature_names))}
             reconstructed = base_value + sum(contribs.values())
 
             result["explanation"] = {
@@ -155,8 +154,9 @@ def _sync_predict(input_dict: dict, explain: bool) -> dict:
                 "base_value": round(base_value, 6),
                 "feature_contributions": contribs,
                 "top_risk_factors": [
-                    f"{k} (+{v:.4f})" for k, v in
-                    sorted(contribs.items(), key=lambda x: x[1], reverse=True)[:3] if v > 0
+                    f"{k} (+{v:.4f})"
+                    for k, v in sorted(contribs.items(), key=lambda x: x[1], reverse=True)[:3]
+                    if v > 0
                 ],
                 "consistency_check": {
                     "actual": round(prob, 6),
@@ -204,9 +204,7 @@ async def predict(req: FraudRequest, explain: bool = False):
     if _pipeline is None:
         raise HTTPException(503, "Model not loaded")
     loop = asyncio.get_running_loop()
-    result = await loop.run_in_executor(
-        _executor, partial(_sync_predict, req.model_dump(), explain)
-    )
+    result = await loop.run_in_executor(_executor, partial(_sync_predict, req.model_dump(), explain))
     return FraudResponse(**result)
 
 

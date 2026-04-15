@@ -30,7 +30,28 @@ remediation plan with commands. Every check must produce evidence (command + out
 
 ## Steps
 
-### 1. Identify the Symptom
+### 1. Anti-Pattern Checklist (DO THIS FIRST)
+
+Run this diagnostic before deep debugging — 80% of inference issues match one of these patterns:
+
+| # | Check | Command | Pass If |
+|---|-------|---------|---------|
+| D-01 | Multiple workers | `grep -rn "workers" $service-name/Dockerfile $service-name/k8s/` | `--workers` absent or `=1` |
+| D-02 | Memory HPA | `grep -n "memory" $service-name/k8s/base/*hpa*` | Empty output |
+| D-03 | Sync predict | `grep -rn "\.predict\|predict_proba" $service-name/app/` | All inside `run_in_executor` |
+| D-04 | TreeExplainer | `grep -rn "TreeExplainer" $service-name/` | None, or only in try/fallback |
+| D-05 | `==` pinning | `grep "==" $service-name/requirements.txt` | No ML packages with `==` |
+| D-06 | Suspiciously high metric | Check MLflow: primary > 0.99? | Below 0.99 |
+| D-07 | SHAP background | Check background has both classes | Both high/low probs |
+| D-08 | Uniform PSI bins | `grep -n "np.linspace\|uniform" $service-name/src/*/monitoring/` | Uses `np.percentile` |
+| D-09 | Missing heartbeat | `grep -n "heartbeat" $service-name/k8s/ monitoring/` | Alert rule exists |
+| D-10 | tfstate in git | `git ls-files \| grep tfstate` | Empty output |
+| D-11 | Model in Docker | `grep -n "COPY.*model\|ADD.*model" $service-name/Dockerfile` | No matches |
+| D-12 | No quality gates | `grep -rn "quality_gate\|should_promote" $service-name/src/` | Gate logic exists |
+
+**Success criteria**: All 12 checks run. Any matches → fix before proceeding to deep debugging.
+
+### 2. Identify the Symptom
 
 Classify the issue into one of:
 - **High latency**: P95 above SLA → likely event loop blocking or resource contention
@@ -40,7 +61,7 @@ Classify the issue into one of:
 
 **Success criteria**: Symptom classified with supporting evidence (logs, metrics, or user report).
 
-### 2. Check Event Loop Blocking
+### 3. Check Event Loop Blocking
 
 The #1 cause of ML inference latency in FastAPI is blocking the event loop.
 
@@ -57,7 +78,7 @@ return await loop.run_in_executor(_inference_executor, partial(_sync_predict, da
 
 **Success criteria**: Confirmed predict calls are wrapped in `run_in_executor`, or fix applied.
 
-### 3. Check Worker Count
+### 4. Check Worker Count
 
 ```bash
 grep -r "workers" $service-name/Dockerfile k8s/base/$service-name-deployment.yaml
@@ -67,7 +88,7 @@ If `--workers N` where N > 1 under K8s → change to 1 worker. HPA handles scali
 
 **Success criteria**: Confirmed single worker (or fix applied).
 
-### 4. Check Model Loading
+### 5. Check Model Loading
 
 ```bash
 grep -r "joblib.load\|pickle.load\|load_model" $service-name/app/
@@ -77,7 +98,7 @@ Model should be loaded ONCE at startup (lifespan handler or module level), not p
 
 **Success criteria**: Model load is confirmed at startup, not inside endpoint functions.
 
-### 5. Check SHAP Performance
+### 6. Check SHAP Performance
 
 If `/predict?explain=true` is slow:
 - Verify background data is ≤ 50 samples
@@ -86,7 +107,7 @@ If `/predict?explain=true` is slow:
 
 **Success criteria**: SHAP configuration verified or issue identified with fix.
 
-### 6. Check Resource Limits
+### 7. Check Resource Limits
 
 ```bash
 kubectl top pod -l app=$service-name -n ml-services
@@ -97,7 +118,7 @@ If CPU is at limit → HPA should scale. If not scaling → check HPA target.
 
 **Success criteria**: Resource usage confirmed within limits or bottleneck identified.
 
-### 7. Check Data Validation
+### 8. Check Data Validation
 
 ```bash
 kubectl logs -l app=$service-name -n ml-services --tail=100 | grep -i "SchemaError\|validation"

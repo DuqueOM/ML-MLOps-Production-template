@@ -65,9 +65,7 @@ class TestDataLeakage:
         X, y = test_data
         y_prob = pipeline.predict_proba(X)[:, 1]
         auc = roc_auc_score(y, y_prob)
-        assert auc < LEAKAGE_THRESHOLD, (
-            f"Possible data leakage: ROC-AUC={auc:.4f} > {LEAKAGE_THRESHOLD}"
-        )
+        assert auc < LEAKAGE_THRESHOLD, f"Possible data leakage: ROC-AUC={auc:.4f} > {LEAKAGE_THRESHOLD}"
 
 
 # ---------------------------------------------------------------------------
@@ -141,9 +139,9 @@ class TestSHAP:
         actual = float(pipeline.predict_proba(pd.DataFrame(sample, columns=feature_names))[:, 1][0])
         reconstructed = float(explainer.expected_value) + float(shap_values[0].sum())
 
-        assert abs(actual - reconstructed) < 0.05, (
-            f"SHAP inconsistency: actual={actual:.4f}, reconstructed={reconstructed:.4f}"
-        )
+        assert (
+            abs(actual - reconstructed) < 0.05
+        ), f"SHAP inconsistency: actual={actual:.4f}, reconstructed={reconstructed:.4f}"
 
 
 # ---------------------------------------------------------------------------

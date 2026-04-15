@@ -5,45 +5,67 @@ globs: **/*
 
 # ML-MLOps Production Template — Cursor Rules
 
-## Critical Invariants
+## Session Protocol
+1. Read `AGENTS.md` before writing code
+2. Check scaffold: `grep -r "{ServiceName}\|{service}" . --include="*.py" --include="*.yaml"`
+3. Identify phase: **Build** (new service) or **Operate** (existing)
 
-- NEVER use `uvicorn --workers N` in Kubernetes — 1 worker, HPA manages horizontal scale
-- NEVER use memory as HPA metric for ML pods — CPU only
-- ALWAYS use `asyncio.run_in_executor()` + `ThreadPoolExecutor` for CPU-bound inference
-- ALWAYS use `KernelExplainer` for SHAP with ensemble/pipeline models (never TreeExplainer)
-- ALWAYS use compatible release pinning (`~=`) for ML dependencies
-- NEVER bake model artifacts into Docker images — use Init Container + emptyDir
-- ALWAYS use IRSA (AWS) / Workload Identity (GCP) — no hardcoded credentials
-- ALWAYS run quality gates (metric threshold, fairness DIR >= 0.80, leakage check) before promotion
-- ALWAYS create an ADR for non-trivial architectural decisions
+## Stack (non-negotiable)
+- Python 3.11+, scikit-learn/XGBoost/LightGBM, FastAPI, Kubernetes, Terraform
+- GCP (primary) + AWS (secondary) | MLflow | Prometheus + Grafana + Evidently | Pandera
 
-## Anti-Patterns (detect and correct)
+## 5 Critical Invariants
+1. `uvicorn --workers 1` only — HPA provides horizontal scale
+2. HPA uses CPU only — never memory for ML pods
+3. CPU-bound inference always via `run_in_executor(ThreadPoolExecutor)`
+4. SHAP always in original feature space via `predict_proba_wrapper`
+5. No model artifacts in Docker images — init container pattern only
 
-- D-01: `uvicorn --workers N` → single worker + ThreadPoolExecutor
-- D-02: Memory HPA → CPU-only HPA
-- D-03: `model.predict()` in async endpoint → `run_in_executor`
-- D-04: `shap.TreeExplainer` with ensembles → KernelExplainer
-- D-05: `==` pinning → `~=` compatible release
-- D-06: Unrealistically high metric → investigate leakage
-- D-08: PSI with uniform bins → quantile-based bins
-- D-09: Drift detection without heartbeat → add AlertManager alert
-- D-11: Model in Docker image → Init Container pattern
-- D-12: No quality gates → add all gates before deploy
+## Anti-Patterns (D-01 to D-12) — detect and correct
+
+| ID | Anti-Pattern | Fix |
+|----|-------------|-----|
+| D-01 | `uvicorn --workers N` | Single worker + ThreadPoolExecutor |
+| D-02 | Memory HPA | CPU-only HPA |
+| D-03 | `model.predict()` in async | `run_in_executor` |
+| D-04 | TreeExplainer on ensemble | KernelExplainer + wrapper |
+| D-05 | `==` pinning for ML | `~=` compatible release |
+| D-06 | Metric > 0.99 | Investigate data leakage |
+| D-07 | SHAP bg with one class | Representative sample |
+| D-08 | PSI uniform bins | Quantile-based bins |
+| D-09 | No heartbeat alert | AlertManager CronJob rule |
+| D-10 | tfstate in git | Remote state + rotate |
+| D-11 | Model in Docker | Init Container pattern |
+| D-12 | No quality gates | All gates before deploy |
+
+## Quality Gates (ALL must pass)
+- Primary metric >= threshold (e.g., ROC-AUC >= 0.80)
+- Fairness: DIR >= 0.80 per protected attribute
+- Leakage: metric < 0.99 (suspiciously high = investigate)
+- Latency: P95 <= 1.2x current production
+- IRSA/Workload Identity configured (no hardcoded credentials)
 
 ## Code Style
-
-- Python 3.11+ with type hints on all public functions
-- Google-style docstrings
-- black (line-length=120), isort (profile=black), flake8, mypy
+- black (120), isort (black profile), flake8, mypy
+- Google-style docstrings, type hints on all public functions
+- `~=` for ML packages (never `==` or bare `>=`)
 - 90% line coverage, 80% branch coverage
-- Compatible release pinning (`~=`) for all ML packages
+- ADR for every non-trivial decision in `docs/decisions/`
 
-## Stack
+## Key Commands
+```bash
+bash templates/scripts/new-service.sh ServiceName service_slug  # Scaffold
+cd examples/minimal && python train.py && uvicorn serve:app     # Demo
+flake8 --max-line-length=120 templates/service/                 # Lint
+kustomize build templates/k8s/base/ > /dev/null                 # K8s validate
+```
 
-Python 3.11+, scikit-learn, XGBoost, LightGBM, FastAPI, Pandera, SHAP KernelExplainer,
-Prometheus, Grafana, Evidently, MLflow, Docker, Kubernetes (GKE + EKS), Terraform, GitHub Actions, DVC
+## Engineering Calibration
+Match complexity to scale: CronJob not Airflow, Pandera not GE, PSI not feature store.
 
 ## Reference
-
-See `AGENTS.md` for the full architecture, anti-pattern table, and engineering calibration principle.
-See `.windsurf/` for skills and workflows (compatible with Windsurf Cascade).
+- `AGENTS.md` — canonical source for architecture, invariants, anti-patterns
+- `.windsurf/skills/` — multi-step procedures (new-service, debug, drift, deploy)
+- `.windsurf/workflows/` — slash commands (/release, /retrain, /incident, etc.)
+- `.claude/rules/` — Claude Code context-aware rules (paths: globs)
+- `examples/minimal/` — working fraud detection demo (5 min)

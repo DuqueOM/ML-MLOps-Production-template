@@ -1,74 +1,42 @@
 ---
 trigger: always_on
-description: Core MLOps conventions, technology stack, and ADR-driven development patterns
+description: Core MLOps conventions — concise reference, full detail in AGENTS.md
 ---
 
-# MLOps Conventions
+# MLOps Production Template — Core Rules
 
-## Technology Stack
+## Stack (non-negotiable)
+- Python 3.11+, scikit-learn/XGBoost/LightGBM, FastAPI, Kubernetes, Terraform
+- Clouds: GCP (primary) + AWS (secondary)
+- Tracking: MLflow | Monitoring: Prometheus + Grafana | Validation: Pandera
 
-- **Python**: 3.11+ with type hints on all public functions
-- **ML Core**: scikit-learn, XGBoost, LightGBM, pandas, numpy, scipy, Optuna
-- **Serving**: FastAPI + uvicorn (single worker in K8s), Pydantic for schemas
-- **Data Validation**: Pandera (DataFrameModel, `@check_types`)
-- **Explainability**: SHAP KernelExplainer (never TreeExplainer for ensembles)
-- **Drift**: Evidently reports, PSI with quantile-based bins, Prometheus Pushgateway
-- **Tracking**: MLflow (experiments, model registry, artifact store)
-- **Monitoring**: Prometheus + Grafana + AlertManager
-- **Infrastructure**: Terraform >= 1.7, GKE + EKS, GCS + S3, Cloud SQL + RDS
-- **CI/CD**: GitHub Actions
-- **Container**: Docker multi-stage builds, non-root USER, HEALTHCHECK
-- **Data Versioning**: DVC with GCS + S3 remotes
+## 5 Invariants (NEVER violate)
+1. `uvicorn --workers 1` only — HPA provides horizontal scale
+2. HPA uses CPU only — never memory for ML pods
+3. CPU-bound inference always via `run_in_executor(ThreadPoolExecutor)`
+4. SHAP always in original feature space via predict_proba_wrapper
+5. No model artifacts in Docker images — init container pattern only
 
 ## Dependency Pinning
+Always `~=` for ML packages. Never `==` (conflicts) or bare `>=` (breaks).
 
-Always use compatible release operator `~=` for ML packages:
-```
-scikit-learn ~= "1.5.0"   # Allows 1.5.x but not 1.6.0
-numpy        ~= "1.26.0"  # numpy 2.x silently corrupts joblib models
-```
-
-Never use `==` (causes resolution conflicts) or bare `>=` (allows breaking changes).
-
-## ADR-Driven Development
-
-Every non-trivial architectural decision MUST have an ADR in `docs/decisions/`:
-- Use the template at `templates/docs/decisions/adr-template.md`
-- Include: Context, Options Considered, Decision, Rationale, Consequences, Revisit When
-- Number sequentially: `001-decision-name.md`, `002-decision-name.md`
-
-## Code Quality Standards
-
-- **Coverage**: >= 90% lines, >= 80% branches in `src/`
-- **Type hints**: Required on all public functions
-- **Docstrings**: Google style
-- **Linting**: flake8, black, isort, mypy
-- **Testing**: pytest for unit/integration, Locust for load tests
+## Quality Standards
+- Coverage >= 90% lines, >= 80% branches
+- Type hints on all public functions, Google-style docstrings
+- black (120), isort (black profile), flake8, mypy
+- ADR for every non-trivial decision in `docs/decisions/`
 
 ## Engineering Calibration
+Match complexity to scale: CronJob not Airflow, Pandera not GE, PSI not feature store.
 
-Before implementing any component, evaluate whether the complexity is proportional to the problem:
-- 2-3 models → CronJob + GitHub Actions (not Airflow/Prefect)
-- In-memory DataFrames → Pandera (not Great Expectations)
-- Simple drift → PSI (not a full feature store)
-- Small team → README + ADRs (not Confluence + Notion + Backstage)
+## When to Load Skills
+- Creating a new service? → `new-service` (uses `templates/scripts/new-service.sh`)
+- Debugging inference? → `debug-ml-inference`
+- Drift alert fired? → `drift-detection` → `model-retrain`
+- Deploying? → `deploy-gke` or `deploy-aws`
+- Monthly cost review? → `cost-audit`
 
-Document the scale reasoning in the corresponding ADR.
-
-## File Organization
-
-```
-{ServiceName}-{Purpose}/
-├── app/              # FastAPI serving layer
-├── src/{service}/    # Core ML logic
-│   ├── training/     # train.py, features.py, model.py
-│   ├── monitoring/   # drift_detection.py, business_kpis.py
-│   └── schemas.py    # Pandera DataFrameModel
-├── data/
-│   ├── raw/          # DVC tracked
-│   └── reference/    # Background data for SHAP + drift
-├── models/           # Artifacts (gitignored, stored in GCS/S3)
-├── tests/            # test_training.py, test_api.py, test_explainer.py
-├── Dockerfile
-└── requirements.txt
-```
+## Full Details
+- Anti-pattern table D-01 to D-12: see `AGENTS.md`
+- All invariants with reasoning: see `AGENTS.md`
+- Session initialization protocol: see `AGENTS.md`

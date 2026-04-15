@@ -36,9 +36,14 @@ Guides creation of a complete, production-ready ML service using the template sy
 A fully deployed, tested, monitored ML service with all quality gates passing,
 drift detection running, and documentation complete.
 
+## Pre-conditions
+- `templates/scripts/new-service.sh` exists and is executable
+- The caller has specified ServiceName (PascalCase) and service_slug (snake_case)
+- Cloud target is known (gcp, aws, or both)
+
 ## Steps
 
-### 1. Define the Service
+### 1. Gather Requirements
 **Human checkpoint**: Confirm requirements before scaffolding.
 
 Answer these questions:
@@ -48,15 +53,20 @@ Answer these questions:
 4. **Scale**: Expected request volume, latency requirements
 5. **Explainability**: Is SHAP required? (High-stakes decisions = yes)
 
+### 2. Run Scaffolding Script
+
 ```bash
-export SERVICE_NAME="$service-name"
-cp -r templates/service/ ${SERVICE_NAME}/
-find ${SERVICE_NAME}/ -type f -exec sed -i "s/{service}/${SERVICE_NAME}/g" {} +
+bash templates/scripts/new-service.sh "$service-name" "$service-slug"
 ```
 
-**Success criteria**: Service directory created with all template files renamed.
+Verify no remaining placeholders:
+```bash
+grep -r "{ServiceName}\|{service}\|{SERVICE}" $service-name/ --include="*.py" --include="*.yaml" | head -20
+```
 
-### 2. Data Validation (Agent-DataValidator)
+**Success criteria**: Directory created with zero remaining `{ServiceName}`, `{service}`, or `{SERVICE}` placeholders. Run `examples/minimal/` if this is the first time to validate template works.
+
+### 3. Data Validation (Agent-DataValidator)
 
 1. Define Pandera schema in `src/$service-name/schemas.py`
 2. Check for temporal data → review for leakage risk
@@ -65,7 +75,7 @@ find ${SERVICE_NAME}/ -type f -exec sed -i "s/{service}/${SERVICE_NAME}/g" {} +
 
 **Success criteria**: Pandera schema validates sample data without errors. DVC tracking configured.
 
-### 3. Training Pipeline (Agent-MLTrainer)
+### 4. Training Pipeline (Agent-MLTrainer)
 
 1. Implement `FeatureEngineer` class in `src/$service-name/training/features.py`
 2. Define model pipeline in `src/$service-name/training/model.py`
@@ -84,7 +94,7 @@ find ${SERVICE_NAME}/ -type f -exec sed -i "s/{service}/${SERVICE_NAME}/g" {} +
 
 **Success criteria**: `python -m src.$service-name.cli train --data data/raw/dataset.csv` completes with all quality gates passing.
 
-### 4. Serving API (Agent-APIBuilder)
+### 5. Serving API (Agent-APIBuilder)
 
 1. Define Pydantic schemas in `app/schemas.py`
 2. Implement FastAPI app in `app/main.py`:
@@ -98,7 +108,7 @@ find ${SERVICE_NAME}/ -type f -exec sed -i "s/{service}/${SERVICE_NAME}/g" {} +
 
 **Success criteria**: `pytest tests/test_api.py -v` passes. `curl localhost:8000/health` returns healthy.
 
-### 5. Containerization (Agent-DockerBuilder)
+### 6. Containerization (Agent-DockerBuilder)
 
 1. Customize `Dockerfile` (multi-stage, non-root, HEALTHCHECK)
 2. Verify `.dockerignore` excludes models/, data/raw/, tests/
@@ -111,7 +121,7 @@ find ${SERVICE_NAME}/ -type f -exec sed -i "s/{service}/${SERVICE_NAME}/g" {} +
 
 **Success criteria**: Docker build succeeds. Container starts and /health returns 200.
 
-### 6. Kubernetes (Agent-K8sBuilder)
+### 7. Kubernetes (Agent-K8sBuilder)
 
 1. Create deployment from `templates/k8s/deployment.yaml`
 2. Create HPA (CPU-only, 50-70% target) from `templates/k8s/hpa.yaml`
@@ -121,7 +131,7 @@ find ${SERVICE_NAME}/ -type f -exec sed -i "s/{service}/${SERVICE_NAME}/g" {} +
 
 **Success criteria**: `kustomize build k8s/overlays/gcp-production/` renders valid YAML.
 
-### 7. Infrastructure (Agent-TerraformBuilder)
+### 8. Infrastructure (Agent-TerraformBuilder)
 
 1. Add container repository in `infra/terraform/{cloud}/`
 2. Add IAM permissions (Workload Identity for GCP, IRSA for AWS)
@@ -129,7 +139,7 @@ find ${SERVICE_NAME}/ -type f -exec sed -i "s/{service}/${SERVICE_NAME}/g" {} +
 
 **Success criteria**: `terraform plan` shows expected resources with no errors.
 
-### 8. CI/CD (Agent-CICDBuilder)
+### 9. CI/CD (Agent-CICDBuilder)
 
 1. Add service to build matrix in `.github/workflows/ci.yml`
 2. Add drift detection to scheduled workflow
@@ -138,7 +148,7 @@ find ${SERVICE_NAME}/ -type f -exec sed -i "s/{service}/${SERVICE_NAME}/g" {} +
 
 **Success criteria**: CI workflow triggers on PR and runs tests + lint + type check.
 
-### 9. Monitoring (Agent-MonitoringSetup)
+### 10. Monitoring (Agent-MonitoringSetup)
 
 1. Verify `/metrics` exports `{service}_requests_total`, `{service}_request_duration_seconds`
 2. Create Grafana dashboard from `templates/monitoring/grafana-dashboard.json`
@@ -147,7 +157,7 @@ find ${SERVICE_NAME}/ -type f -exec sed -i "s/{service}/${SERVICE_NAME}/g" {} +
 
 **Success criteria**: Grafana dashboard shows live metrics. Alert rules configured.
 
-### 10. Drift Detection (Agent-DriftSetup)
+### 11. Drift Detection (Agent-DriftSetup)
 
 1. Define PSI thresholds per feature with domain reasoning
 2. Implement `drift_detection.py` with quantile-based bins
@@ -156,7 +166,7 @@ find ${SERVICE_NAME}/ -type f -exec sed -i "s/{service}/${SERVICE_NAME}/g" {} +
 
 **Success criteria**: CronJob runs successfully. PSI metrics appear in Pushgateway.
 
-### 11. Documentation (Agent-DocumentationAI)
+### 12. Documentation (Agent-DocumentationAI)
 
 1. Create ADR for model selection decision
 2. Write service `README.md` with real metrics
@@ -165,7 +175,7 @@ find ${SERVICE_NAME}/ -type f -exec sed -i "s/{service}/${SERVICE_NAME}/g" {} +
 
 **Success criteria**: README includes measured metrics, not estimates.
 
-### 12. Testing (Agent-TestGenerator)
+### 13. Testing (Agent-TestGenerator)
 
 1. Data leakage regression test
 2. SHAP consistency + non-zero + original feature space tests

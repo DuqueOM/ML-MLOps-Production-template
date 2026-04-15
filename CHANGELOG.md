@@ -53,7 +53,24 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
 - Updated Quick Start to use `new-service.sh` scaffolding script
 - Updated repo structure tree with all new files
 
+#### Agentic System Improvements
+- **Split `04-python-ml.md`** into `04a-python-serving.md` (app/) and `04b-python-training.md` (training/) — reduces unnecessary context loading
+- **Added `10-examples.md`** — prevents production rules from firing in `examples/` directory
+- **Added `.claude/rules/`** — 5 context-aware rules with `paths:` frontmatter for Claude Code IDE
+- **AGENTS.md** — added Session Initialization Protocol, How to Invoke Skills, Multi-IDE Support sections
+- **01-mlops-conventions.md** — slimmed from 75 to 43 lines, references `AGENTS.md` for detail
+- **CLAUDE.md** — comprehensive rewrite: session protocol, full anti-pattern table, key commands
+- **`.cursor/rules/`** — enhanced with session protocol, full D-01→D-12 table, key commands
+- **Skill `new-service`** — now invokes `new-service.sh`, verifies zero remaining placeholders
+- **Skill `debug-ml-inference`** — added D-01→D-12 anti-pattern checklist as Step 1
+- **Skill `drift-detection`** — added PSI interpretation table with exit codes, special cases for time series/NLP/categorical
+- **Workflow `/new-service`** — uses `new-service.sh` with manual fallback
+- **Workflow `/incident`** — added Step 0: severity classification decision tree (P1–P4)
+- **Workflow `/retrain`** — added explicit quality gate table with typical thresholds and verification script
+- **Workflow `/cost-review`** — added PromQL queries for CPU/memory/throughput/HPA utilization
+
 ### Fixed
+- black formatting: reformatted `test_explainer.py` and `drift_detection.py`
 - flake8 F401: removed unused imports across 7 files
 - flake8 E501/F841: fixed long lines and unused variable in cli.py
 - Kustomize cycle error: restructured to standard `base/` + `overlays/` layout
@@ -66,7 +83,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
 
 #### Agentic System
 - **AGENTS.md** - Root-level agent architecture with 3-layer design (Orchestrator, 11 Specialist Agents, 4 Maintenance Agents), 12 anti-pattern detectors (D-01 to D-12), and Engineering Calibration Principle
-- **9 context-aware rules** (`.windsurf/rules/`) - Behavioral constraints for K8s, Terraform, Python, CI/CD, Docker, docs, data validation, monitoring
+- **10 context-aware rules** (`.windsurf/rules/`) - Behavioral constraints for K8s, Terraform, Python serving/training (split), CI/CD, Docker, docs, data validation, monitoring, examples
 - **8 operational skills** (`.windsurf/skills/`) - Structured frontmatter with `allowed-tools`, `when_to_use`, `argument-hint`, per-step `Success criteria`
 - **8 slash-command workflows** (`.windsurf/workflows/`) - `/release`, `/retrain`, `/load-test`, `/new-adr`, `/incident`, `/drift-check`, `/new-service`, `/cost-review`
 

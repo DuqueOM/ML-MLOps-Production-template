@@ -205,11 +205,13 @@ def create_github_issue(results: dict, repo: str, token: str) -> None:
         )
     body_lines += ["", "**Action required**: Investigate root cause and trigger `/retrain` if confirmed."]
 
-    payload = json.dumps({
-        "title": f"[Drift Alert] {len(alerts)} feature(s) above PSI threshold",
-        "body": "\n".join(body_lines),
-        "labels": ["drift", "automated"],
-    }).encode("utf-8")
+    payload = json.dumps(
+        {
+            "title": f"[Drift Alert] {len(alerts)} feature(s) above PSI threshold",
+            "body": "\n".join(body_lines),
+            "labels": ["drift", "automated"],
+        }
+    ).encode("utf-8")
 
     req = Request(
         f"https://api.github.com/repos/{repo}/issues",

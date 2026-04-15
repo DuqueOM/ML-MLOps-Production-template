@@ -37,15 +37,20 @@ def pipeline_and_data():
     TODO: Replace with your actual pipeline + background data.
     """
     X, y = make_classification(
-        n_samples=300, n_features=8, n_informative=5, random_state=42,
+        n_samples=300,
+        n_features=8,
+        n_informative=5,
+        random_state=42,
     )
     X_df = pd.DataFrame(X, columns=ORIGINAL_FEATURE_NAMES)
     X_train, X_test, y_train, _ = train_test_split(X_df, y, test_size=0.2, random_state=42)
 
-    pipe = Pipeline([
-        ("scaler", StandardScaler()),
-        ("model", GradientBoostingClassifier(n_estimators=50, random_state=42)),
-    ])
+    pipe = Pipeline(
+        [
+            ("scaler", StandardScaler()),
+            ("model", GradientBoostingClassifier(n_estimators=50, random_state=42)),
+        ]
+    )
     pipe.fit(X_train, y_train)
 
     # Background data: 30 representative samples for KernelExplainer
@@ -100,9 +105,7 @@ class TestSHAPValues:
         sample = X_test.values[:1]
         shap_values = explainer.shap_values(sample, nsamples=100)
 
-        actual = float(pipe.predict_proba(
-            pd.DataFrame(sample, columns=ORIGINAL_FEATURE_NAMES)
-        )[:, 1][0])
+        actual = float(pipe.predict_proba(pd.DataFrame(sample, columns=ORIGINAL_FEATURE_NAMES))[:, 1][0])
         reconstructed = float(explainer.expected_value) + float(shap_values[0].sum())
 
         assert abs(actual - reconstructed) < SHAP_CONSISTENCY_TOLERANCE, (

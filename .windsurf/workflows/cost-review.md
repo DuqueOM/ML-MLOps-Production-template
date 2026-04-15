@@ -48,12 +48,31 @@ vs Last Month:                         $___/mo (↑/↓ __%)
 - [ ] No non-production clusters running overnight
 - [ ] Old container images cleaned up
 
-## 5. Identify Optimizations
+## 5. Check Prometheus Utilization Metrics
+
+```bash
+# CPU utilization per pod (actual vs requested)
+curl -s 'http://prometheus:9090/api/v1/query?query=avg(rate(container_cpu_usage_seconds_total{namespace="ml-services"}[5m])) by (pod)'
+
+# Memory utilization per pod
+curl -s 'http://prometheus:9090/api/v1/query?query=avg(container_memory_working_set_bytes{namespace="ml-services"}) by (pod)'
+
+# Prediction throughput (requests/min)
+curl -s 'http://prometheus:9090/api/v1/query?query=sum(rate(http_requests_total{namespace="ml-services"}[1h])) by (service) * 60'
+
+# HPA utilization (are we over-provisioned?)
+curl -s 'http://prometheus:9090/api/v1/query?query=kube_horizontalpodautoscaler_status_current_replicas / kube_horizontalpodautoscaler_spec_max_replicas'
+```
+
+## 6. Identify Optimizations
 
 ### Right-Sizing
 ```bash
-# Check actual CPU usage vs requests
+# Pods with CPU usage < 30% of request (candidates for downsizing)
 kubectl top pods -n ${NAMESPACE} --sort-by=cpu
+
+# Check HPA min/max vs actual replicas
+kubectl get hpa -n ${NAMESPACE}
 ```
 
 ### Storage Cleanup
@@ -69,14 +88,14 @@ aws s3 ls --summarize --human-readable s3://${BUCKET}
 gcloud artifacts docker images list ${REGISTRY} --filter="updateTime<-P90D"
 ```
 
-## 6. Document Findings
+## 7. Document Findings
 
 Update:
 - Service READMEs with current costs
 - FinOps ADR with trend analysis
 - Budget projections for next month
 
-## 7. Action Items
+## 8. Action Items
 
 Create GitHub Issues for any optimization opportunities:
 ```bash
