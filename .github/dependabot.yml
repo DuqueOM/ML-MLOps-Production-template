@@ -1,0 +1,48 @@
+# Dependabot configuration for automated dependency updates
+# https://docs.github.com/en/code-security/dependabot/dependabot-version-updates
+
+version: 2
+updates:
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "thursday"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "ci"
+    labels:
+      - "dependencies"
+      - "github-actions"
+
+  # Docker (service template)
+  - package-ecosystem: "docker"
+    directory: "/templates/service"
+    schedule:
+      interval: "monthly"
+    labels:
+      - "dependencies"
+      - "docker"
+    ignore:
+      # Ignore Python 3.14+ (pre-release/development versions)
+      - dependency-name: "python"
+        versions: [">=3.14"]
+
+  # Terraform (GCP)
+  - package-ecosystem: "terraform"
+    directory: "/templates/infra/terraform/gcp"
+    schedule:
+      interval: "monthly"
+    labels:
+      - "dependencies"
+      - "terraform"
+
+  # Terraform (AWS)
+  - package-ecosystem: "terraform"
+    directory: "/templates/infra/terraform/aws"
+    schedule:
+      interval: "monthly"
+    labels:
+      - "dependencies"
+      - "terraform"

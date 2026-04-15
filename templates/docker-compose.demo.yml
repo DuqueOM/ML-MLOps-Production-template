@@ -1,0 +1,145 @@
+# ML-MLOps Template Demo Stack
+# Levanta un servicio de ejemplo + MLflow + Pushgateway + Prometheus
+#
+# Uso básico (servicio + MLflow):
+#   docker compose -f templates/docker-compose.demo.yml up --build
+#
+# Con monitoring (agrega Prometheus + Grafana):
+#   docker compose -f templates/docker-compose.demo.yml --profile monitoring up --build
+#
+# Verificar:
+#   curl http://localhost:8000/health
+#   curl http://localhost:5000/health
+#
+# TODO: Replace {service} with your actual service name.
+# TODO: Update build context to point to your service directory.
+
+services:
+  # ─────────────────────────────────────────────
+  # MLflow Tracking Server
+  # ─────────────────────────────────────────────
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.9.2
+    container_name: mlflow-server
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlflow-artifacts:/mlflow
+    environment:
+      - MLFLOW_BACKEND_STORE_URI=sqlite:///mlflow/mlflow.db
+      - MLFLOW_DEFAULT_ARTIFACT_ROOT=/mlflow/artifacts
+    command: >
+      mlflow server
+      --backend-store-uri sqlite:///mlflow/mlflow.db
+      --default-artifact-root /mlflow/artifacts
+      --host 0.0.0.0
+      --port 5000
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - ml-network
+
+  # ─────────────────────────────────────────────
+  # ML Service (your service from templates/service/)
+  # ─────────────────────────────────────────────
+  # TODO: Replace {service} with your service name
+  ml-service:
+    image: ml-template-{service}:latest
+    build:
+      context: ./service
+      dockerfile: Dockerfile
+    container_name: ml-service-api
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount model artifacts (read-only in demo)
+      - ./service/models:/app/models:ro
+      - ./service/data:/app/data:ro
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - MODEL_PATH=/app/models/model.joblib
+      - LOG_FORMAT=json
+      - LOG_LEVEL=INFO
+      - SERVICE_NAME={service}
+      - PYTHONUNBUFFERED=1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 45s
+    depends_on:
+      mlflow:
+        condition: service_started
+    networks:
+      - ml-network
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────
+  # Prometheus Pushgateway (for drift metrics)
+  # ─────────────────────────────────────────────
+  pushgateway:
+    image: prom/pushgateway:v1.7.0
+    container_name: pushgateway
+    ports:
+      - "9091:9091"
+    networks:
+      - ml-network
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────
+  # Prometheus (optional — monitoring profile)
+  # ─────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus-demo.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    networks:
+      - ml-network
+    restart: unless-stopped
+    profiles:
+      - monitoring
+
+  # ─────────────────────────────────────────────
+  # Grafana (optional — monitoring profile)
+  # ─────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:10.2.2
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    networks:
+      - ml-network
+    restart: unless-stopped
+    profiles:
+      - monitoring
+
+volumes:
+  mlflow-artifacts:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+
+networks:
+  ml-network:
+    driver: bridge
+    name: ml-template-network

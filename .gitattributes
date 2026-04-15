@@ -1,0 +1,41 @@
+# Git LFS — Track large ML artifacts
+# https://git-lfs.github.com/
+*.pt filter=lfs diff=lfs merge=lfs -text
+*.pth filter=lfs diff=lfs merge=lfs -text
+*.h5 filter=lfs diff=lfs merge=lfs -text
+*.hdf5 filter=lfs diff=lfs merge=lfs -text
+*.onnx filter=lfs diff=lfs merge=lfs -text
+*.pb filter=lfs diff=lfs merge=lfs -text
+*.pkl filter=lfs diff=lfs merge=lfs -text
+*.joblib filter=lfs diff=lfs merge=lfs -text
+*.sav filter=lfs diff=lfs merge=lfs -text
+models/**/*.pkl filter=lfs diff=lfs merge=lfs -text
+models/**/*.joblib filter=lfs diff=lfs merge=lfs -text
+models/**/*.h5 filter=lfs diff=lfs merge=lfs -text
+
+# Binary data files
+*.parquet filter=lfs diff=lfs merge=lfs -text
+*.feather filter=lfs diff=lfs merge=lfs -text
+
+# Compressed archives
+*.tar.gz filter=lfs diff=lfs merge=lfs -text
+*.zip filter=lfs diff=lfs merge=lfs -text
+
+# Database files
+*.db filter=lfs diff=lfs merge=lfs -text
+*.sqlite filter=lfs diff=lfs merge=lfs -text
+
+# Line ending normalization
+* text=auto
+*.py text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.tf text eol=lf
+*.sh text eol=lf
+
+# Exclude from LFS
+.venv/** -filter -diff -merge -text
+__pycache__/** -filter -diff -merge -text
+*.pyc -filter -diff -merge -text

@@ -1,0 +1,101 @@
+# Validate Templates CI
+# Proves the repo is alive — validates K8s, Terraform, and Python templates.
+# Runs on every push and PR to main.
+
+name: Validate Templates
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  python-quality:
+    name: Python Lint + Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install tools
+        run: pip install flake8 black isort mypy
+
+      - name: Check formatting (black)
+        run: black --check --line-length=120 templates/service/ templates/common_utils/
+
+      - name: Check imports (isort)
+        run: isort --check --profile=black --line-length=120 templates/service/ templates/common_utils/
+
+      - name: Lint (flake8)
+        run: flake8 --max-line-length=120 --extend-ignore=E203,W503 templates/service/ templates/common_utils/
+
+  kubernetes-validate:
+    name: Kubernetes Manifests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install kubeval
+        run: |
+          wget -q https://github.com/instrumenta/kubeval/releases/latest/download/kubeval-linux-amd64.tar.gz
+          tar xf kubeval-linux-amd64.tar.gz
+          sudo mv kubeval /usr/local/bin/
+
+      - name: Validate base manifests
+        run: |
+          kubeval templates/k8s/deployment.yaml --strict
+          kubeval templates/k8s/hpa.yaml --strict
+          kubeval templates/k8s/service.yaml --strict
+          kubeval templates/k8s/serviceaccount.yaml --strict
+          kubeval templates/k8s/cronjob-drift.yaml --strict
+
+      - name: Install kustomize
+        run: |
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+          sudo mv kustomize /usr/local/bin/
+
+      - name: Validate Kustomize build (base)
+        run: kustomize build templates/k8s/ > /dev/null
+
+      - name: Validate Kustomize build (GCP overlay)
+        run: kustomize build templates/k8s/overlays/gcp-production/ > /dev/null
+
+      - name: Validate Kustomize build (AWS overlay)
+        run: kustomize build templates/k8s/overlays/aws-production/ > /dev/null
+
+  terraform-validate:
+    name: Terraform Validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.7.0"
+
+      - name: Validate GCP
+        run: |
+          cd templates/infra/terraform/gcp
+          terraform init -backend=false
+          terraform validate
+
+      - name: Validate AWS
+        run: |
+          cd templates/infra/terraform/aws
+          terraform init -backend=false
+          terraform validate
+
+  docker-lint:
+    name: Dockerfile Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lint Dockerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: templates/service/Dockerfile

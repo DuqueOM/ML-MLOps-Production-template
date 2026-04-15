@@ -1,0 +1,40 @@
+# Gitleaks configuration for ML service secret detection
+# https://github.com/gitleaks/gitleaks
+#
+# Used by: .pre-commit-config.yaml (local) and CI workflow (remote)
+# Run manually: gitleaks detect --config .gitleaks.toml -v
+
+title = "ML-MLOps Template Secret Detection"
+
+[extend]
+# Use default gitleaks rules (AWS keys, GCP credentials, generic secrets, etc.)
+useDefault = true
+
+# Allowlist for known false positives
+[allowlist]
+description = "Allowlisted patterns and paths"
+
+# Paths to ignore
+paths = [
+    '''.*\.ipynb$''',
+    '''.*\/mlruns\/.*''',
+    '''.*\/artifacts\/.*''',
+    '''.*\/models\/.*''',
+    '''.*\/__pycache__\/.*''',
+    '''\.venv\/.*''',
+    '''.*\.joblib$''',
+    '''.*\.pkl$''',
+]
+
+# Regex patterns that are false positives (visualization IDs, etc.)
+regexes = [
+    '''AIDABEE[A-Z0-9]{12}''',
+    '''AIPABB[A-Z0-9]{14}''',
+]
+
+# TODO: Add custom rules for your organization's secret patterns
+# [[rules]]
+# id = "custom-internal-token"
+# description = "Detect internal API tokens"
+# regex = '''MYORG_[A-Z0-9]{32}'''
+# secretGroup = 0

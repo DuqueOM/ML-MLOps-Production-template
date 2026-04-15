@@ -7,10 +7,35 @@
 [![Terraform >= 1.7](https://img.shields.io/badge/terraform-%3E%3D1.7-blueviolet.svg)](https://www.terraform.io/)
 [![Kubernetes](https://img.shields.io/badge/k8s-GKE%20%2B%20EKS-326CE5.svg)](https://kubernetes.io/)
 
+[![Validate Templates](https://github.com/DuqueOM/ML-MLOps-Production-template/actions/workflows/validate-templates.yml/badge.svg)](https://github.com/DuqueOM/ML-MLOps-Production-template/actions/workflows/validate-templates.yml)
+
 [![Template](https://img.shields.io/badge/use%20as-template-brightgreen.svg)](https://github.com/DuqueOM/ML-MLOps-Production-template/generate)
 [![Anti-Patterns](https://img.shields.io/badge/anti--patterns-12%20encoded-red.svg)](#anti-pattern-detection)
 [![Clouds](https://img.shields.io/badge/clouds-GCP%20%2B%20AWS-orange.svg)](#technology-stack)
 [![Windsurf](https://img.shields.io/badge/agentic-Windsurf%20%7C%20Claude%20Code%20%7C%20Cursor-blueviolet.svg)](#agentic-system)
+
+---
+
+## Quick Navigation
+
+- **[What This Is](#what-this-is)**
+- **[Architecture Overview](#architecture-overview)**
+- **[Technology Stack](#technology-stack)**
+- **[Quick Start](#quick-start)**
+- **[Agentic System](#agentic-system)**
+- **[Critical Patterns (Invariants)](#critical-patterns-invariants)**
+- **[Anti-Pattern Detection](#anti-pattern-detection)**
+- **[Templates Detail](#templates-detail)**
+- **[Contributing](#contributing)**
+- **[Security](#security)**
+
+## Real-World Example
+
+This template was extracted from:
+
+- **[ML-MLOps-Portfolio](https://github.com/DuqueOM/ML-MLOps-Portfolio)**
+
+It shows how these patterns look when applied to real production-like ML services.
 
 ---
 
@@ -34,46 +59,52 @@ A **complete, opinionated template** for shipping ML models to production — no
 ## Architecture Overview
 
 ```
-┌──────────────────────────────────────────────────────────────────────┐
-│                     AGENTIC SYSTEM                                   │
-│                                                                      │
-│  AGENTS.md          → Root-level invariants + anti-pattern rules     │
-│  .windsurf/rules/   → 9 context-aware behavioral constraints         │
-│  .windsurf/skills/  → 8 multi-step operational procedures            │
-│  .windsurf/workflows/→ 8 prompt-triggered structured workflows       │
-│                                                                      │
-├──────────────────────────────────────────────────────────────────────┤
-│                     TEMPLATE SYSTEM                                  │
-│                                                                      │
-│  templates/service/     → FastAPI + training + monitoring            │
-│  templates/common_utils/→ Shared library (seed, logging, persistence)│
-│  templates/k8s/         → Deployment, HPA, Kustomize, Argo Rollouts  │
-│  templates/infra/       → Terraform GCP + AWS                        │
-│  templates/cicd/        → GitHub Actions (CI, deploy, drift, retrain)│
-│  templates/scripts/     → deploy.sh, promote_model.sh, health_check  │
-│  templates/docs/        → ADR, runbook, service README               │
-│  templates/monitoring/  → Grafana dashboard + Prometheus alerts      │
-│                                                                      │
-├──────────────────────────────────────────────────────────────────────┤
-│                     TARGET PROJECT                                   │
-│                                                                      │
-│  {ServiceName}/                                                      │
-│  ├── app/           → FastAPI (1 worker, ThreadPoolExecutor)         │
-│  ├── src/{service}/                                                  │
-│  │   ├── training/  → train.py, features.py, model.py                │
-│  │   ├── monitoring/→ drift_detection.py, business_kpis.py           │
-│  │   └── schemas.py → Pandera DataFrameModel                         │
-│  ├── tests/         → unit, integration, explainer, load             │
-│  ├── k8s/           → base/ + overlays/gcp/ + overlays/aws/          │
-│  ├── infra/         → terraform/gcp/ + terraform/aws/                │
-│  ├── docs/decisions/→ ADRs with measured trade-offs                  │
-│  └── monitoring/    → Grafana + Prometheus per service               │
-└──────────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────┐
+│                     AGENTIC SYSTEM                                     │
+│                                                                        │
+│  AGENTS.md          → Root-level invariants + anti-pattern rules       │
+│  .windsurf/rules/   → 9 context-aware behavioral constraints           │
+│  .windsurf/skills/  → 8 multi-step operational procedures              │
+│  .windsurf/workflows/→ 8 prompt-triggered structured workflows         │
+│                                                                        │
+├────────────────────────────────────────────────────────────────────────┤
+│                     TEMPLATE SYSTEM                                    │
+│                                                                        │
+│  templates/service/     → FastAPI + training + monitoring              │
+│  templates/common_utils/→ Shared library (seed, logging, persistence)  │
+│  templates/k8s/         → Deployment, HPA, Kustomize, Argo Rollouts    │
+│  templates/infra/       → Terraform GCP + AWS                          │
+│  templates/cicd/        → GitHub Actions (CI, deploy, drift, retrain)  │
+│  templates/scripts/     → deploy.sh, promote_model.sh, health_check    │
+│  templates/docs/        → ADR, runbook, service README                 │
+│  templates/monitoring/  → Grafana dashboard + Prometheus alerts        │
+│                                                                        │
+├────────────────────────────────────────────────────────────────────────┤
+│                     TARGET PROJECT                                     │
+│                                                                        │
+│  {ServiceName}/                                                        │
+│  ├── app/           → FastAPI (1 worker, ThreadPoolExecutor)           │
+│  ├── src/{service}/                                                    │
+│  │   ├── training/  → train.py, features.py, model.py                  │
+│  │   ├── monitoring/→ drift_detection.py, business_kpis.py             │
+│  │   └── schemas.py → Pandera DataFrameModel                           │
+│  ├── tests/         → unit, integration, explainer, load               │
+│  ├── k8s/           → base/ + overlays/gcp/ + overlays/aws/            │
+│  ├── infra/         → terraform/gcp/ + terraform/aws/                  │
+│  ├── docs/decisions/→ ADRs with measured trade-offs                    │
+│  └── monitoring/    → Grafana + Prometheus per service                 │
+└────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
 ## Technology Stack
+
+## Canonical Source Note (common_utils)
+
+`templates/common_utils/` in this repository is intended to be the **canonical source**.
+If you also maintain a `common_utils` copy in another repository (e.g., the portfolio),
+reconcile differences before using in production to avoid silent behavior drift.
 
 | Layer | Technology | Notes |
 |-------|-----------|-------|
@@ -463,6 +494,17 @@ Reusable shared library for all ML services:
 
 - **Prometheus alerts**: Error rate, service down, drift heartbeat, latency, resource usage, pod restarts
 - **Grafana dashboard**: Request rate, error rate, latency percentiles, PSI scores, prediction distribution, HPA replicas, CPU/memory usage
+
+---
+
+## Documentation at Scale (MkDocs)
+
+This README is intentionally comprehensive, but for larger teams you should move long-form
+documentation (architecture deep-dives, operations guides, incident runbooks) into a versioned
+docs site.
+
+- **Recommended**: MkDocs Material + GitHub Pages
+- **Reference**: see `mkdocs.yml` in the portfolio repo for a working example
 
 ---
 
