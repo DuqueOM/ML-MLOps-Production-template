@@ -13,15 +13,16 @@ kind: Kustomization
 
 namespace: ml-services
 
-commonLabels:
-  app: "{service}"
-  managed-by: kustomize
+labels:
+  - pairs:
+      app: "{service}"
+      managed-by: kustomize
 
 resources:
-  - ../deployment.yaml
-  - ../service.yaml
-  - ../hpa.yaml
-  - ../serviceaccount.yaml
-  - ../cronjob-drift.yaml
-  - ../networkpolicy.yaml
-  - ../rbac.yaml
+  - deployment.yaml
+  - service.yaml
+  - hpa.yaml
+  - serviceaccount.yaml
+  - cronjob-drift.yaml
+  - networkpolicy.yaml
+  - rbac.yaml

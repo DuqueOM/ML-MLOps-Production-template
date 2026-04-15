@@ -74,7 +74,7 @@ A **complete, opinionated template** for shipping ML models to production — no
 │                                                                        │
 │  templates/service/     → FastAPI + training + monitoring              │
 │  templates/common_utils/→ Shared library (seed, logging, persistence)  │
-│  templates/k8s/         → Deployment, HPA, Kustomize, Argo Rollouts    │
+│  templates/k8s/base/    → Deployment, HPA, Kustomize base, Argo Rollouts│
 │  templates/infra/       → Terraform GCP + AWS                          │
 │  templates/cicd/        → GitHub Actions (CI, deploy, drift, retrain)  │
 │  templates/scripts/     → deploy.sh, promote_model.sh, health_check    │
@@ -91,7 +91,8 @@ A **complete, opinionated template** for shipping ML models to production — no
 │  │   ├── monitoring/→ drift_detection.py, business_kpis.py             │
 │  │   └── schemas.py → Pandera DataFrameModel                           │
 │  ├── tests/         → unit, integration, explainer, load               │
-│  ├── k8s/           → base/ + overlays/gcp/ + overlays/aws/            │
+│  ├── k8s/base/      → manifests + kustomize base                       │
+│  ├── k8s/overlays/  → gcp-production/ + aws-production/                │
 │  ├── infra/         → terraform/gcp/ + terraform/aws/                  │
 │  ├── docs/decisions/→ ADRs with measured trade-offs                    │
 │  └── monitoring/    → Grafana + Prometheus per service                 │
@@ -272,15 +273,16 @@ ML-MLOps-Production-template/
     │   └── telemetry.py                   #   OpenTelemetry tracing (optional)
     │
     ├── k8s/                               # Kubernetes manifest templates
-    │   ├── deployment.yaml                #   1-worker pod + init container for model
-    │   ├── hpa.yaml                       #   CPU-only autoscaling (never memory)
-    │   ├── service.yaml                   #   ClusterIP service
-    │   ├── cronjob-drift.yaml             #   Daily drift detection CronJob
-    │   ├── serviceaccount.yaml            #   Workload Identity / IRSA annotations
-    │   ├── networkpolicy.yaml             #   Ingress/egress traffic restrictions
-    │   ├── rbac.yaml                      #   Role + RoleBinding (least privilege)
-    │   ├── base/kustomization.yaml        #   Base Kustomize config
-    │   ├── argo-rollout.yaml              #   Canary deployment + AnalysisTemplate
+    │   ├── base/                          #   Kustomize base (all manifests here)
+    │   │   ├── kustomization.yaml         #     Base Kustomize config
+    │   │   ├── deployment.yaml            #     1-worker pod + init container for model
+    │   │   ├── hpa.yaml                   #     CPU-only autoscaling (never memory)
+    │   │   ├── service.yaml               #     ClusterIP service
+    │   │   ├── cronjob-drift.yaml         #     Daily drift detection CronJob
+    │   │   ├── serviceaccount.yaml        #     Workload Identity / IRSA annotations
+    │   │   ├── networkpolicy.yaml         #     Ingress/egress traffic restrictions
+    │   │   ├── rbac.yaml                  #     Role + RoleBinding (least privilege)
+    │   │   └── argo-rollout.yaml          #     Canary deployment + AnalysisTemplate
     │   └── overlays/                      #   Environment-specific patches
     │       ├── gcp-production/            #     GKE: Artifact Registry, Workload Identity
     │       └── aws-production/            #     EKS: ECR, IRSA

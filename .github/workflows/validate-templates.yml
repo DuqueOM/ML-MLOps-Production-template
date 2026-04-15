@@ -48,13 +48,13 @@ jobs:
       - name: Validate base manifests
         run: |
           kubeconform -strict -ignore-missing-schemas \
-            templates/k8s/deployment.yaml \
-            templates/k8s/hpa.yaml \
-            templates/k8s/service.yaml \
-            templates/k8s/serviceaccount.yaml \
-            templates/k8s/cronjob-drift.yaml \
-            templates/k8s/networkpolicy.yaml \
-            templates/k8s/rbac.yaml
+            templates/k8s/base/deployment.yaml \
+            templates/k8s/base/hpa.yaml \
+            templates/k8s/base/service.yaml \
+            templates/k8s/base/serviceaccount.yaml \
+            templates/k8s/base/cronjob-drift.yaml \
+            templates/k8s/base/networkpolicy.yaml \
+            templates/k8s/base/rbac.yaml
 
       - name: Install kustomize
         run: |

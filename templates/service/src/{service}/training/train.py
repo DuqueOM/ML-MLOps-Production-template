@@ -25,9 +25,7 @@ import numpy as np
 import optuna
 import pandas as pd
 from sklearn.metrics import (
-    classification_report,
     f1_score,
-    make_scorer,
     precision_recall_curve,
     roc_auc_score,
 )
