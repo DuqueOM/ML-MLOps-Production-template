@@ -12,7 +12,7 @@ uvicorn              ~= 0.32.0
 pydantic             ~= 2.10.0
 
 # Data Validation
-pandera              ~= 0.21.0
+pandera              ~= 0.23.0
 
 # Explainability
 shap                 ~= 0.46.0
