@@ -264,14 +264,6 @@ windsurf mcp add kubernetes
 windsurf mcp add terraform
 ```
 
-### MCPs to skip for this template
-
-| MCP | Why skip |
-|-----|----------|
-| `mcp-playwright` | No frontend — template is API + K8s only |
-| `pinecone-mcp-server` | Vector DB for LLM/RAG — out of scope (ADR-001) |
-| `supabase-mcp-server` | Template uses self-hosted PostgreSQL + MLflow, not Supabase |
-
 ### Agent behavior with MCPs installed
 
 When `mcp-github` is active: agents read CI failures directly — no need to paste logs into chat.

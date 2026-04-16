@@ -744,8 +744,6 @@ MCPs extend what agents can **do** (execute commands, read live data) vs. just g
 
 MCPs installed = agents **execute**. MCPs absent = agents **instruct**. Same invariants apply either way.
 
-> **Skip**: `mcp-playwright` (no frontend), `pinecone` (LLM scope, ADR-001), `supabase` (self-hosted PostgreSQL).
->
 > Full setup instructions and rationale: [`AGENTS.md § MCP Integrations`](AGENTS.md#mcp-integrations)
 
 ---
