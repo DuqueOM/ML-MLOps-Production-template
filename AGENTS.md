@@ -242,27 +242,43 @@ Install only MCPs that change agent capabilities for this stack. Skip MCPs for t
 
 ### Recommended MCPs (high ROI for this template)
 
-| MCP | Install | What the agent gains |
-|-----|---------|----------------------|
-| **`mcp-github`** | `windsurf mcp add github` | Read CI logs, PR status, issues without copy-pasting output into chat. Agents can diagnose CI failures autonomously. |
-| **`mcp-kubernetes`** | `windsurf mcp add kubernetes` | Run `kubectl apply/get/logs/describe` directly. Skills `deploy-gke` and `deploy-aws` execute instead of instruct. |
-| **`mcp-terraform`** | `windsurf mcp add terraform` | Run `terraform plan/validate/apply` directly. Workflow `/release` can verify infra state in real time. |
-| **`mcp-prometheus`** | `windsurf mcp add prometheus` | Query live metrics. Skills `drift-detection` and `/incident` work with real data, not hypothetical. |
+| MCP | Package / Server | What the agent gains |
+|-----|-----------------|----------------------|
+| **`github`** | Streamable HTTP — `api.githubcopilot.com/mcp/` + PAT | Read CI logs, PR status, issues — no copy-paste into chat |
+| **`kubectl-mcp-server`** | `npx kubectl-mcp-server@latest` | Run `kubectl apply/get/logs/describe` directly — skills execute instead of instruct |
+| **`terraform-mcp-server`** | `docker run hashicorp/terraform-mcp-server` | Registry lookup, `plan/validate` — workflow `/release` with real infra state |
+| **`mcp-prometheus`** | varies by deployment | Query live metrics — `drift-detection` and `/incident` with real data |
 
-### Setup (Windsurf)
+### Setup (`~/.codeium/windsurf/mcp_config.json`)
 
-```bash
-# Add to ~/.codeium/windsurf/mcp_config.json or via Settings → MCP
-# GitHub (requires GITHUB_TOKEN env var)
-windsurf mcp add github
-
-# Kubernetes (uses current kubectl context — verify before use)
-# ALWAYS run: kubectl config current-context before any apply
-windsurf mcp add kubernetes
-
-# Terraform (run from infra directory)
-windsurf mcp add terraform
+```json
+{
+  "mcpServers": {
+    "github": {
+      "serverUrl": "https://api.githubcopilot.com/mcp/",
+      "headers": {
+        "Authorization": "Bearer YOUR_GITHUB_PAT"
+      }
+    },
+    "kubectl-mcp-server": {
+      "command": "npx",
+      "args": ["-y", "kubectl-mcp-server@latest"],
+      "env": {}
+    },
+    "terraform-mcp-server": {
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "hashicorp/terraform-mcp-server:latest"],
+      "env": {}
+    }
+  }
+}
 ```
+
+**GitHub PAT scopes needed**: `repo`, `actions` (CI logs), `pull_requests`.
+Create at: https://github.com/settings/personal-access-tokens/new
+
+**Note**: `kubectl-mcp-server` uses your current `kubectl` context.
+**Always run** `kubectl config current-context` before any cluster operation.
 
 ### Agent behavior with MCPs installed
 
