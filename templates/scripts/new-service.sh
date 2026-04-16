@@ -93,6 +93,22 @@ for script in deploy.sh promote_model.sh health_check.sh; do
     fi
 done
 
+# --- Copy DVC templates ---
+if [[ -f "$TARGET_DIR/dvc.yaml" ]]; then
+    info "DVC pipeline template already present"
+else
+    info "DVC templates included (dvc.yaml + .dvc/config)"
+fi
+
+# --- Copy integration test templates ---
+info "Copying integration test templates..."
+mkdir -p "$TARGET_DIR/tests/integration"
+for f in conftest.py test_service_integration.py; do
+    if [[ -f "$TEMPLATE_ROOT/tests/integration/$f" ]]; then
+        cp "$TEMPLATE_ROOT/tests/integration/$f" "$TARGET_DIR/tests/integration/"
+    fi
+done
+
 # --- Copy DX files ---
 for f in Makefile .pre-commit-config.yaml .gitleaks.toml .env.example docker-compose.demo.yml; do
     if [[ -f "$TEMPLATE_ROOT/$f" ]]; then
@@ -125,7 +141,10 @@ done
 # --- Create standard directories ---
 mkdir -p "$TARGET_DIR/data/raw"
 mkdir -p "$TARGET_DIR/data/reference"
+mkdir -p "$TARGET_DIR/data/validated"
+mkdir -p "$TARGET_DIR/data/processed"
 mkdir -p "$TARGET_DIR/models"
+mkdir -p "$TARGET_DIR/reports"
 
 # --- Create .gitkeep files for empty directories ---
 touch "$TARGET_DIR/data/raw/.gitkeep"

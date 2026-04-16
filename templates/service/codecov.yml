@@ -1,0 +1,51 @@
+# codecov.yml — Codecov configuration for {ServiceName}
+# https://docs.codecov.com/docs/codecov-yaml
+#
+# TODO: Replace {service} and {ServiceName} with your values.
+# TODO: Adjust coverage targets for your service.
+
+coverage:
+  precision: 2
+  round: down
+  range: "70...100"
+
+  status:
+    project:
+      default:
+        target: 90%           # Minimum overall coverage
+        threshold: 1%         # Allow 1% regression before failing
+        if_not_found: success
+        if_ci_failed: error
+
+    patch:
+      default:
+        target: 80%           # New code in PRs must be 80%+ covered
+        threshold: 5%
+        if_not_found: success
+        if_ci_failed: error
+
+flags:
+  "{service}":
+    paths:
+      - "src/{service}/"
+    carryforward: true
+
+# Ignore files that should not affect coverage metrics
+ignore:
+  - "**/__pycache__/**"
+  - "**/tests/**"
+  - "**/test_*.py"
+  - "**/conftest.py"
+  - "**/*.egg-info/**"
+  - "scripts/**"
+  - "infra/**"
+  - "k8s/**"
+  - "monitoring/**"
+
+# PR comment configuration
+comment:
+  layout: "reach,diff,flags,files"
+  behavior: default
+  require_changes: false
+  require_base: false
+  require_head: true

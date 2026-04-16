@@ -213,14 +213,18 @@ templates/
 │   ├── app/            # FastAPI serving layer
 │   ├── src/            # Training, features, monitoring
 │   ├── tests/          # Unit, integration, regression
+│   ├── dvc.yaml        # DVC pipeline (validate → featurize → train → evaluate)
+│   ├── .dvc/config     # DVC remote config (GCS/S3)
 │   ├── Dockerfile
+│   ├── pyproject.toml  # Modern Python project config
 │   ├── requirements.txt
 │   └── README.md
-├── k8s/                # Kubernetes manifest templates (base/ + overlays/)
-├── infra/              # Terraform IaC templates (GCP + AWS)
+├── tests/integration/  # Integration test templates (health, predict, latency SLA)
+├── k8s/                # K8s manifests (base/ + overlays/), SLO PrometheusRule
+├── infra/              # Terraform IaC (GCP + AWS), docker-compose.mlflow.yml
 ├── scripts/            # new-service.sh, deploy.sh, promote_model.sh
 ├── cicd/               # GitHub Actions workflow templates
-├── docs/               # ADR, runbook, README templates
+├── docs/               # ADR, runbook, model card, mkdocs.yml, CHECKLIST_RELEASE.md
 ├── common_utils/       # Shared utilities (seed, logging, persistence)
 └── monitoring/         # Grafana dashboard + Prometheus alert templates
 ```

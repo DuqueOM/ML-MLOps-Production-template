@@ -1,0 +1,62 @@
+# DVC Pipeline — {ServiceName}
+# Data versioning and pipeline reproducibility.
+#
+# Setup:
+#   dvc init
+#   dvc remote add -d storage gs://your-bucket/dvc/{service}    # GCP
+#   dvc remote add -d storage s3://your-bucket/dvc/{service}    # AWS
+#
+# Usage:
+#   dvc repro              # Run full pipeline
+#   dvc push               # Push data/models to remote
+#   dvc pull               # Pull data/models from remote
+#   dvc dag                # View pipeline DAG
+#
+# TODO: Replace {service} and {ServiceName} with your values.
+# TODO: Update paths and parameters for your actual pipeline.
+
+stages:
+  validate:
+    cmd: python src/{service}/training/validate_data.py --input data/raw/dataset.csv
+    deps:
+      - data/raw/dataset.csv
+      - src/{service}/schemas.py
+    outs:
+      - data/validated/dataset.csv:
+          cache: true
+
+  featurize:
+    cmd: python src/{service}/training/features.py --input data/validated/dataset.csv --output data/processed/features.csv
+    deps:
+      - data/validated/dataset.csv
+      - src/{service}/training/features.py
+    outs:
+      - data/processed/features.csv:
+          cache: true
+
+  train:
+    cmd: python src/{service}/training/train.py --data data/processed/features.csv
+    deps:
+      - data/processed/features.csv
+      - src/{service}/training/model.py
+      - src/{service}/training/train.py
+    outs:
+      - models/model.joblib:
+          cache: true
+      - models/metadata.json:
+          cache: false
+    metrics:
+      - reports/metrics.json:
+          cache: false
+    plots:
+      - reports/plots/:
+          cache: false
+
+  evaluate:
+    cmd: python src/{service}/training/evaluate.py --model models/model.joblib --data data/processed/features.csv
+    deps:
+      - models/model.joblib
+      - data/processed/features.csv
+    metrics:
+      - reports/evaluation.json:
+          cache: false

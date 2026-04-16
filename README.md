@@ -1,6 +1,6 @@
 # ML-MLOps Production Template
 
-> Agent-driven framework for building and maintaining production-grade ML systems with multi-cloud deployment, comprehensive observability, and enterprise CI/CD.
+**Ship ML models to production without reinventing the infrastructure.** This template encodes 12 production anti-patterns, multi-cloud K8s deployment (GKE + EKS), and agentic workflows — so your AI assistant builds it right the first time.
 
 [![Release](https://img.shields.io/github/v/release/DuqueOM/ML-MLOps-Production-Template.svg)](https://github.com/DuqueOM/ML-MLOps-Production-Template/releases)
 [![Python 3.11 | 3.12](https://img.shields.io/badge/python-3.11_%7C_3.12-blue.svg)](https://www.python.org/downloads/)
@@ -16,36 +16,67 @@
 [![Clouds](https://img.shields.io/badge/clouds-GCP%20%2B%20AWS-orange.svg)](#technology-stack)
 [![Agentic](https://img.shields.io/badge/agentic-Windsurf_%7C_Claude_Code_%7C_Cursor-blueviolet.svg)](#agentic-system)
 
+```bash
+# Clone → scaffold → serve in 3 commands
+git clone https://github.com/DuqueOM/ML-MLOps-Production-Template.git
+cd ML-MLOps-Production-Template
+./templates/scripts/new-service.sh ChurnPredictor churn_predictor
+```
+
+**[QUICK_START.md](QUICK_START.md)** — From clone to first model served in 10 minutes
+&nbsp;|&nbsp; **[RUNBOOK.md](RUNBOOK.md)** — Template operations reference
+
 ---
 
 ## Quick Navigation
 
-- **[What This Is](#what-this-is)**
-- **[Try It in 5 Minutes](#try-it-in-5-minutes)**
-- **[Architecture Overview](#architecture-overview)**
-- **[Technology Stack](#technology-stack)**
-- **[Quick Start](#quick-start)**
-- **[What's Different](#whats-different-from-other-templates)**
-- **[Agentic System](#agentic-system)**
-- **[Critical Patterns (Invariants)](#critical-patterns-invariants)**
-- **[Anti-Pattern Detection](#anti-pattern-detection)**
-- **[Templates Detail](#templates-detail)**
-- **[Contributing](#contributing)**
-- **[Security](#security)**
+| Getting Started | Architecture | Development |
+|----------------|-------------|-------------|
+| [Try It in 5 Minutes](#try-it-in-5-minutes) | [Architecture Overview](#architecture-overview) | [Agentic System](#agentic-system) |
+| [Quick Start](#quick-start) | [Technology Stack](#technology-stack) | [Critical Patterns](#critical-patterns-invariants) |
+| [QUICK_START.md](QUICK_START.md) | [What's Different](#whats-different-from-other-templates) | [Anti-Pattern Detection](#anti-pattern-detection) |
+| [RUNBOOK.md](RUNBOOK.md) | [Templates Detail](#templates-detail) | [Contributing](#contributing) |
 
 ## Real-World Example
 
-This template was extracted from:
+This template was extracted from **[ML-MLOps-Portfolio](https://github.com/DuqueOM/ML-MLOps-Portfolio)** — a production portfolio with 3 live ML services showing how these patterns work in practice.
 
-- **[ML-MLOps-Portfolio](https://github.com/DuqueOM/ML-MLOps-Portfolio)**
+---
 
-It shows how these patterns look when applied to real production-like ML services.
+## What This Is
+
+A **complete, opinionated template** for shipping ML models to production — not a toy notebook, not a mega-framework. It includes:
+
+- **An agentic system** (rules, skills, workflows) that guides AI coding assistants to build and maintain MLOps projects following enterprise patterns
+- **Production-ready templates** for every layer of the stack: serving, training, infrastructure, CI/CD, monitoring, and documentation
+- **Encoded invariants** that prevent the 12 most common ML production failures (event loop blocking, memory HPA, model baked in images, etc.)
+- **Engineering calibration** — every component is sized to actual requirements, avoiding both under-engineering and over-engineering
+
+## Who It's For
+
+- ML engineers shipping models to production for the first time
+- Teams standardizing their MLOps across multiple services
+- Engineers using AI coding assistants (Windsurf Cascade, Claude Code, Cursor) who want those tools to follow best practices automatically
 
 ---
 
 ## Try It in 5 Minutes
 
 A working fraud detection service that demonstrates the entire pipeline:
+
+```bash
+git clone https://github.com/DuqueOM/ML-MLOps-Production-Template.git
+cd ML-MLOps-Production-Template
+
+# One-command demo (install → train → test → drift)
+make demo-minimal
+
+# Or with Docker (API + MLflow)
+docker compose up --build
+# API: http://localhost:8000/docs | MLflow: http://localhost:5000
+```
+
+Or step by step:
 
 ```bash
 cd examples/minimal
@@ -75,23 +106,6 @@ python drift_check.py
 ```
 
 See [`examples/minimal/`](examples/minimal/) for the full working example.
-
----
-
-## What This Is
-
-A **complete, opinionated template** for shipping ML models to production — not a toy notebook, not a mega-framework. It includes:
-
-- **An agentic system** (rules, skills, workflows) that guides AI coding assistants to build and maintain MLOps projects following enterprise patterns
-- **Production-ready templates** for every layer of the stack: serving, training, infrastructure, CI/CD, monitoring, and documentation
-- **Encoded invariants** that prevent the 12 most common ML production failures (event loop blocking, memory HPA, model baked in images, etc.)
-- **Engineering calibration** — every component is sized to actual requirements, avoiding both under-engineering and over-engineering
-
-## Who It's For
-
-- ML engineers shipping models to production for the first time
-- Teams standardizing their MLOps across multiple services
-- Engineers using AI coding assistants (Windsurf Cascade, Claude Code, Cursor) who want those tools to follow best practices automatically
 
 ---
 
@@ -166,50 +180,46 @@ A **complete, opinionated template** for shipping ML models to production — no
 
 ## Quick Start
 
-### 1. Clone the template
+> For a more detailed guide, see **[QUICK_START.md](QUICK_START.md)**.
+
+### 1. Clone and scaffold
 
 ```bash
 git clone https://github.com/DuqueOM/ML-MLOps-Production-Template.git
 cd ML-MLOps-Production-Template
+
+# Scaffold a new service (copies all templates, replaces placeholders)
+./templates/scripts/new-service.sh ChurnPredictor churn_predictor
+
+# Or via Make:
+make new-service NAME=ChurnPredictor SLUG=churn_predictor
 ```
 
-### 2. Create a new ML service
+This creates `ChurnPredictor/` with the full service structure: FastAPI app, training pipeline, K8s manifests, Terraform, CI/CD, monitoring, tests, DVC pipeline, and documentation templates.
 
-Use the scaffolding script or the `/new-service` workflow (in Windsurf Cascade):
+### 2. Configure your features
 
 ```bash
-# Automated scaffolding (recommended)
-./templates/scripts/new-service.sh FraudDetector fraud_detector
-
-# Or manually:
-SERVICE_NAME="FraudDetector"
-SERVICE_SLUG="fraud_detector"
-cp -r templates/service/ ${SERVICE_NAME}/
-find ${SERVICE_NAME}/ -type f -exec sed -i "s/{ServiceName}/${SERVICE_NAME}/g" {} +
-find ${SERVICE_NAME}/ -type f -exec sed -i "s/{service}/${SERVICE_SLUG}/g" {} +
-mv ${SERVICE_NAME}/src/\{service\} ${SERVICE_NAME}/src/${SERVICE_SLUG}
+cd ChurnPredictor
 ```
 
-### 3. Configure your features
+Edit these files with your actual features:
 
-Edit the following files with your actual features:
+- `src/churn_predictor/schemas.py` — Pandera schema (data validation)
+- `src/churn_predictor/training/features.py` — Feature engineering
+- `src/churn_predictor/training/model.py` — Model pipeline
+- `app/schemas.py` — Pydantic request/response models
 
-- `{ServiceName}/src/{service}/schemas.py` — Pandera schema
-- `{ServiceName}/src/{service}/training/features.py` — Feature engineering
-- `{ServiceName}/src/{service}/training/model.py` — Model pipeline
-- `{ServiceName}/app/schemas.py` — Pydantic request/response
-
-### 4. Train and serve
+### 3. Train and serve
 
 ```bash
-cd ${SERVICE_NAME}
 pip install -r requirements.txt
 
 # Train
-python src/${SERVICE_SLUG}/training/train.py --data data/raw/dataset.csv
+make train DATA=data/raw/your-dataset.csv
 
 # Serve locally
-uvicorn app.main:app --host 0.0.0.0 --port 8000
+make serve
 
 # Test prediction
 curl -X POST http://localhost:8000/predict \
@@ -217,18 +227,20 @@ curl -X POST http://localhost:8000/predict \
   -d '{"feature_a": 42.0, "feature_b": 50000.0, "feature_c": "category_A"}'
 ```
 
-### 5. Deploy to production
+### 4. Deploy to production
 
 ```bash
 # Build and push Docker image
-docker build -t ${SERVICE_SLUG}-predictor:v1.0.0 .
+docker build -t churn_predictor:v1.0.0 .
 
 # Deploy to GKE
-kubectl apply -k k8s/overlays/gcp/
+kubectl apply -k k8s/overlays/gcp-production/
 
 # Deploy to EKS
-kubectl apply -k k8s/overlays/aws/
+kubectl apply -k k8s/overlays/aws-production/
 ```
+
+See the [Release Checklist](templates/docs/CHECKLIST_RELEASE.md) for the full pre-deployment checklist.
 
 ---
 
@@ -240,14 +252,24 @@ ML-MLOps-Production-Template/
 ├── AGENTS.md                              # Agent architecture, invariants, anti-patterns
 ├── CLAUDE.md                              # Claude Code project context
 ├── README.md                              # This file
+├── QUICK_START.md                         # 10-minute setup guide (standalone)
+├── RUNBOOK.md                             # Template operations reference
+├── CHANGELOG.md                           # Semantic versioning changelog
+├── LICENSE                                # MIT License
 ├── SECURITY.md                            # Vulnerability reporting policy
 ├── CONTRIBUTING.md                        # Contribution guidelines
 ├── CODE_OF_CONDUCT.md                     # Contributor Covenant v2.0
-├── CHANGELOG.md                           # Semantic versioning changelog
 ├── Makefile                               # Contributor DX: validate-templates, lint-all, demo-minimal
+├── docker-compose.yml                     # Local dev: example API + MLflow (docker compose up)
+├── pyproject.toml                         # Root project config (pytest, coverage, black, isort)
 ├── .pre-commit-config.yaml               # Contributor pre-commit hooks (black, isort, flake8, gitleaks)
 ├── .gitleaks.toml                         # Secret detection config (shared root + templates/)
 ├── .gitattributes                         # Git LFS + line ending config
+│
+├── releases/                              # GitHub Release notes (copy to Releases page)
+│   ├── v1.0.0.md
+│   ├── v1.1.0.md
+│   └── v1.2.0.md
 │
 ├── .github/                               # GitHub community health files
 │   ├── ISSUE_TEMPLATE/                    #   Bug report + feature request templates
@@ -261,6 +283,13 @@ ML-MLOps-Production-Template/
 │   ├── 03-kubernetes.md                   #   paths: k8s/**/*.yaml
 │   ├── 04-terraform.md                    #   paths: **/*.tf
 │   └── 05-examples.md                     #   paths: examples/**/*
+│
+├── .cursor/rules/                         # Cursor IDE rules (globs: frontmatter)
+│   ├── 01-mlops-conventions.mdc           #   Session protocol, full D-01→D-12
+│   ├── 02-kubernetes.mdc                  #   K8s: 1 worker, CPU HPA, init container
+│   ├── 03-python-serving.mdc              #   Async inference, SHAP, Prometheus
+│   ├── 04-python-training.mdc             #   Pipeline, quality gates, tests
+│   └── 05-docker.mdc                      #   Multi-stage, non-root, no model
 │
 ├── .windsurf/                             # Agentic system configuration (Windsurf Cascade)
 │   ├── rules/                             # 10 behavioral constraint files
@@ -296,6 +325,14 @@ ML-MLOps-Production-Template/
 │       ├── new-service.md                 #   /new-service
 │       └── cost-review.md                 #   /cost-review
 │
+├── examples/minimal/                      # Working fraud detection demo (5 min)
+│   ├── train.py                           #   Synthetic data + train + quality gates
+│   ├── serve.py                           #   FastAPI + async inference + SHAP + Prometheus
+│   ├── test_service.py                    #   Leakage, SHAP, latency, fairness tests
+│   ├── drift_check.py                     #   PSI drift detection demo
+│   ├── Dockerfile                         #   For docker-compose.yml demo
+│   └── requirements.txt                   #   Minimal dependencies
+│
 └── templates/                             # Production scaffolding templates
     ├── service/                           # Complete ML service boilerplate
     │   ├── app/                           #   FastAPI serving layer
@@ -307,10 +344,13 @@ ML-MLOps-Production-Template/
     │   │   ├── monitoring/                #     drift_detection.py, business_kpis.py
     │   │   └── schemas.py                 #     Pandera DataFrameModel
     │   ├── tests/                         #   test_training.py, test_api.py, test_explainer.py
+    │   ├── dvc.yaml                       #   DVC pipeline template (validate → featurize → train → evaluate)
+    │   ├── .dvc/config                    #   DVC remote config (GCS/S3)
+    │   ├── codecov.yml                    #   Codecov config template
     │   ├── Dockerfile                     #   Multi-stage, non-root, HEALTHCHECK
     │   ├── .dockerignore                  #   Excludes models, data, tests
     │   ├── requirements.txt               #   Pinned with ~= (compatible release)
-    │   ├── pyproject.toml                 #   Modern Python project config (alternative)
+    │   ├── pyproject.toml                 #   Modern Python project config
     │   └── README.md                      #   Service-specific documentation
     │
     ├── common_utils/                      # Shared utility library
@@ -319,6 +359,13 @@ ML-MLOps-Production-Template/
     │   ├── logging.py                     #   JSON (prod) + human-readable (dev) logging
     │   ├── model_persistence.py           #   joblib save/load with SHA256 integrity
     │   └── telemetry.py                   #   OpenTelemetry tracing (optional)
+    │
+    ├── tests/                             # Test templates
+    │   ├── integration/                   #   Integration tests
+    │   │   ├── conftest.py                #     Service health wait + fixtures
+    │   │   └── test_service_integration.py #   Health, predict, SHAP, latency SLA
+    │   └── infra/policies/                #   OPA/Conftest policies
+    │       └── kubernetes.rego            #     Security + ML anti-pattern enforcement
     │
     ├── k8s/                               # Kubernetes manifest templates
     │   ├── base/                          #   Kustomize base (all manifests here)
@@ -330,21 +377,16 @@ ML-MLOps-Production-Template/
     │   │   ├── serviceaccount.yaml        #     Workload Identity / IRSA annotations
     │   │   ├── networkpolicy.yaml         #     Ingress/egress traffic restrictions
     │   │   ├── rbac.yaml                  #     Role + RoleBinding (least privilege)
+    │   │   ├── slo-prometheusrule.yaml    #     SLO/SLA definitions (availability, latency, error budget)
     │   │   └── argo-rollout.yaml          #     Canary deployment + AnalysisTemplate
     │   └── overlays/                      #   Environment-specific patches
     │       ├── gcp-production/            #     GKE: Artifact Registry, Workload Identity
     │       └── aws-production/            #     EKS: ECR, IRSA
     │
-    ├── infra/terraform/                   # Multi-cloud infrastructure
-    │   ├── gcp/                           #   GKE cluster, GCS buckets, Artifact Registry
-    │   │   ├── main.tf
-    │   │   ├── compute.tf
-    │   │   ├── storage.tf
-    │   │   └── variables.tf
-    │   └── aws/                           #   EKS cluster, OIDC, IAM roles
-    │       ├── main.tf
-    │       ├── compute.tf
-    │       └── variables.tf
+    ├── infra/                             # Infrastructure templates
+    │   ├── terraform/gcp/                 #   GKE cluster, GCS buckets, Artifact Registry
+    │   ├── terraform/aws/                 #   EKS cluster, OIDC, IAM roles
+    │   └── docker-compose.mlflow.yml      #   MLflow + PostgreSQL + MinIO (local tracking)
     │
     ├── cicd/                              # GitHub Actions workflow templates
     │   ├── ci.yml                         #   Lint + Test + Build + Scan
@@ -363,6 +405,8 @@ ML-MLOps-Production-Template/
     ├── docs/                              # Documentation templates
     │   ├── decisions/adr-template.md      #   ADR with Options, Rationale, Revisit When
     │   ├── runbooks/runbook-template.md   #   P1–P4 incident response procedures
+    │   ├── CHECKLIST_RELEASE.md           #   Pre-deployment release checklist
+    │   ├── mkdocs.yml                     #   MkDocs Material config template
     │   ├── service-readme-template.md     #   Service README with measured data slots
     │   ├── model-card-template.md         #   ML transparency model card
     │   └── dependency-analysis-template.md#   Dependency conflict documentation
@@ -378,13 +422,6 @@ ML-MLOps-Production-Template/
     ├── .pre-commit-config.yaml            # black, isort, flake8, mypy, bandit, gitleaks
     ├── .gitleaks.toml                     # Secret detection config
     └── .env.example                       # Environment variable documentation
-│
-├── examples/minimal/                      # Working fraud detection demo (5 min)
-│   ├── train.py                           #   Synthetic data + train + quality gates
-│   ├── serve.py                           #   FastAPI + async inference + SHAP + Prometheus
-│   ├── test_service.py                    #   Leakage, SHAP, latency, fairness tests
-│   ├── drift_check.py                     #   PSI drift detection demo
-│   └── requirements.txt                   #   Minimal dependencies
 ```
 
 ---
@@ -539,6 +576,8 @@ A complete, production-ready ML service with:
 - **Tests** for data leakage, quality gates, API endpoints, SHAP consistency, latency SLA
 - **Load tests** with Locust (100 concurrent users, < 1% error rate)
 - **`pyproject.toml`** for modern Python tooling (alternative to `requirements.txt`)
+- **DVC pipeline** (`dvc.yaml`) with validate → featurize → train → evaluate stages
+- **DVC config** (`.dvc/config`) with GCS/S3 remote storage setup
 
 ### Common Utils (`templates/common_utils/`)
 
@@ -559,6 +598,7 @@ Reusable shared library for all ML services:
 - **NetworkPolicy** restricting ingress (nginx + Prometheus) and egress (DNS, MLflow, cloud storage)
 - **RBAC** Role + RoleBinding with least-privilege access (read ConfigMaps/Secrets only)
 - **Kustomize overlays** for GCP (Artifact Registry, Workload Identity) and AWS (ECR, IRSA)
+- **SLO/SLA PrometheusRule** — availability (99.5%), latency P95, error budget burn rate alerts
 - **Argo Rollouts** canary deployment with Prometheus-based analysis (error rate, P95 latency)
 
 ### Scripts (`templates/scripts/`)
@@ -567,10 +607,20 @@ Reusable shared library for all ML services:
 - **`promote_model.sh`** — Run quality gates (metric threshold, fairness, leakage, integrity) before promotion
 - **`health_check.sh`** — Quick pod status and /health + /model/info endpoint check
 
-### Terraform Templates (`templates/infra/`)
+### Integration Tests (`templates/tests/integration/`)
+
+- **`conftest.py`** — Service health wait fixture, auto-skip if service unavailable
+- **`test_service_integration.py`** — Full service validation: health, predictions, SHAP, latency SLA, metrics
+
+### OPA/Conftest Policies (`templates/tests/infra/policies/`)
+
+- **`kubernetes.rego`** — 12 policy rules: non-root, resource limits/requests, health probes, no `:latest`, namespace, app label, HPA scaleDown + ML-specific D-01 (no multi-worker) and D-02 (no memory HPA) enforcement
+
+### Terraform & Infrastructure (`templates/infra/`)
 
 - **GCP**: GKE cluster with Workload Identity, node pool autoscaling, GCS buckets (models, data, MLflow, logs), Artifact Registry
 - **AWS**: EKS cluster with OIDC for IRSA, managed node group, IAM roles and policies
+- **`docker-compose.mlflow.yml`** — Production-like MLflow with PostgreSQL + MinIO (S3-compatible) for local development
 
 ### CI/CD Templates (`templates/cicd/`)
 
@@ -586,6 +636,8 @@ Reusable shared library for all ML services:
 - **Runbook template**: P1–P4 severity procedures with `kubectl` commands
 - **Service README**: Measured latency tables, drift thresholds, cost breakdown, resource profile
 - **Model card**: ML transparency document (intended use, metrics, fairness, limitations)
+- **Release checklist**: Pre-deployment verification (quality gates, Docker, K8s, infra, monitoring)
+- **MkDocs config**: MkDocs Material template with navigation, plugins, and theme ready to use
 - **Dependency analysis**: Known conflicts, resolution strategies, CVE tracking
 
 ### Monitoring Templates (`templates/monitoring/`)
@@ -629,12 +681,11 @@ prevent the most common production failures.
 
 ## Documentation at Scale (MkDocs)
 
-This README is intentionally comprehensive, but for larger teams you should move long-form
-documentation (architecture deep-dives, operations guides, incident runbooks) into a versioned
-docs site.
+For larger teams, move long-form documentation into a versioned docs site:
 
-- **Recommended**: MkDocs Material + GitHub Pages
-- **Reference**: see `mkdocs.yml` in the portfolio repo for a working example
+- **Template**: [`templates/docs/mkdocs.yml`](templates/docs/mkdocs.yml) — MkDocs Material config ready to use
+- **Setup**: `pip install mkdocs-material mkdocstrings[python] mkdocs-mermaid2-plugin`
+- **Reference**: see `mkdocs.yml` in the [portfolio repo](https://github.com/DuqueOM/ML-MLOps-Portfolio) for a working example with 17 ADRs
 
 ---
 

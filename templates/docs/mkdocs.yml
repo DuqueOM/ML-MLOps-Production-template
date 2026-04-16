@@ -1,0 +1,106 @@
+# MkDocs Configuration — {ServiceName}
+# Generate a documentation site with MkDocs Material.
+#
+# Setup:
+#   pip install mkdocs-material mkdocstrings[python] mkdocs-mermaid2-plugin
+#
+# Usage:
+#   mkdocs serve           # Local preview at http://localhost:8000
+#   mkdocs build           # Build static site to site/
+#   mkdocs gh-deploy       # Deploy to GitHub Pages
+#
+# TODO: Replace {ServiceName}, {service}, author info, and URLs.
+
+site_name: "{ServiceName} Documentation"
+site_description: "{ServiceName} — ML prediction service documentation"
+site_author: "Your Name"
+site_url: "https://your-org.github.io/{service}/"
+
+repo_name: "your-org/{service}"
+repo_url: "https://github.com/your-org/{service}"
+
+theme:
+  name: material
+  language: en
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.tabs.link
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  icon:
+    repo: fontawesome/brands/github
+
+plugins:
+  - search
+  - mermaid2
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: google
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - pymdownx.details
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Getting Started:
+      - Quick Start: getting-started/quickstart.md
+      - Installation: getting-started/installation.md
+  - Architecture:
+      - Overview: architecture/overview.md
+      - Decisions (ADRs): architecture/decisions.md
+  - API Reference:
+      - REST API: api/rest-api.md
+  - Operations:
+      - Deployment: operations/deployment.md
+      - Monitoring: operations/monitoring.md
+      - Runbook: operations/runbook.md
+  - Models:
+      - Model Card: models/model-card.md
+      - Drift Detection: models/drift.md
+  - Reference:
+      - Changelog: CHANGELOG.md
+      - Contributing: contributing.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github-alt
+      link: https://github.com/your-org
+
+watch:
+  - docs

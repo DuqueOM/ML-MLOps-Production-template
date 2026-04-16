@@ -1,0 +1,123 @@
+# SLO/SLA PrometheusRule — {ServiceName}
+# Defines Service Level Objectives as Prometheus recording and alerting rules.
+#
+# SLOs encode the contract between the ML service and its consumers:
+#   - Availability: >= 99.5% of requests succeed (non-5xx)
+#   - Latency: >= 95% of requests complete within 500ms (P95)
+#   - Prediction quality: Drift PSI stays below alert threshold
+#
+# These rules create:
+#   1. Recording rules for SLI (Service Level Indicator) calculations
+#   2. Alerting rules for SLO burn rate (multi-window)
+#
+# TODO: Replace {service} with your service name.
+# TODO: Adjust SLO targets based on your service's requirements.
+# TODO: Apply to cluster: kubectl apply -f slo-prometheusrule.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: "{service}-slo"
+  namespace: ml-services
+  labels:
+    app: "{service}"
+    role: slo
+    managed-by: kustomize
+spec:
+  groups:
+    # ─────────────────────────────────────────────
+    # Recording Rules — SLI calculations
+    # ─────────────────────────────────────────────
+    - name: "{service}.slo.recording"
+      interval: 30s
+      rules:
+        # Availability SLI: ratio of successful requests (non-5xx)
+        - record: "{service}:sli:availability"
+          expr: |
+            1 - (
+              sum(rate(http_requests_total{service="{service}", status=~"5.."}[5m]))
+              /
+              sum(rate(http_requests_total{service="{service}"}[5m]))
+            )
+
+        # Latency SLI: ratio of requests within 500ms
+        - record: "{service}:sli:latency_500ms"
+          expr: |
+            sum(rate(http_request_duration_seconds_bucket{service="{service}", le="0.5"}[5m]))
+            /
+            sum(rate(http_request_duration_seconds_count{service="{service}"}[5m]))
+
+        # Error budget remaining (30-day window)
+        - record: "{service}:error_budget:availability"
+          expr: |
+            1 - (
+              (1 - {service}:sli:availability)
+              /
+              (1 - 0.995)
+            )
+
+    # ─────────────────────────────────────────────
+    # Alerting Rules — SLO violations (multi-window burn rate)
+    # ─────────────────────────────────────────────
+    - name: "{service}.slo.alerts"
+      rules:
+        # P1 — Fast burn: >14.4x error budget consumption (1h window)
+        # 2% of monthly budget burned in 1 hour → page immediately
+        - alert: "{SERVICE}_SLO_AvailabilityBurnRateCritical"
+          expr: |
+            (
+              sum(rate(http_requests_total{service="{service}", status=~"5.."}[1h]))
+              /
+              sum(rate(http_requests_total{service="{service}"}[1h]))
+            ) > (14.4 * 0.005)
+          for: 2m
+          labels:
+            severity: P1
+            service: "{service}"
+            slo: availability
+          annotations:
+            summary: "{ServiceName} SLO: availability burn rate critical (>14.4x)"
+            description: "Error rate is consuming availability budget at >14.4x — immediate action required."
+            runbook_url: "https://your-org.github.io/{service}/operations/runbook/#p1-service-down"
+
+        # P2 — Slow burn: >6x error budget consumption (6h window)
+        - alert: "{SERVICE}_SLO_AvailabilityBurnRateHigh"
+          expr: |
+            (
+              sum(rate(http_requests_total{service="{service}", status=~"5.."}[6h]))
+              /
+              sum(rate(http_requests_total{service="{service}"}[6h]))
+            ) > (6 * 0.005)
+          for: 5m
+          labels:
+            severity: P2
+            service: "{service}"
+            slo: availability
+          annotations:
+            summary: "{ServiceName} SLO: availability burn rate high (>6x)"
+            description: "Error rate is consuming availability budget at >6x over 6h window."
+
+        # P2 — Latency SLO violation
+        - alert: "{SERVICE}_SLO_LatencyBudgetBurning"
+          expr: |
+            {service}:sli:latency_500ms < 0.95
+          for: 10m
+          labels:
+            severity: P2
+            service: "{service}"
+            slo: latency
+          annotations:
+            summary: "{ServiceName} SLO: <95% of requests within 500ms latency target"
+            description: "P95 latency SLO is being violated — fewer than 95% of requests complete within 500ms."
+
+        # P3 — Error budget low (< 25% remaining)
+        - alert: "{SERVICE}_SLO_ErrorBudgetLow"
+          expr: |
+            {service}:error_budget:availability < 0.25
+          for: 30m
+          labels:
+            severity: P3
+            service: "{service}"
+            slo: error_budget
+          annotations:
+            summary: "{ServiceName} SLO: error budget below 25%"
+            description: "Less than 25% of the monthly availability error budget remains."

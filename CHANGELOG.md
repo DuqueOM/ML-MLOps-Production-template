@@ -6,6 +6,80 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
 
 ---
 
+## [1.3.0] - 2026-04-16
+
+### Added
+
+#### Standalone Documentation (root)
+- **`QUICK_START.md`** — 10-minute setup guide: Option A (example demo), Option B (scaffold service), Option C (full MLflow stack)
+- **`RUNBOOK.md`** — Template operations reference: scaffolding, validation, MLflow, contributing, release process
+- **`LICENSE`** — MIT License (was referenced in README but file was missing)
+- **`docker-compose.yml`** — Local dev stack: example fraud detection API + MLflow (one command: `docker compose up`)
+- **`releases/`** — GitHub Release notes directory: `v1.0.0.md`, `v1.1.0.md`, `v1.2.0.md` ready to publish
+
+#### DVC Templates (new)
+- **`templates/service/dvc.yaml`** — DVC pipeline with 4 stages: validate → featurize → train → evaluate
+- **`templates/service/.dvc/config`** — DVC remote configuration template for GCS/S3 storage
+
+#### Infrastructure (from portfolio)
+- **`templates/infra/docker-compose.mlflow.yml`** — Production-like MLflow stack: PostgreSQL + MinIO (S3-compatible) + MLflow server with health checks
+
+#### Documentation Templates (new)
+- **`templates/docs/CHECKLIST_RELEASE.md`** — Pre-deployment release checklist: quality gates, Docker, K8s, infra, monitoring, multi-cloud
+- **`templates/docs/mkdocs.yml`** — MkDocs Material configuration template with navigation, plugins, theme, and docstring support
+
+#### Integration Test Templates (new)
+- **`templates/tests/integration/conftest.py`** — Service health wait fixture, auto-skip if unavailable
+- **`templates/tests/integration/test_service_integration.py`** — Full service validation: health, predictions, SHAP, latency SLA, metrics, model info
+
+#### Enterprise K8s & Security (new)
+- **`templates/tests/infra/policies/kubernetes.rego`** — OPA/Conftest policies (ported from portfolio): non-root, resource limits, health probes, no :latest, namespace, HPA scaleDown + ML-specific D-01/D-02 enforcement
+- **`templates/k8s/base/slo-prometheusrule.yaml`** — SLO/SLA definitions as PrometheusRule:
+  - Availability SLI (99.5% non-5xx), Latency SLI (95% < 500ms)
+  - Error budget recording rules (30-day window)
+  - Multi-window burn rate alerts: P1 (14.4x/1h), P2 (6x/6h), P3 (budget < 25%)
+
+#### Service Template Additions
+- **`templates/service/codecov.yml`** — Codecov configuration template with per-service coverage flags
+
+#### Example Improvements
+- **`examples/minimal/Dockerfile`** — Docker image for the fraud detection example (used by root docker-compose.yml)
+
+### Changed
+
+#### README — Major Restructure
+- **Concise hook at top** — Problem statement + differentiator in 3 lines, replacing verbose intro
+- **Quick Navigation** — Replaced bullet list with 3-column table (Getting Started | Architecture | Development)
+- **Quick Start** — Removed manual `sed -i` commands, now uses `new-service.sh` exclusively (fixes inconsistency with CHANGELOG v1.1.0)
+- **"Try It in 5 Minutes"** — Added `make demo-minimal` one-liner and Docker Compose alternative
+- **Repository Structure** — Updated tree with all new files: QUICK_START.md, RUNBOOK.md, LICENSE, docker-compose.yml, releases/, DVC, integration tests, SLO, mkdocs, checklist, MLflow compose
+- **Templates Detail** — Added sections for DVC, integration tests, SLO, MLflow, release checklist, MkDocs
+- **MkDocs section** — Now references `templates/docs/mkdocs.yml` template instead of just the portfolio
+- Added links to QUICK_START.md and RUNBOOK.md at top of README
+
+#### AGENTS.md
+- Updated Template System tree with DVC, pyproject.toml, integration tests, SLO, MLflow compose, mkdocs, checklist
+
+#### CLAUDE.md
+- Updated File Structure with all new files and directories
+
+#### `new-service.sh`
+- Added DVC template copying step
+- Added integration test template copying
+- Added `data/validated/`, `data/processed/`, `reports/` to standard directories
+
+### Notes
+
+#### Claude-code-main Assessment
+- Evaluated `/home/duque_om/projects/Claude-code-main` — TypeScript CLI rebuild of Claude Code, **no reusable content** for this MLOps template
+
+#### Enterprise Gap Assessment
+- **Already present**: RBAC (`rbac.yaml`), NetworkPolicy (`networkpolicy.yaml`), Workload Identity / IRSA
+- **Added in v1.3.0**: SLO/SLA PrometheusRule
+- **Still missing** (tracked for future): External Secrets Operator templates, multi-tenancy considerations. These are deferred per the Engineering Calibration Principle — they add complexity beyond the template's target scale.
+
+---
+
 ## [1.2.0] - 2026-04-15
 
 ### Added

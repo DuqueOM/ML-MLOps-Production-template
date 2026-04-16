@@ -1,0 +1,70 @@
+# docker-compose.yml — Local development for the template itself
+# Runs the minimal example + MLflow so visitors can see the template working.
+#
+# Usage:
+#   docker compose up --build         # Start example + MLflow
+#   docker compose down               # Stop
+#   docker compose down -v            # Stop + remove volumes
+#
+# Access:
+#   Example API:   http://localhost:8000/docs
+#   MLflow UI:     http://localhost:5000
+
+services:
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:latest
+    container_name: template-mlflow
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlflow-data:/mlflow
+    environment:
+      - MLFLOW_BACKEND_STORE_URI=sqlite:///mlflow/mlflow.db
+      - MLFLOW_DEFAULT_ARTIFACT_ROOT=/mlflow/artifacts
+    command: >
+      mlflow server
+      --backend-store-uri sqlite:///mlflow/mlflow.db
+      --default-artifact-root /mlflow/artifacts
+      --host 0.0.0.0
+      --port 5000
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - template-network
+
+  example-api:
+    build:
+      context: .
+      dockerfile: examples/minimal/Dockerfile
+    container_name: template-example-api
+    ports:
+      - "8000:8000"
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - LOG_FORMAT=json
+      - LOG_LEVEL=INFO
+    depends_on:
+      mlflow:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 45s
+    networks:
+      - template-network
+    restart: unless-stopped
+
+volumes:
+  mlflow-data:
+    driver: local
+
+networks:
+  template-network:
+    driver: bridge
+    name: ml-template-dev-network

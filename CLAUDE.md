@@ -91,15 +91,22 @@ kustomize build templates/k8s/base/ > /dev/null
 ```
 AGENTS.md              → Full architecture, invariants, anti-patterns (canonical source)
 CLAUDE.md              → This file (Claude Code context)
+QUICK_START.md         → 10-minute setup guide (standalone)
+RUNBOOK.md             → Template operations reference
+LICENSE                → MIT License
+docker-compose.yml     → Local dev: example API + MLflow
 templates/
-├── service/           → FastAPI + training + tests + Dockerfile
-├── k8s/base/          → Deployment, HPA, Service, Kustomize
-├── infra/             → Terraform GCP + AWS
+├── service/           → FastAPI + training + tests + Dockerfile + DVC pipeline
+├── tests/integration/ → Integration test templates (health, predict, latency SLA)
+├── k8s/base/          → Deployment, HPA, Service, SLO PrometheusRule, Kustomize
+├── infra/             → Terraform GCP + AWS, docker-compose.mlflow.yml
 ├── cicd/              → GitHub Actions workflows
 ├── scripts/           → new-service.sh, deploy.sh, promote_model.sh
+├── docs/              → ADR, runbook, model card, mkdocs.yml, CHECKLIST_RELEASE.md
 ├── monitoring/        → AlertManager rules, Grafana dashboards, Prometheus
 └── common_utils/      → seed, logging, model_persistence, telemetry
 examples/minimal/      → Working fraud detection demo (5 min)
+releases/              → GitHub Release notes (v1.0.0, v1.1.0, v1.2.0)
 .claude/rules/         → Context-aware rules (this IDE, paths: globs)
 .windsurf/             → Rules, skills, workflows (Windsurf Cascade)
 .cursor/rules/         → Cursor IDE rules

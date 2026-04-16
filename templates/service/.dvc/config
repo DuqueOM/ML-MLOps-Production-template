@@ -1,0 +1,20 @@
+# DVC Configuration — {ServiceName}
+# Remote storage for data and model artifacts.
+#
+# After scaffolding, configure your remote:
+#   dvc remote modify storage url gs://your-bucket/dvc/{service}    # GCP
+#   dvc remote modify storage url s3://your-bucket/dvc/{service}    # AWS
+#
+# For authentication:
+#   GCP: Uses Application Default Credentials or Workload Identity
+#   AWS: Uses IAM role (IRSA in K8s) or ~/.aws/credentials
+#
+# TODO: Replace the placeholder URL with your actual bucket.
+
+[core]
+    remote = storage
+    autostage = true
+
+[remote "storage"]
+    # GCP (default — change to s3:// for AWS)
+    url = gs://your-project-ml-data/dvc/{service}
