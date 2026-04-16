@@ -1,7 +1,7 @@
 # ML-MLOps-Production-Template
 
 > Agent-driven template for production ML systems.
-> Version: v1.3.1 | License: MIT | Author: DuqueOM
+> Version: v1.3.0 | License: MIT | Author: DuqueOM
 
 ## What this is
 A complete, opinionated MLOps template for shipping ML models to production.
@@ -14,7 +14,7 @@ Scope: classical ML (scikit-learn, XGBoost, LightGBM). Not LLM/GenAI.
 - CLAUDE.md: Claude Code project context (stack, invariants, file structure)
 - QUICK_START.md: 10-minute onboarding (example, scaffold, MLflow)
 - RUNBOOK.md: Operations reference (scaffolding, secrets, MLflow, releases)
-- CHANGELOG.md: Full version history (v1.0.0 → v1.3.1)
+- CHANGELOG.md: Full version history (v1.0.0 → v1.3.0)
 - docs/decisions/ADR-001-template-scope-boundaries.md: Why LLM/multi-tenancy/Vault/feature-store deferred
 
 ## Agentic system
@@ -65,4 +65,4 @@ Scope: classical ML (scikit-learn, XGBoost, LightGBM). Not LLM/GenAI.
 - DIR >= 0.80 fairness gate before every model promotion
 
 ## Releases
-v1.3.1 (latest), v1.3.0, v1.2.0, v1.1.0, v1.0.0
+v1.3.0 (latest), v1.2.0, v1.1.0, v1.0.0
