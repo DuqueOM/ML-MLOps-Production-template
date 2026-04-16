@@ -261,8 +261,8 @@ Install only MCPs that change agent capabilities for this stack. Skip MCPs for t
       }
     },
     "kubectl-mcp-server": {
-      "command": "npx",
-      "args": ["-y", "kubectl-mcp-server@latest"],
+      "command": "/path/to/envs/ml/bin/kubectl-mcp-serve",
+      "args": ["serve", "--transport", "stdio", "--read-only"],
       "env": {}
     },
     "terraform-mcp-server": {
