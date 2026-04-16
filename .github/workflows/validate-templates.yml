@@ -145,8 +145,8 @@ jobs:
           import json
           m = json.load(open('artifacts/metrics.json'))
           assert m['roc_auc'] >= 0.65, f'ROC-AUC {m[\"roc_auc\"]} < 0.65'
-          assert m['f1'] >= 0.40, f'F1 {m[\"f1\"]} < 0.40'
-          print(f'✓ Quality gates passed: ROC-AUC={m[\"roc_auc\"]:.4f}, F1={m[\"f1\"]:.4f}')
+          assert m['f1_score'] >= 0.40, f'F1 {m[\"f1_score\"]} < 0.40'
+          print(f'✓ Quality gates passed: ROC-AUC={m[\"roc_auc\"]:.4f}, F1={m[\"f1_score\"]:.4f}')
           "
 
   docker-lint:
