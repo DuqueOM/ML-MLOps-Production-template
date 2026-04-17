@@ -774,3 +774,9 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 ## AI Transparency
 
 This template uses AI-assisted coding agents for code generation and boilerplate. All architectural decisions, system design, trade-off analysis, and ADR documentation require human engineering judgment. AI tools accelerate throughput — they don't replace the engineer's responsibility to calibrate solutions to the right scale.
+
+---
+
+<p align="center">
+  <b>If this template saved you time, please give it a ⭐</b>
+</p>
