@@ -12,6 +12,7 @@
 #   make test-examples     # Run example regression tests
 
 .PHONY: help install-dev lint-all format-all validate-templates \
+        validate-agentic bootstrap \
         demo-minimal test-examples clean
 
 # Colors
@@ -37,6 +38,12 @@ install-dev: ## Install contributor tools + pre-commit hooks
 	pip install -r examples/minimal/requirements.txt
 	pre-commit install
 	@echo "$(GREEN)✓ Contributor environment ready$(NC)"
+
+bootstrap: ## One-command setup: detect OS, install deps, configure MCPs, run example
+	@bash scripts/bootstrap.sh
+
+bootstrap-check: ## Verify required tooling is installed (no install, no changes)
+	@bash scripts/bootstrap.sh --check-only
 
 # ═══════════════════════════════════════════════
 # Quality
@@ -77,7 +84,11 @@ validate-tf: ## Validate Terraform syntax
 		echo "$(YELLOW)⚠ terraform not installed, skipping$(NC)"; \
 	fi
 
-validate-templates: lint-all validate-k8s ## Validate all templates (lint + K8s)
+validate-agentic: ## Validate agentic system (rules, skills, workflows, AGENTS.md refs)
+	@echo "$(GREEN)Validating agentic system...$(NC)"
+	python3 scripts/validate_agentic.py
+
+validate-templates: lint-all validate-k8s validate-agentic ## Validate all templates (lint + K8s + agentic)
 	@echo "$(GREEN)✓ All templates validated$(NC)"
 
 # ═══════════════════════════════════════════════

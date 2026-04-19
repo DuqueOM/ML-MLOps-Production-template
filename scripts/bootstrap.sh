@@ -176,24 +176,31 @@ fi
 # ═══════════════════════════════════════════════════════════
 # 7. Summary
 # ═══════════════════════════════════════════════════════════
+if [[ "$CHECK_ONLY" == "true" ]]; then
+  header "Check complete"
+  echo -e "${GREEN}All required tooling is present.${NC}"
+  echo ""
+  echo "To finish setup, run: make bootstrap"
+  exit 0
+fi
+
 header "Ready!"
-cat <<EOF
-
-${GREEN}Your ML-MLOps template is ready to use.${NC}
-
-Next steps:
-  1. Create a new service:
-     ${YELLOW}make new-service NAME=MyService SLUG=my_service${NC}
-
-  2. Run the example end-to-end:
-     ${YELLOW}make demo-minimal${NC}
-
-  3. Validate the agentic system:
-     ${YELLOW}make validate-agentic${NC}
-
-  4. Read the docs:
-     - Quick start: ${BLUE}QUICK_START.md${NC}
-     - Agentic system: ${BLUE}AGENTS.md${NC}
-     - Scope decisions: ${BLUE}docs/decisions/ADR-001-template-scope-boundaries.md${NC}
-
-EOF
+echo ""
+echo -e "${GREEN}Your ML-MLOps template is ready to use.${NC}"
+echo ""
+echo "Next steps:"
+echo "  1. Create a new service:"
+echo -e "     ${YELLOW}make new-service NAME=MyService SLUG=my_service${NC}"
+echo ""
+echo "  2. Run the example end-to-end:"
+echo -e "     ${YELLOW}make demo-minimal${NC}"
+echo ""
+echo "  3. Validate the agentic system:"
+echo -e "     ${YELLOW}make validate-agentic${NC}"
+echo ""
+echo "  4. Read the docs:"
+echo -e "     - Quick start:    ${BLUE}QUICK_START.md${NC}"
+echo -e "     - Agentic system: ${BLUE}AGENTS.md${NC}"
+echo -e "     - Scope:          ${BLUE}docs/decisions/ADR-001-template-scope-boundaries.md${NC}"
+echo -e "     - Governance:     ${BLUE}docs/decisions/ADR-002-model-promotion-governance.md${NC}"
+echo ""

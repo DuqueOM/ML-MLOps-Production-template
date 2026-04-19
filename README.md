@@ -68,13 +68,18 @@ A working fraud detection service that demonstrates the entire pipeline:
 git clone https://github.com/DuqueOM/ML-MLOps-Production-Template.git
 cd ML-MLOps-Production-Template
 
-# One-command demo (install → train → test → drift)
+# Zero-to-ready in one command (detects OS, installs deps, configures MCPs, runs example)
+make bootstrap
+
+# Or just the demo (install → train → test → drift)
 make demo-minimal
 
 # Or with Docker (API + MLflow)
 docker compose up --build
 # API: http://localhost:8000/docs | MLflow: http://localhost:5000
 ```
+
+> `make bootstrap` is idempotent and safe to re-run. Flags: `--skip-mcp`, `--skip-demo`, `--check-only`.
 
 Or step by step:
 
