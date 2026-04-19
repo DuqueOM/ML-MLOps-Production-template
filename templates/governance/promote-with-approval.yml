@@ -1,0 +1,123 @@
+name: Promote Model with Approval
+
+# Governance workflow: promote a model version from Staging → Production.
+# Requires an approver configured on the 'production' GitHub Environment.
+#
+# Usage:
+#   Actions tab → "Promote Model with Approval" → Run workflow
+#     model-name: fraud_detector
+#     version: 42
+#
+# Prerequisite: the model version must already be in MLflow stage 'Staging'.
+
+on:
+  workflow_dispatch:
+    inputs:
+      model-name:
+        description: "MLflow registered model name"
+        required: true
+        type: string
+      version:
+        description: "Model version number to promote"
+        required: true
+        type: string
+      reason:
+        description: "Promotion reason (audit trail)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  deployments: write
+
+jobs:
+  verify-staging:
+    name: Verify model is in Staging
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install MLflow client
+        run: pip install "mlflow~=2.0"
+
+      - name: Check model is in Staging
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+        run: |
+          python - <<'PY'
+          import os, sys
+          import mlflow
+          from mlflow.tracking import MlflowClient
+
+          client = MlflowClient()
+          name = "${{ inputs.model-name }}"
+          version = "${{ inputs.version }}"
+          mv = client.get_model_version(name, version)
+          if mv.current_stage != "Staging":
+              print(f"✗ Model {name} v{version} is in '{mv.current_stage}', expected 'Staging'")
+              sys.exit(1)
+          print(f"✓ {name} v{version} is in Staging — eligible for promotion")
+          PY
+
+  promote-to-production:
+    name: Promote to Production (requires approval)
+    needs: verify-staging
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      # The 'production' Environment must be configured with required_reviewers.
+      # See templates/governance/github-environments.yml
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install MLflow client
+        run: pip install "mlflow~=2.0"
+
+      - name: Transition to Production
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+        run: |
+          python - <<'PY'
+          from mlflow.tracking import MlflowClient
+
+          client = MlflowClient()
+          name = "${{ inputs.model-name }}"
+          version = "${{ inputs.version }}"
+          reason = """${{ inputs.reason }}"""
+
+          # Archive any existing Production version first (atomic swap)
+          client.transition_model_version_stage(
+              name=name,
+              version=version,
+              stage="Production",
+              archive_existing_versions=True,
+          )
+
+          # Audit trail: add promotion reason as a tag
+          client.set_model_version_tag(name, version, "promoted_by",
+                                        "${{ github.actor }}")
+          client.set_model_version_tag(name, version, "promotion_reason", reason)
+          client.set_model_version_tag(name, version, "promoted_at",
+                                        "${{ github.event.repository.updated_at }}")
+
+          print(f"✓ {name} v{version} promoted to Production by ${{ github.actor }}")
+          PY
+
+      - name: Audit record
+        run: |
+          echo "## Model Promotion" >> $GITHUB_STEP_SUMMARY
+          echo "- Model: ${{ inputs.model-name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Version: ${{ inputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Promoted by: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Reason: ${{ inputs.reason }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_STEP_SUMMARY

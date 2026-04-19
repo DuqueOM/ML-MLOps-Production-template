@@ -1,0 +1,73 @@
+# GitHub Environments configuration (reference)
+#
+# This file documents the Environments you need to create manually in
+# GitHub Settings → Environments. GitHub does not yet support declarative
+# Environment config via a file in the repo — you must configure via UI
+# or via the REST API.
+#
+# Use this file as the source of truth for your Environments configuration,
+# and review PRs that change it.
+
+environments:
+  staging:
+    deployment_branch_policy:
+      protected_branches: false
+      custom_branch_policies: true
+      allowed_branches:
+        - main
+    required_reviewers: []   # Quality gates are enforced by CI, not humans
+    wait_timer_minutes: 0
+    secrets:
+      - MLFLOW_TRACKING_URI
+      - STAGING_KUBECONFIG
+    variables:
+      K8S_NAMESPACE: ml-services-staging
+      MLFLOW_STAGE_TARGET: Staging
+
+  production:
+    deployment_branch_policy:
+      protected_branches: true   # Only protected branches
+      custom_branch_policies: false
+    required_reviewers:
+      # At least one of these teams/users must approve
+      - team: ml-tech-leads
+      # Or individual users (pick the model that fits your org):
+      # - user: alice-techlead
+      # - user: bob-platformeng
+    wait_timer_minutes: 1440  # 24h soak in staging before production promotion
+    secrets:
+      - MLFLOW_TRACKING_URI
+      - PRODUCTION_KUBECONFIG
+    variables:
+      K8S_NAMESPACE: ml-services
+      MLFLOW_STAGE_TARGET: Production
+
+# ─────────────────────────────────────────────────────────────────
+# How to apply this configuration
+# ─────────────────────────────────────────────────────────────────
+#
+# Option A — GitHub UI (manual, recommended for most teams):
+#   1. Repository → Settings → Environments
+#   2. Click "New environment" → name: staging
+#   3. Configure per the 'staging' section above
+#   4. Repeat for 'production'
+#
+# Option B — REST API (for IaC workflows):
+#   See: https://docs.github.com/en/rest/deployments/environments
+#   Example:
+#     gh api -X PUT /repos/OWNER/REPO/environments/production \
+#       -f wait_timer=1440 \
+#       -F 'reviewers[][type]=Team' \
+#       -F 'reviewers[][id]=TEAM_ID'
+#
+# ─────────────────────────────────────────────────────────────────
+# Wait timer rationale
+# ─────────────────────────────────────────────────────────────────
+#
+# 24h wait in Staging forces a soak period. This catches:
+#   - Latency regressions under real traffic patterns
+#   - Memory leaks that only appear after hours of uptime
+#   - Drift-triggered alerts that fire on new predictions
+#
+# If your SLA permits, increase to 48h. If you ship faster than daily,
+# reduce to 4h but add an explicit Tech Lead approval gate.

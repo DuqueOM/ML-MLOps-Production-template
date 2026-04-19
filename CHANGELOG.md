@@ -6,6 +6,43 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
 
 ---
 
+## [1.4.0] - 2026-04-19
+
+### Added
+
+#### One-Command Bootstrap
+- **`scripts/bootstrap.sh`** — Detects OS (Linux/macOS/WSL), verifies required tools (Python 3.11+, Docker, kubectl, terraform, git, make), installs Python dependencies, configures MCPs interactively, installs pre-commit hooks, and validates by running the minimal example end-to-end. Idempotent; supports `--skip-mcp`, `--skip-demo`, `--check-only`.
+- **`scripts/_lib/detect_os.sh`** — OS detection helper
+- **`scripts/_lib/install_deps.sh`** — Python + system dependency installer
+- **`scripts/_lib/configure_mcp.sh`** — Interactive MCP configuration (github, git, kubectl-mcp-server, terraform-mcp-server)
+- **Makefile targets**: `make bootstrap`, `make bootstrap-check`
+
+#### Agentic System Validator
+- **`scripts/validate_agentic.py`** — Validates `.windsurf/` structure:
+  - Rule frontmatter (`trigger`, `description`, `globs`)
+  - Glob patterns match real files (catches dead rules)
+  - Skill `SKILL.md` contracts (`name`, `description`, `allowed-tools`)
+  - Workflow frontmatter
+  - AGENTS.md cross-references (no orphan skills/workflows)
+- **CI job**: `agentic-system` in `validate-templates.yml` runs on every PR
+- **Makefile target**: `make validate-agentic` (chained into `make validate-templates`)
+
+#### Governance Module (opt-in)
+- **`templates/governance/README.md`** — When/how to enable approval gates
+- **`templates/governance/ROLES.md`** — ML Engineer / Tech Lead / Platform Engineer responsibilities
+- **`templates/governance/github-environments.yml`** — GitHub Environments configuration reference (staging + production with `required_reviewers` and 24h soak)
+- **`templates/governance/promote-with-approval.yml`** — GitHub Actions workflow for Staging → Production promotion with MLflow stage transitions and audit tags
+- **`templates/governance/promote_to_stage.sh`** — CLI for MLflow Model Registry stage transitions with audit trail
+- **`docs/decisions/ADR-002-model-promotion-governance.md`** — Documents why governance is opt-in, why GitHub Environments + MLflow stages over custom infrastructure, and how it respects ADR-001
+
+### Changed
+
+#### Makefile (root)
+- `validate-templates` now includes `validate-agentic` step
+- Added `bootstrap`, `bootstrap-check`, `validate-agentic` as first-class targets
+
+---
+
 ## [1.3.0] - 2026-04-16
 
 ### Added
