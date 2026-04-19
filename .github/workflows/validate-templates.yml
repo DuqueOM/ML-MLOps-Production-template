@@ -181,4 +181,36 @@ jobs:
         run: |
           bash -n scripts/bootstrap.sh
           bash -n scripts/_lib/*.sh
+          bash -n scripts/test_scaffold.sh
           echo "✓ All shell scripts parse cleanly"
+
+  scaffold-e2e:
+    name: Scaffolder End-to-End Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install validation tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest
+
+      - name: Install kustomize
+        run: |
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+          sudo mv kustomize /usr/local/bin/
+          kustomize version
+
+      - name: Run scaffolder end-to-end test
+        # Executes templates/scripts/new-service.sh in a tmp dir, verifies:
+        # - zero unreplaced {ServiceName}/{service}/{SERVICE} placeholders
+        # - critical files + directories exist
+        # - all generated Python parses
+        # - both kustomize overlays render (GCP + AWS)
+        # - pytest can collect the scaffolded tests
+        run: bash scripts/test_scaffold.sh

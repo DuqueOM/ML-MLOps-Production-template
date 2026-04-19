@@ -88,7 +88,11 @@ validate-agentic: ## Validate agentic system (rules, skills, workflows, AGENTS.m
 	@echo "$(GREEN)Validating agentic system...$(NC)"
 	python3 scripts/validate_agentic.py
 
-validate-templates: lint-all validate-k8s validate-agentic ## Validate all templates (lint + K8s + agentic)
+test-scaffold: ## End-to-end test: runs new-service.sh in a tmp dir and validates output
+	@echo "$(GREEN)Testing scaffolder end-to-end...$(NC)"
+	@bash scripts/test_scaffold.sh
+
+validate-templates: lint-all validate-k8s validate-agentic test-scaffold ## Validate all templates (lint + K8s + agentic + scaffold e2e)
 	@echo "$(GREEN)✓ All templates validated$(NC)"
 
 # ═══════════════════════════════════════════════
