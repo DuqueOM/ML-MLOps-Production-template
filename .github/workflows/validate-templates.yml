@@ -160,3 +160,25 @@ jobs:
         with:
           dockerfile: templates/service/Dockerfile
           failure-threshold: error
+
+  agentic-system:
+    name: Agentic System Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Validate agentic configuration
+        # Verifies: rule frontmatter + glob matching, skill SKILL.md contracts,
+        # workflow frontmatter, and AGENTS.md cross-references.
+        run: python scripts/validate_agentic.py
+
+      - name: Shell script syntax check
+        run: |
+          bash -n scripts/bootstrap.sh
+          bash -n scripts/_lib/*.sh
+          echo "✓ All shell scripts parse cleanly"
