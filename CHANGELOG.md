@@ -6,6 +6,73 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
 
 ---
 
+## [1.5.0] - 2026-04-23
+
+### Added
+
+#### EDA Phase Integration (closes data-to-training gap)
+
+The template now has a first-class Exploratory Data Analysis phase that connects
+raw data → trained model through 6 structured phases with 4 agentic invariants.
+
+**Agentic configuration:**
+- **`AGENTS.md`**: new Agent-EDAProfiler (Layer 2); anti-patterns D-13 through D-16;
+  updated skill/workflow inventories with `eda-analysis` and `/eda`
+- **`.windsurf/rules/11-data-eda.md`**: enforces snake_case, sandbox isolation,
+  baseline persistence, structural layout. Glob: `**/eda/**`, `**/notebooks/**/*.ipynb`
+- **`.windsurf/skills/eda-analysis/SKILL.md`**: 6-phase procedure with hard gate on
+  phase 4 (leakage detection) — chains to `/incident` on block
+- **`.windsurf/workflows/eda.md`**: `/eda` slash command; chains to `/new-service`
+  on pass or `/incident` on leakage block
+
+**Template module `templates/eda/`:**
+- **`eda_pipeline.py`** (500 lines): scriptable pipeline
+  - Phase 0: ingest + snake_case normalization (D-13 sandbox check)
+  - Phase 1: structural profile → `01_dtypes_map.json`
+  - Phase 2: univariate + **`02_baseline_distributions.pkl`** (D-15) with
+    quantile bins for PSI compatibility (D-08)
+  - Phase 3: correlations + feature ranking
+  - Phase 4: leakage detection HARD GATE (exit 1 if `BLOCKED_FEATURES` non-empty)
+  - Phase 5: feature proposals with rationale (D-16)
+  - Phase 6: `schema_proposal.py` with observed ranges (D-14) + summary markdown
+- **`notebook_template.ipynb`**: interactive companion (13 cells, one per phase)
+- **`requirements.txt`**: lightweight mode (~50MB, pandas + scipy + pandera)
+- **`requirements-heavy.txt`**: opt-in ydata-profiling + plotly (~500MB)
+- **`README.md`**: conventions, phase artifacts reference, drift loop diagram
+
+**Anti-patterns D-13 to D-16:**
+- D-13: EDA on production data without sandbox
+- D-14: Pandera schema without observed ranges from EDA
+- D-15: Baseline distributions not persisted (silently breaks drift detection)
+- D-16: Feature engineering without documented rationale
+
+**Integration:**
+- `new-service.sh` now copies `eda/` to scaffolded services + creates
+  `reports/`, `artifacts/`, `notebooks/` subdirs
+- Updated scaffolder next-steps walk users through EDA before `schemas.py`/`features.py`
+- `test_scaffold.sh` validates 5 new `eda/` paths exist in scaffolded output
+- `make eda-validate` target (syntax + `py_compile`); chained into `make validate-templates`
+
+**Documentation:**
+- **`docs/decisions/ADR-004-eda-phase-integration.md`**: documents the design,
+  rationale for 6 phases (not fewer), hard gate on leakage, lightweight vs heavy
+  modes, and why `schemas.py` is never auto-overwritten
+
+**Validation:**
+Tested end-to-end against `examples/minimal` fraud data (400 rows × 6 cols): all
+6 phases pass in <1s, `baseline_distributions.pkl` produced with quantile bins,
+leakage gate correctly PASSED, 3 transforms proposed each with rationale.
+
+**The drift detection loop now closes:**
+```
+EDA phase 2 → 02_baseline_distributions.pkl (DVC-tracked)
+           → Drift CronJob (production, consumes the pkl)
+           → PSI per feature using quantile bins (D-08)
+           → Alert if PSI > threshold → /drift-check → /retrain
+```
+
+---
+
 ## [1.4.0] - 2026-04-19
 
 ### Added
