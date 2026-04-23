@@ -39,7 +39,17 @@ cd ML-MLOps-Production-Template
 
 ## Real-World Example
 
-This template was extracted from **[ML-MLOps-Portfolio](https://github.com/DuqueOM/ML-MLOps-Portfolio)** — a production portfolio with 3 live ML services showing how these patterns work in practice.
+This template was extracted from **[ML-MLOps-Portfolio](https://github.com/DuqueOM/ML-MLOps-Portfolio)** — a production portfolio with 3 ML services (BankChurn, NLPInsight, ChicagoTaxi), 18 ADRs, 395+ tests, and live deployments on GKE + EKS.
+
+| Resource | Link |
+|----------|------|
+| **Source repo** | [github.com/DuqueOM/ML-MLOps-Portfolio](https://github.com/DuqueOM/ML-MLOps-Portfolio) |
+| **Full documentation (MkDocs)** | [duqueom.github.io/ML-MLOps-Portfolio](https://duqueom.github.io/ML-MLOps-Portfolio/) |
+| **Architecture decisions (18 ADRs)** | [portfolio ADR index](https://duqueom.github.io/ML-MLOps-Portfolio/decisions/) |
+| **Operational status** | [PORTFOLIO_STATUS.md](https://github.com/DuqueOM/ML-MLOps-Portfolio/blob/main/PORTFOLIO_STATUS.md) |
+
+The portfolio demonstrates the patterns this template encodes — real
+incidents diagnosed, real trade-offs documented, real deployments verified.
 
 ---
 
