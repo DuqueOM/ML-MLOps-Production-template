@@ -100,6 +100,13 @@ else
     info "DVC templates included (dvc.yaml + .dvc/config)"
 fi
 
+# --- Copy EDA module ---
+if [[ -d "$TEMPLATE_ROOT/eda" ]]; then
+    info "Copying EDA module (6-phase exploratory analysis pipeline)..."
+    cp -r "$TEMPLATE_ROOT/eda" "$TARGET_DIR/eda"
+    mkdir -p "$TARGET_DIR/eda/reports" "$TARGET_DIR/eda/artifacts" "$TARGET_DIR/eda/notebooks"
+fi
+
 # --- Copy integration test templates ---
 info "Copying integration test templates..."
 mkdir -p "$TARGET_DIR/tests/integration"
@@ -161,12 +168,17 @@ echo "  Directory: $TARGET_DIR"
 echo ""
 echo "  Next steps:"
 echo "    1. cd $TARGET_DIR"
-echo "    2. Edit src/$SERVICE_SLUG/schemas.py with your features"
-echo "    3. Edit src/$SERVICE_SLUG/training/features.py"
-echo "    4. Edit src/$SERVICE_SLUG/training/model.py"
-echo "    5. Edit app/schemas.py with your API request/response"
-echo "    6. pip install -r requirements.txt"
-echo "    7. make train DATA=data/raw/your-dataset.csv"
-echo "    8. make serve"
+echo "    2. Place your dataset: cp <your-data>.csv data/raw/"
+echo "    3. Run EDA (produces baseline distributions + schema proposal):"
+echo "         pip install -r eda/requirements.txt"
+echo "         python -m eda.eda_pipeline --input data/raw/<file>.csv --target <col> --service-slug $SERVICE_SLUG"
+echo "    4. Review eda/reports/04_leakage_audit.md (must show BLOCKED_FEATURES: [])"
+echo "    5. Copy src/$SERVICE_SLUG/schema_proposal.py → schemas.py (review first)"
+echo "    6. Edit src/$SERVICE_SLUG/training/features.py (consume 05_feature_proposals.yaml)"
+echo "    7. Edit src/$SERVICE_SLUG/training/model.py"
+echo "    8. Edit app/schemas.py with your API request/response"
+echo "    9. pip install -r requirements.txt"
+echo "   10. make train DATA=data/raw/<file>.csv"
+echo "   11. make serve"
 echo ""
 info "Done."

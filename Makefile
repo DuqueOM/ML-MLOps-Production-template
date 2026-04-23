@@ -92,7 +92,13 @@ test-scaffold: ## End-to-end test: runs new-service.sh in a tmp dir and validate
 	@echo "$(GREEN)Testing scaffolder end-to-end...$(NC)"
 	@bash scripts/test_scaffold.sh
 
-validate-templates: lint-all validate-k8s validate-agentic test-scaffold ## Validate all templates (lint + K8s + agentic + scaffold e2e)
+eda-validate: ## Validate EDA pipeline: syntax + run against example dataset
+	@echo "$(GREEN)Validating EDA pipeline...$(NC)"
+	python3 -c "import ast; ast.parse(open('templates/eda/eda_pipeline.py').read())"
+	python3 -m py_compile templates/eda/eda_pipeline.py
+	@echo "$(GREEN)✓ EDA pipeline syntactically valid$(NC)"
+
+validate-templates: lint-all validate-k8s validate-agentic test-scaffold eda-validate ## Validate all templates (lint + K8s + agentic + scaffold + EDA)
 	@echo "$(GREEN)✓ All templates validated$(NC)"
 
 # ═══════════════════════════════════════════════

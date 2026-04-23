@@ -1,0 +1,19 @@
+# EDA outputs — regenerable; keep repo lightweight
+
+# HTML reports (large, regenerable)
+reports/*.html
+reports/**/*.html
+
+# Images produced during notebook exploration
+notebooks/**/*.png
+notebooks/**/*.jpg
+notebooks/.ipynb_checkpoints/
+
+# Intermediate profile caches
+*.profile_cache/
+*.pkl.bak
+
+# KEEP (committed or DVC-tracked):
+#  - reports/*.md (leakage audit, summary, ingest report)
+#  - artifacts/*.json, artifacts/*.yaml, artifacts/*.csv (machine-readable, small)
+#  - artifacts/02_baseline_distributions.pkl (DVC-tracked via `dvc add`)

@@ -1,0 +1,10 @@
+# EDA module — heavy mode (opt-in, ~500MB)
+# Use for initial exploration on large datasets (>1M rows) or when
+# stakeholders need polished HTML reports.
+
+-r requirements.txt
+
+ydata-profiling~=4.6
+plotly~=5.18
+seaborn~=0.13
+great-tables~=0.10

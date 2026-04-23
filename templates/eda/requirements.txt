@@ -1,0 +1,16 @@
+# EDA module — lightweight dependencies (default mode)
+# ~50MB total. Sufficient for datasets up to ~1M rows.
+# For heavy mode with ydata-profiling, install requirements-heavy.txt instead.
+
+pandas~=2.2
+numpy~=1.26
+scipy~=1.11
+scikit-learn~=1.4
+pandera~=0.18
+matplotlib~=3.8
+pyyaml~=6.0
+chardet~=5.2
+
+# Optional (uncomment for interactive notebook use):
+# jupyter~=1.0
+# ipykernel~=6.29

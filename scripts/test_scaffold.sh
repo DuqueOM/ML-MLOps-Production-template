@@ -122,6 +122,11 @@ CRITICAL_FILES=(
   "tests"
   "monitoring"
   "infra/terraform"
+  "eda/eda_pipeline.py"
+  "eda/requirements.txt"
+  "eda/reports"
+  "eda/artifacts"
+  "eda/notebooks"
 )
 for f in "${CRITICAL_FILES[@]}"; do
   if [[ -e "$SERVICE_DIR/$f" ]]; then
