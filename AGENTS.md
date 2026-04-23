@@ -172,6 +172,9 @@ This makes handoffs auditable and reproducible.
 | D-14 | Pandera schema without observed ranges from EDA | Add `Check.in_range(min, max)` derived from EDA distribution analysis |
 | D-15 | Baseline distributions not persisted for drift detection | Save `baseline_distributions.pkl` during EDA; consume in drift CronJob |
 | D-16 | Feature engineering without documented rationale | Add `feature_proposals.yaml` with justification tied to EDA evidence |
+| D-17 | Hardcoded credentials in code, configs, or `os.environ[...]` for secrets | Use `common_utils/secrets.py` — delegates to AWS Secrets Manager / GCP Secret Manager |
+| D-18 | Static AWS access keys or GCP JSON service-account keys in production | Migrate to IRSA (AWS) or Workload Identity (GCP) — remove all static creds |
+| D-19 | Unsigned images reaching production or missing SBOM | Sign with Cosign, generate SBOM with Syft, enforce via Kyverno admission controller |
 
 ## Session Initialization Protocol
 
@@ -207,6 +210,7 @@ When starting a new session in a project derived from this template:
 - `/load-test` — Locust load tests against ML services
 - `/new-adr` — create Architecture Decision Record
 - `/eda` — run 6-phase exploratory data analysis on a new dataset
+- `/secret-breach` — incident workflow for leaked secrets (STOP pipeline, rotate, audit)
 
 ## Agentic Configuration
 
@@ -224,7 +228,8 @@ When starting a new session in a project derived from this template:
 │   ├── 08-data-validation.md           # glob: **/schemas.py, **/validate*.py
 │   ├── 09-monitoring.md               # glob: monitoring/**/*
 │   ├── 10-examples.md                 # glob: examples/**/*
-│   └── 11-data-eda.md                 # glob: **/eda/**, **/notebooks/**/*.ipynb
+│   ├── 11-data-eda.md                 # glob: **/eda/**, **/notebooks/**/*.ipynb
+│   └── 12-security-secrets.md         # always_on — D-17/D-18/D-19
 ├── skills/                             # Multi-step operational procedures
 │   ├── debug-ml-inference/SKILL.md
 │   ├── deploy-gke/SKILL.md
@@ -245,6 +250,7 @@ When starting a new session in a project derived from this template:
     ├── incident.md                     # /incident
     ├── drift-check.md                  # /drift-check
     ├── eda.md                          # /eda
+    ├── secret-breach.md                # /secret-breach
     ├── new-service.md                  # /new-service
     └── cost-review.md                  # /cost-review
 ```
