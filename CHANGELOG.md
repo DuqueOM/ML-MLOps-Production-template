@@ -6,6 +6,133 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
 
 ---
 
+## [1.7.0] - 2026-04-23
+
+### Added
+
+#### Closed-Loop Monitoring — Ground Truth + Sliced Performance + Champion/Challenger
+
+Closes the largest remaining gap in the template: concept drift went silent
+because the system only tracked feature distributions (PSI). This release
+wires predictions to their eventual ground-truth labels, computes sliced
+performance metrics, and gates promotion on statistical superiority.
+
+See **ADR-006** (closed-loop monitoring), **ADR-007** (sliced analysis),
+**ADR-008** (champion/challenger), and **ADR-009** (retraining orchestration
+triggers) for the full rationale.
+
+**Prediction logger (ADR-006):**
+- `templates/common_utils/prediction_logger.py` — async buffered logger with
+  4 pluggable backends (parquet, BigQuery, SQLite, stdout) via
+  `PREDICTION_LOG_BACKEND` env var
+- `PredictionEvent` frozen dataclass validates `prediction_id`,
+  `entity_id`, and `model_version` at construction (invariant D-20)
+- Fire-and-forget semantics: handler never blocks on log I/O (D-21)
+- Failure-tolerant: flush errors swallowed + counted via
+  `prediction_log_errors_total` (D-22)
+- Integrated into `fastapi_app.py` and `main.py` lifespan; gracefully
+  degrades if backend fails to start
+
+**Ground truth ingestion (ADR-006):**
+- `templates/service/src/{service}/monitoring/ground_truth.py` — daily
+  CronJob with user-implemented `fetch_labels_from_source()` contract
+- Ships CSV stub for local dev + documented examples for BigQuery, Postgres
+- Writes idempotent daily parquet partitions (`year=/month=/day=`)
+- `configs/ground_truth_source.yaml` — declarative source config
+
+**Sliced performance monitor (ADR-007):**
+- `templates/service/src/{service}/monitoring/performance_monitor.py` —
+  JOINs predictions with labels on `entity_id` with causality constraint
+  (`label_ts >= prediction_ts`), computes AUC/F1/precision/recall/Brier
+  globally AND per slice
+- Baseline comparison for concept drift (`auc_drop_warning/alert`)
+- Tri-state status: `ok` / `warning` / `alert` / `insufficient_data`
+- Prometheus Pushgateway metrics with labels
+  `{slice_name, slice_value, metric}` for Grafana filtering
+- `configs/slices.yaml` — bounded-cardinality slice declarations
+  (country, channel, model_version, score_bucket examples)
+
+**K8s manifests:**
+- `k8s/base/cronjob-performance.yaml` — two CronJobs:
+  - `{service}-ground-truth-ingester` at 03:00 UTC
+  - `{service}-performance-monitor` at 04:00 UTC
+- `k8s/base/performance-prometheusrule.yaml` — 5 alerts:
+  - `GlobalAUCBelowAlert` (concept drift)
+  - `SlicedAUCBelowAlert` (subpopulation degradation)
+  - `F1BelowAlert` (threshold calibration)
+  - `PerformanceMonitorStale` (heartbeat)
+  - `PredictionLogErrorsHigh` (D-22 degradation visibility)
+
+**Champion/Challenger statistical gate (ADR-008):**
+- `templates/service/src/{service}/evaluation/champion_challenger.py` —
+  McNemar exact binomial test + bootstrap ΔAUC 95% CI combined into
+  tri-state decision (promote / keep / block)
+- `configs/champion_challenger.yaml` — alpha, n_bootstrap,
+  non_inferiority_margin, superiority_margin
+- `cicd/retrain-service.yml` — new C/C gate between quality gates and
+  promotion; posts decision to Actions step summary; opens issue on
+  keep/block
+- Exit codes: 0 (promote) / 1 (keep) / 2 (block)
+
+**Anti-patterns (D-20, D-21, D-22):**
+- D-20 — prediction log events without `prediction_id` / `entity_id`
+- D-21 — prediction logging blocking the async inference event loop
+- D-22 — logging backend failure propagating to the HTTP response
+- Added to `AGENTS.md` anti-pattern table (now D-01 → D-22)
+
+**Agentic system:**
+- `.windsurf/rules/13-closed-loop-monitoring.md` — invariants + slicing /
+  ground-truth / C/C contracts + agent behavior by file (AUTO/CONSULT/STOP)
+- `.windsurf/skills/concept-drift-analysis/` — new skill with RCA decision
+  tree (global vs sliced, drift vs labels vs noise)
+- `.windsurf/skills/drift-detection/` — extended to cover BOTH data drift
+  (PSI) AND concept drift (sliced performance)
+- `.windsurf/skills/model-retrain/` — new Step 5.5 for C/C statistical gate
+- `.windsurf/workflows/performance-review.md` — monthly review workflow
+  with multi-window metric collection + degrading-slice detection
+
+**IDE parity:**
+- `.cursor/rules/08-closed-loop.mdc` — parity with Windsurf rule 13
+- `.claude/rules/08-closed-loop.md` — parity with Windsurf rule 13
+
+**ADRs:**
+- `docs/decisions/ADR-006-closed-loop-monitoring.md`
+- `docs/decisions/ADR-007-sliced-performance-analysis.md`
+- `docs/decisions/ADR-008-champion-challenger-statistical-gate.md`
+- `docs/decisions/ADR-009-retraining-orchestration-triggers.md` —
+  documents measurable triggers for migrating retraining beyond GHA;
+  explicitly rejects premature Argo Workflows adoption
+
+**Tests (50 total passing, 25 new):**
+- `templates/tests/unit/test_prediction_logger.py` — 20 tests covering
+  `PredictionEvent` invariants, 3 backends, D-21/D-22 contract
+- `templates/tests/unit/test_ground_truth.py` — 6 tests for LabelRecord
+  invariants and CSV stub
+- `templates/tests/unit/test_performance_monitor.py` — 14 tests for
+  metrics, slicing, thresholds, full pipeline with sliced subpopulations
+- `templates/tests/unit/test_champion_challenger.py` — 10 tests for
+  McNemar, bootstrap CI, decide() logic, end-to-end sklearn comparison
+
+**Schema changes (BREAKING for services on v1.6.x):**
+- `PredictionRequest.entity_id` is now REQUIRED (`min_length=1`)
+- `PredictionResponse.prediction_id` is now REQUIRED (UUID hex)
+- Optional: `PredictionRequest.slice_values: dict[str, str]` for sliced
+  monitoring
+
+**Dependencies:**
+- `pyarrow ~=18.0` — parquet backend for prediction_logger
+- `pyyaml ~=6.0` — config loaders
+
+**Scope respected:**
+- No Argo Workflows (ADR-009 documents triggers; GHA remains default)
+- No Bytewax / streaming (parquet batch covers target audience)
+- No ClickHouse default (parquet is default; BigQuery optional; ClickHouse
+  mentioned as future trigger at >100M predictions/day)
+- No Istio shadow mode (ADR-008 future-work section)
+- ADR-001 scope honored throughout
+
+---
+
 ## [1.6.0] - 2026-04-23
 
 ### Added
