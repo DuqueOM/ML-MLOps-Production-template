@@ -1,4 +1,14 @@
-description_project.md
+# ─── Personal / local ops data ────────────────────────
+# Dated incident reports are personal to each environment.
+# README.md and EXAMPLE.md are tracked; dated files are not.
+docs/incidents/20*.md
+
+# Local audit trail (per-user); CI may produce its own.
+ops/audit.jsonl
+ops/*.json
+
+# Local secrets loader referenced by docs/runbooks/mcp-config-hygiene.md
+.secrets.env
 
 # ─── Python ──────────────────────────────────────────
 __pycache__/
@@ -100,3 +110,7 @@ reports/
 
 # ─── DVC ─────────────────────────────────────────────
 /tmp/
+
+# ─── PRIVATE ─────────────────────────────────────────
+
+AUDIOVISUAL_CONTENT.md
