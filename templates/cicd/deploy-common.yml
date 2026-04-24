@@ -1,0 +1,135 @@
+name: "Reusable — Deploy to Environment"
+
+# Reusable workflow called by deploy-gcp.yml, deploy-aws.yml, and the
+# promote-staging / promote-prod gates. Centralizes build/push/apply/verify
+# so fixes (e.g., smoke-test hardening) apply to all callers.
+#
+# CI fan-in (dev → staging → prod) requires a SEPARATE caller workflow per
+# environment so that GitHub Environment Protection Rules apply the right
+# `required_reviewers` gate. This reusable workflow handles the mechanics;
+# the caller controls the gate.
+
+on:
+  workflow_call:
+    inputs:
+      cloud:
+        description: "gcp or aws"
+        required: true
+        type: string
+      environment:
+        description: "dev | staging | production"
+        required: true
+        type: string
+      cluster_name:
+        required: true
+        type: string
+      region:
+        required: true
+        type: string
+      overlay_path:
+        description: "Kustomize overlay dir relative to repo root (e.g. k8s/overlays/gcp-prod)"
+        required: true
+        type: string
+      version:
+        description: "Image tag to deploy (sha, semver, or branch)"
+        required: true
+        type: string
+      services:
+        description: "JSON array of service dirnames, e.g. '[\"ServiceA\",\"ServiceB\"]'"
+        required: false
+        default: '["ServiceA"]'
+        type: string
+    secrets:
+      GCP_SA_KEY:
+        required: false
+      AWS_ROLE_ARN:
+        required: false
+      GCP_PROJECT_ID:
+        required: false
+      AWS_REGISTRY_ID:
+        required: false
+
+jobs:
+  deploy:
+    name: "Deploy to ${{ inputs.cloud }} / ${{ inputs.environment }}"
+    runs-on: ubuntu-latest
+    # The environment name carries Protection Rules (required_reviewers,
+    # wait timers, deployment branches). Configure in GitHub repo settings
+    # → Environments → <env-name>.
+    environment: ${{ inputs.cloud }}-${{ inputs.environment }}
+    permissions:
+      id-token: write     # OIDC to cloud
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      # -------------------------------------------------------------------
+      # Cloud auth — branches on input.cloud to keep one workflow reusable
+      # -------------------------------------------------------------------
+      - name: Authenticate to GCP
+        if: inputs.cloud == 'gcp'
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Configure GKE credentials
+        if: inputs.cloud == 'gcp'
+        uses: google-github-actions/get-gke-credentials@v2
+        with:
+          cluster_name: ${{ inputs.cluster_name }}
+          location: ${{ inputs.region }}
+
+      - name: Authenticate to AWS (IRSA-compatible OIDC)
+        if: inputs.cloud == 'aws'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ inputs.region }}
+
+      - name: Configure EKS credentials
+        if: inputs.cloud == 'aws'
+        run: |
+          aws eks update-kubeconfig \
+            --name ${{ inputs.cluster_name }} \
+            --region ${{ inputs.region }}
+
+      - name: Verify cluster context
+        run: |
+          CONTEXT=$(kubectl config current-context)
+          echo "Current context: ${CONTEXT}"
+          kubectl cluster-info
+          # Sanity: refuse to apply to prod from a non-prod branch (extra
+          # guard; GH Environment Protection is the primary gate)
+          if [ "${{ inputs.environment }}" = "production" ] && \
+             [ "${GITHUB_REF_NAME}" != "main" ] && \
+             [[ ! "${GITHUB_REF_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+            echo "::error::Production deploys must be from main or a version tag"
+            exit 1
+          fi
+
+      # -------------------------------------------------------------------
+      # Build + push (only for callers with CI-built images; otherwise
+      # image is already pushed by the CI workflow, and we just apply)
+      # -------------------------------------------------------------------
+      - name: Apply Kustomize overlay
+        run: |
+          kubectl apply -k ${{ inputs.overlay_path }}
+
+      - name: Wait for rollout
+        run: |
+          for svc in $(echo '${{ inputs.services }}' | jq -r '.[]'); do
+            DEPLOY="$(echo $svc | tr 'A-Z' 'a-z')-predictor"
+            kubectl rollout status "deployment/${DEPLOY}" --timeout=600s
+          done
+
+      - name: Post-deploy smoke test
+        run: |
+          for svc in $(echo '${{ inputs.services }}' | jq -r '.[]'); do
+            LOWER=$(echo $svc | tr 'A-Z' 'a-z')
+            kubectl run smoke-${LOWER}-${GITHUB_RUN_ID} \
+              --rm -i --restart=Never \
+              --image=curlimages/curl \
+              -- curl -sfw '%{http_code}\n' "http://${LOWER}-service/ready" \
+              | grep -q 200 \
+              || { echo "::error::Smoke test failed for ${svc}"; exit 1; }
+          done

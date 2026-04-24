@@ -1,30 +1,48 @@
-name: Deploy — GCP GKE
+name: "Deploy — GCP (dev → staging → prod)"
+
+# Environment promotion chain with human-gated transitions:
+#
+#   main / tag push
+#        │
+#   [build-and-push]  ← AUTO
+#        │
+#   [deploy-dev]      ← AUTO (GitHub Environment `gcp-dev` — no reviewers)
+#        │
+#   [deploy-staging]  ← CONSULT (GitHub Environment `gcp-staging` — 1 reviewer)
+#        │
+#   [deploy-prod]     ← STOP (GitHub Environment `gcp-production` — 2 reviewers + 5m wait)
+#
+# GitHub Environment Protection Rules are configured in the repo Settings
+# → Environments. The PROTECTION lives there, not in this YAML — the YAML
+# only declares which environment each job targets.
+#
+# Required Environments (configure manually in GitHub Settings):
+#   * gcp-dev         — auto-deploy, no reviewers
+#   * gcp-staging     — required_reviewers: 1 (tech lead)
+#   * gcp-production  — required_reviewers: 2, wait_timer: 5m,
+#                       deployment_branches: main + version tags only
 
 on:
   push:
-    tags:
-      - "v*"
+    branches: [main]
+    tags: ["v*"]
   workflow_dispatch:
-    inputs:
-      service:
-        description: "Service to deploy (or 'all')"
-        required: true
-        default: "all"
-
-# Required secrets:
-# GCP_SA_KEY — GCP service account key (JSON)
-# GCP_PROJECT_ID — GCP project ID
-# GKE_CLUSTER — GKE cluster name
-# GKE_REGION — GKE cluster region
 
 env:
-  REGISTRY: ${{ secrets.GKE_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/ml-images
+  REGISTRY: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/ml-images
 
 jobs:
-  deploy:
-    name: Deploy to GKE
+  # ---------------------------------------------------------------------
+  # 1. Build + push images ONCE (reused across dev/staging/prod)
+  # ---------------------------------------------------------------------
+  build:
+    name: Build and push images
     runs-on: ubuntu-latest
-    environment: production-gcp
+    permissions:
+      id-token: write
+      contents: read
+    outputs:
+      version: ${{ steps.version.outputs.v }}
     steps:
       - uses: actions/checkout@v4
 
@@ -34,38 +52,87 @@ jobs:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
       - name: Configure Docker for Artifact Registry
-        run: gcloud auth configure-docker ${{ secrets.GKE_REGION }}-docker.pkg.dev
+        run: gcloud auth configure-docker ${{ vars.GCP_REGION }}-docker.pkg.dev
 
-      - name: Get GKE credentials
-        uses: google-github-actions/get-gke-credentials@v2
-        with:
-          cluster_name: ${{ secrets.GKE_CLUSTER }}
-          location: ${{ secrets.GKE_REGION }}
-
-      - name: Verify cluster context
+      - name: Compute version
+        id: version
         run: |
-          echo "Current context: $(kubectl config current-context)"
-          kubectl cluster-info
+          V="${GITHUB_REF_NAME}"
+          if [ "${V}" = "main" ]; then
+            V="main-$(git rev-parse --short HEAD)"
+          fi
+          echo "v=${V}" >> $GITHUB_OUTPUT
 
-      - name: Build and push images
+      - name: Build and push
         run: |
-          VERSION=${GITHUB_REF_NAME:-$(git rev-parse --short HEAD)}
           # TODO: Loop over your services
           for SERVICE in ServiceA; do
-            docker build -t ${{ env.REGISTRY }}/${SERVICE}:${VERSION} ${SERVICE}/
-            docker push ${{ env.REGISTRY }}/${SERVICE}:${VERSION}
+            docker build -t ${{ env.REGISTRY }}/${SERVICE}:${{ steps.version.outputs.v }} ${SERVICE}/
+            docker push ${{ env.REGISTRY }}/${SERVICE}:${{ steps.version.outputs.v }}
           done
 
-      - name: Apply K8s manifests
-        run: kubectl apply -k k8s/overlays/gcp/
-
-      - name: Wait for rollout
+      - name: Sign images with Cosign (keyless OIDC)
+        env:
+          COSIGN_EXPERIMENTAL: "true"
         run: |
-          # TODO: Add your deployment names
-          kubectl rollout status deployment --all -n default --timeout=300s
+          for SERVICE in ServiceA; do
+            cosign sign --yes ${{ env.REGISTRY }}/${SERVICE}:${{ steps.version.outputs.v }}
+          done
 
-      - name: Smoke test
-        run: |
-          sleep 10
-          # TODO: Add service endpoints
-          # kubectl run smoke-test --rm -i --restart=Never --image=curlimages/curl -- curl -sf http://service-a-service/health
+  # ---------------------------------------------------------------------
+  # 2. Deploy to dev (AUTO)
+  # ---------------------------------------------------------------------
+  deploy-dev:
+    needs: build
+    uses: ./.github/workflows/deploy-common.yml
+    with:
+      cloud: gcp
+      environment: dev
+      cluster_name: ${{ vars.GKE_DEV_CLUSTER }}
+      region: ${{ vars.GCP_REGION }}
+      overlay_path: k8s/overlays/gcp-dev
+      version: ${{ needs.build.outputs.version }}
+      services: '["ServiceA"]'
+    secrets:
+      GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+      GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+
+  # ---------------------------------------------------------------------
+  # 3. Deploy to staging (CONSULT — 1 reviewer via Environment Protection)
+  # ---------------------------------------------------------------------
+  deploy-staging:
+    needs: [build, deploy-dev]
+    # Only auto-promote when main or tag — feature branches stop at dev
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    uses: ./.github/workflows/deploy-common.yml
+    with:
+      cloud: gcp
+      environment: staging
+      cluster_name: ${{ vars.GKE_STAGING_CLUSTER }}
+      region: ${{ vars.GCP_REGION }}
+      overlay_path: k8s/overlays/gcp-staging
+      version: ${{ needs.build.outputs.version }}
+      services: '["ServiceA"]'
+    secrets:
+      GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+      GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+
+  # ---------------------------------------------------------------------
+  # 4. Deploy to production (STOP — 2 reviewers + wait timer + branch gate)
+  # ---------------------------------------------------------------------
+  deploy-prod:
+    needs: [build, deploy-staging]
+    # Only version tags can reach prod — D-26
+    if: startsWith(github.ref, 'refs/tags/v')
+    uses: ./.github/workflows/deploy-common.yml
+    with:
+      cloud: gcp
+      environment: production
+      cluster_name: ${{ vars.GKE_PROD_CLUSTER }}
+      region: ${{ vars.GCP_REGION }}
+      overlay_path: k8s/overlays/gcp-prod
+      version: ${{ needs.build.outputs.version }}
+      services: '["ServiceA"]'
+    secrets:
+      GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+      GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}

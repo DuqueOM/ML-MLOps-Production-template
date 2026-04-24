@@ -126,10 +126,63 @@ Document all required GitHub Secrets in the workflow comments:
 # MLFLOW_TRACKING_URI — MLflow server URL
 ```
 
+## Environment Promotion Gates (MANDATORY — D-26)
+
+Deploys MUST chain through `dev → staging → prod` with human approval
+at staging and prod via GitHub Environment Protection Rules:
+
+```yaml
+jobs:
+  deploy-dev:
+    uses: ./.github/workflows/deploy-common.yml
+    with: { environment: dev, ... }    # no reviewers
+
+  deploy-staging:
+    needs: deploy-dev
+    uses: ./.github/workflows/deploy-common.yml
+    with: { environment: staging, ... }  # 1 reviewer via Env Protection
+
+  deploy-prod:
+    needs: deploy-staging
+    if: startsWith(github.ref, 'refs/tags/v')
+    uses: ./.github/workflows/deploy-common.yml
+    with: { environment: production, ... }  # 2 reviewers + wait_timer
+```
+
+Environments to configure in `Settings → Environments`:
+
+| Env name | Reviewers | Wait timer | Deployment branches |
+|---|---|---|---|
+| `{cloud}-dev` | 0 | 0 | all |
+| `{cloud}-staging` | 1 | 0 | main + tags |
+| `{cloud}-production` | 2 | 5 min | version tags only |
+
+## Reusable Workflows (MANDATORY for multi-cloud deploys)
+
+Deploy logic that is identical across clouds (build, push, smoke-test)
+MUST be extracted into a `workflow_call` reusable workflow so a single
+fix applies everywhere:
+
+```yaml
+# deploy-common.yml
+on:
+  workflow_call:
+    inputs:
+      cloud: { type: string, required: true }
+      environment: { type: string, required: true }
+      ...
+```
+
+See `docs/environment-promotion.md` for full setup.
+
 ## Rules
 
 - NEVER store credentials in workflow files — use GitHub Secrets
+- ALWAYS use **Environment secrets** (not repo-level) for
+  cloud-credential scoping per dev/staging/prod (D-18 + D-26)
 - ALWAYS pin action versions to a specific SHA (not `@main` or `@v3`)
 - ALWAYS use `continue-on-error: true` for drift detection (drift does not block CI)
 - ALWAYS run security scans (trivy for images, tfsec/checkov for Terraform)
 - ALWAYS use matrix strategies for multi-service operations
+- ALWAYS use `workflow_call` reusable workflows for shared deploy logic
+- Production deploys MUST be gated on a version tag + 2 reviewers (D-26)

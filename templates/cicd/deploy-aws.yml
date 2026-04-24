@@ -1,68 +1,113 @@
-name: Deploy — AWS EKS
+name: "Deploy — AWS (dev → staging → prod)"
+
+# Environment promotion chain with human-gated transitions (mirror of
+# deploy-gcp.yml; uses IRSA-compatible OIDC, NOT static AWS keys — D-18).
+#
+# Required Environments (configure manually in GitHub Settings):
+#   * aws-dev         — auto-deploy, no reviewers
+#   * aws-staging     — required_reviewers: 1 (tech lead)
+#   * aws-production  — required_reviewers: 2, wait_timer: 5m,
+#                       deployment_branches: main + version tags only
+#
+# Required Environment SECRETS per environment:
+#   * AWS_ROLE_ARN (OIDC federated role for this env)
+# Required Environment VARS:
+#   * AWS_REGION, AWS_REGISTRY_ID, EKS_<ENV>_CLUSTER
 
 on:
   push:
-    tags:
-      - "v*"
+    branches: [main]
+    tags: ["v*"]
   workflow_dispatch:
-    inputs:
-      service:
-        description: "Service to deploy (or 'all')"
-        required: true
-        default: "all"
-
-# Required secrets:
-# AWS_ACCESS_KEY_ID — AWS access key
-# AWS_SECRET_ACCESS_KEY — AWS secret key
-# AWS_ACCOUNT_ID — AWS account ID
-# AWS_REGION — AWS region
-# EKS_CLUSTER — EKS cluster name
 
 env:
-  REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+  REGISTRY: ${{ vars.AWS_REGISTRY_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com
 
 jobs:
-  deploy:
-    name: Deploy to EKS
+  build:
+    name: Build and push images
     runs-on: ubuntu-latest
-    environment: production-aws
+    permissions:
+      id-token: write
+      contents: read
+    outputs:
+      version: ${{ steps.version.outputs.v }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
+      - name: Authenticate to AWS (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_BUILD_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
 
       - name: Login to ECR
         run: aws ecr get-login-password | docker login --username AWS --password-stdin ${{ env.REGISTRY }}
 
-      - name: Update kubeconfig
-        run: aws eks update-kubeconfig --name ${{ secrets.EKS_CLUSTER }} --region ${{ secrets.AWS_REGION }}
-
-      - name: Verify cluster context
+      - name: Compute version
+        id: version
         run: |
-          echo "Current context: $(kubectl config current-context)"
-          kubectl cluster-info
+          V="${GITHUB_REF_NAME}"
+          if [ "${V}" = "main" ]; then
+            V="main-$(git rev-parse --short HEAD)"
+          fi
+          echo "v=${V}" >> $GITHUB_OUTPUT
 
-      - name: Build and push images
+      - name: Build and push
         run: |
-          VERSION=${GITHUB_REF_NAME:-$(git rev-parse --short HEAD)}
-          # TODO: Loop over your services
           for SERVICE in ServiceA; do
-            docker build -t ${{ env.REGISTRY }}/${SERVICE}:${VERSION} ${SERVICE}/
-            docker push ${{ env.REGISTRY }}/${SERVICE}:${VERSION}
+            docker build -t ${{ env.REGISTRY }}/${SERVICE}:${{ steps.version.outputs.v }} ${SERVICE}/
+            docker push ${{ env.REGISTRY }}/${SERVICE}:${{ steps.version.outputs.v }}
           done
 
-      - name: Apply K8s manifests
-        run: kubectl apply -k k8s/overlays/aws/
-
-      - name: Wait for rollout
-        run: kubectl rollout status deployment --all -n default --timeout=300s
-
-      - name: Smoke test
+      - name: Sign images with Cosign (keyless OIDC)
+        env:
+          COSIGN_EXPERIMENTAL: "true"
         run: |
-          sleep 10
-          # TODO: Add service endpoints
+          for SERVICE in ServiceA; do
+            cosign sign --yes ${{ env.REGISTRY }}/${SERVICE}:${{ steps.version.outputs.v }}
+          done
+
+  deploy-dev:
+    needs: build
+    uses: ./.github/workflows/deploy-common.yml
+    with:
+      cloud: aws
+      environment: dev
+      cluster_name: ${{ vars.EKS_DEV_CLUSTER }}
+      region: ${{ vars.AWS_REGION }}
+      overlay_path: k8s/overlays/aws-dev
+      version: ${{ needs.build.outputs.version }}
+      services: '["ServiceA"]'
+    secrets:
+      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+
+  deploy-staging:
+    needs: [build, deploy-dev]
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    uses: ./.github/workflows/deploy-common.yml
+    with:
+      cloud: aws
+      environment: staging
+      cluster_name: ${{ vars.EKS_STAGING_CLUSTER }}
+      region: ${{ vars.AWS_REGION }}
+      overlay_path: k8s/overlays/aws-staging
+      version: ${{ needs.build.outputs.version }}
+      services: '["ServiceA"]'
+    secrets:
+      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+
+  deploy-prod:
+    needs: [build, deploy-staging]
+    if: startsWith(github.ref, 'refs/tags/v')
+    uses: ./.github/workflows/deploy-common.yml
+    with:
+      cloud: aws
+      environment: production
+      cluster_name: ${{ vars.EKS_PROD_CLUSTER }}
+      region: ${{ vars.AWS_REGION }}
+      overlay_path: k8s/overlays/aws-prod
+      version: ${{ needs.build.outputs.version }}
+      services: '["ServiceA"]'
+    secrets:
+      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
