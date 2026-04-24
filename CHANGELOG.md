@@ -6,6 +6,44 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
 
 ---
 
+## [1.9.0] - 2026-04-24
+
+### Added
+
+- **Batch inference skill** — `.windsurf/skills/batch-inference/SKILL.md`
+  scaffolds CronJob-based scoring that reuses the exact same
+  `predictor.predict_batch()` function and Pandera schema as the live
+  API; includes PSS restricted container, `concurrencyPolicy: Forbid`,
+  and `activeDeadlineSeconds` hard cap
+- **ADR-013 — GitOps strategy** — codifies the current
+  `kubectl apply` posture and the four revisit triggers for
+  migrating to ArgoCD
+- **DORA metrics exporter** — `templates/scripts/dora_metrics.py`
+  aggregates deployment_frequency, lead_time_for_changes,
+  change_failure_rate, and mttr from the GitHub REST API +
+  `ops/audit.jsonl`. Writes `ops/dora/{YYYY-MM}-metrics.json`.
+  Graceful degradation without `GITHUB_TOKEN`. 9 unit tests
+- **Devcontainer** — `.devcontainer/devcontainer.json` +
+  `post-create.sh` give contributors a reproducible environment
+  matching the CI runner (Python 3.11 bookworm + docker-in-docker +
+  kubectl/helm + terraform + cosign + conftest + syft + gitleaks)
+- **Secret rotation runbook** — `docs/runbooks/secret-rotation.md`
+  covers SCHEDULED rotation (complement to `secret-breach-response`
+  which handles emergencies): per-credential cadence table, STOP per
+  env, 7-day soak on OLD version, quarterly calendar
+
+### Scope note
+
+v1.9.0 was planned as a 10-item roadmap. Delivered the 5 highest-
+impact items; deferred D2 (GPU), D5 (more reusable GHA), D6
+(Terraform tests), D8 (template repo publish) to future releases.
+
+### Total test count
+
+- Unit tests: **127 passing** (was 118 in v1.8.1)
+
+---
+
 ## [1.8.1] - 2026-04-24
 
 ### Added
