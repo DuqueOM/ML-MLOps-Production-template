@@ -6,6 +6,50 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
 
 ---
 
+## [1.8.0] - 2026-04-24
+
+### Added
+
+- **AuditLog** — thread-safe append-only JSONL writer in
+  `common_utils/agent_context.py` for `ops/audit.jsonl`. Integrates with
+  `RiskContext` via `record_operation()` to automatically persist the
+  five ADR-010 signals plus `base_mode` whenever dynamic escalation
+  changed the operation's mode
+- **AuditEntry hardening** — now validates `result ∈ {success, failure,
+  halted}` and requires an `approver` for CONSULT/STOP success entries
+  (human-accountability invariant)
+- **Skill `rule-audit`** — READ-ONLY automated compliance scanner
+  against AGENTS.md anti-patterns D-01..D-28. Per-invariant query,
+  evidence-backed findings, `--subset` scoping, AuditLog integration
+- **Skill `performance-degradation-rca`** — multi-stream RCA
+  correlating sliced metrics, drift, deploys, upstream data, and
+  logger health. Produces R1..R5 root-cause classification and
+  `docs/incidents/{date}-{service}.md` blameless RCA template
+- **Rule 14 `14-api-contracts.md`** — API contract versioning policy:
+  committed `openapi.snapshot.json`, semver table for schema evolution,
+  CI guard enforcing version bump alongside snapshot changes
+- **`templates/service/tests/contract/`** — scaffolded contract-test
+  layout: `test_openapi_snapshot.py` (3 tests) + `openapi.snapshot.json`
+  (regenerated via `scripts/refresh_contract.py`)
+- **`templates/service/scripts/refresh_contract.py`** — operator
+  regeneration script (executable)
+- **Anti-pattern D-28** in AGENTS.md — breaking API change without
+  version bump + snapshot update
+- **25 unit tests** in `test_agent_context.py` covering every typed
+  handoff + AuditLog semantics
+
+### Changed
+
+- `common_utils/agent_context.py`: `AuditEntry` gains `risk_signals:
+  list[str]` and `base_mode: AgentMode | None` fields (omitted from
+  JSONL when None)
+
+### Total test count
+
+- Unit tests: **100 passing** (was 75 in v1.7.1)
+
+---
+
 ## [1.7.1] - 2026-04-24
 
 ### Added
