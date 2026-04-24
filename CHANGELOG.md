@@ -6,6 +6,73 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
 
 ---
 
+## [1.7.1] - 2026-04-24
+
+### Added
+
+- **Model warm-up** (`warm_up_model` in `fastapi_app.py`) forces a dummy
+  predict and builds the SHAP `KernelExplainer` once during lifespan,
+  before `_warmed_up=True`. Cached on app state (D-24)
+- **Probe split** — `livenessProbe: /health` (always 200 while alive),
+  `readinessProbe: /ready` (503 until warmed), `startupProbe: /health`
+  with `failureThreshold: 24` to absorb cold start (D-23)
+- **Graceful shutdown** — `terminationGracePeriodSeconds: 30` coordinated
+  with uvicorn `--timeout-graceful-shutdown=20` (D-25)
+- **PodDisruptionBudget** (`k8s/base/pdb.yaml`) with `minAvailable: 1`
+  and HPA `minReplicas: 2` (D-27)
+- **Champion/Challenger Argo Rollouts** — two AnalysisTemplates:
+  `{service}-cc-online` (4 proxy metrics during canary, auto-rollback)
+  and `{service}-cc-post-deploy` (3 business metrics from performance_monitor,
+  human-gated rollback). Closes G-02b
+- **Rollback skill + /rollback workflow** — STOP-class emergency revert
+  procedure: Argo Rollouts abort+undo, MLflow registry revert, alert
+  silencing, audit issue. Closes G-05
+- **Environment promotion chain** — dev→staging→prod with GitHub
+  Environment Protection Rules. Reusable `deploy-common.yml` workflow;
+  `deploy-gcp.yml` and `deploy-aws.yml` rewritten as 4-job chains.
+  `docs/environment-promotion.md` operator setup guide (ADR-011, D-26)
+- **Dynamic Behavior Protocol** — `common_utils/risk_context.py` with
+  19 unit tests. Reads `mcp-prometheus` for 5 live signals
+  (incident_active, drift_severe, error_budget_exhausted, off_hours,
+  recent_rollback); escalates AUTO→CONSULT or CONSULT→STOP per
+  ADR-010. Fallback to `ops/*.json` files keeps template usable
+  without the MCP
+- **mcp-prometheus promoted to CORE MCP** in AGENTS.md §MCP Integrations
+- **ADR-010** — Dynamic Behavior Protocol via mcp-prometheus
+- **ADR-011** — Environment Promotion Gates (dev→staging→prod)
+- **Anti-patterns D-23..D-27** added to AGENTS.md table with corrective
+  actions
+
+### Changed
+
+- `templates/tests/infra/policies/kubernetes.rego` converted from Rego
+  v0 (legacy `deny[msg] { }`) to Rego v1 (`deny contains msg if { }`).
+  Pre-existing technical debt — current versions of conftest reject the
+  old syntax. Content preserved; only syntax updated.
+- `.windsurf/rules/01-mlops-conventions.md` — invariants list grows to
+  6 (adds warm-up/probe-split); new Dynamic Behavior Protocol section
+- `.windsurf/rules/02-kubernetes.md` — new sections for probe split,
+  graceful shutdown, PodDisruptionBudget
+- `.windsurf/rules/05-github-actions.md` — Environment Promotion Gates
+  (D-26) and Reusable Workflows sections
+- HPA `minReplicas: 1 → 2` (required for PDB `minAvailable: 1` to be
+  non-trivially effective)
+- Rollout's canary `analysis.templates` references the new
+  `{service}-cc-online` template in dedicated file (previously inline)
+
+### Fixed
+
+- `templates/tests/infra/policies/kubernetes.rego` now parses with
+  current conftest/OPA (Rego v1 strict mode)
+- Argo Rollout canary no longer serves traffic to pods that have passed
+  `/health` but have not finished warming their SHAP explainer
+
+### Total test count
+
+- Unit tests: **75 passing** (was 56 in v1.7.0)
+
+---
+
 ## [1.7.0] - 2026-04-23
 
 ### Added
