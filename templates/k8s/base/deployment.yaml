@@ -29,6 +29,16 @@ spec:
     spec:
       serviceAccountName: "{service}-sa"
 
+      # Pod-level securityContext — satisfies PSS 'restricted' (v1.8.1).
+      # All containers inherit runAsNonRoot + the seccomp profile.
+      # See templates/k8s/policies/pod-security-standards.yaml.
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532          # nonroot user; matches distroless images
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+
       # Init container downloads model from cloud storage
       initContainers:
         - name: model-downloader
@@ -39,6 +49,15 @@ spec:
             - cp
             - gs://{MODEL_BUCKET}/{service}/model.joblib
             - /models/model.joblib
+          securityContext:
+            # PSS restricted: init container must also pass the gate.
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests: { cpu: "50m", memory: "64Mi" }
+            limits:   { cpu: "500m", memory: "256Mi" }
           volumeMounts:
             - name: model-storage
               mountPath: /models
@@ -78,6 +97,17 @@ spec:
             limits:
               cpu: "1000m"
               memory: "1024Mi"
+          # PSS restricted (v1.8.1) — strictest container-level policy.
+          # readOnlyRootFilesystem: true requires writable volumes for temp files
+          # (e.g., /tmp for joblib spills). Uncomment the emptyDir below if
+          # needed; default is disabled so scaffolded services work out of the box.
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 65532
+            capabilities:
+              drop: ["ALL"]
+            # readOnlyRootFilesystem: true    # enable after testing for tmp writes
           # --- Probes (D-23) ---
           # startupProbe: absorbs the slow-start window (model download +
           # warm-up). Prevents the livenessProbe from restarting a pod that

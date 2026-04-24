@@ -152,6 +152,54 @@ strategy:
     maxUnavailable: 0   # Zero downtime
 ```
 
+## Pod Security Standards (MANDATORY — D-29)
+
+Every Deployment MUST pass the PSS **restricted** profile in production
+and **baseline** (with `warn=restricted` / `audit=restricted`) in dev +
+staging. Namespaces carry PSS labels; admission controller enforces.
+
+### Pod-level securityContext (inherits to containers)
+
+```yaml
+spec:
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 65532          # nonroot user (distroless convention)
+    fsGroup: 65532
+    seccompProfile:
+      type: RuntimeDefault
+```
+
+### Container-level securityContext
+
+```yaml
+containers:
+  - name: predictor
+    securityContext:
+      allowPrivilegeEscalation: false
+      runAsNonRoot: true
+      runAsUser: 65532
+      capabilities:
+        drop: ["ALL"]
+      # readOnlyRootFilesystem: true   # enable after testing /tmp writes
+```
+
+### Namespace labels
+
+```yaml
+# prod namespace
+metadata:
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/audit: restricted
+```
+
+Dev/staging use `enforce=baseline, warn=restricted` to surface
+violations early without blocking builds. See
+`templates/k8s/policies/pod-security-standards.yaml`.
+
 ## Kustomize Multi-Cloud
 
 - `k8s/base/` — shared manifests (deployments, HPAs, services)

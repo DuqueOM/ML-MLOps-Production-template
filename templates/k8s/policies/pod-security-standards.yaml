@@ -1,0 +1,89 @@
+# =============================================================================
+# Pod Security Standards (PSS) namespace labels
+# =============================================================================
+# Three PSS profiles per Kubernetes 1.25+:
+#   privileged — no restrictions (NEVER use for application namespaces)
+#   baseline   — minimally restrictive; blocks known privilege escalations
+#   restricted — strict hardening per current best practices
+#
+# Template policy:
+#   dev, staging ........... warn=restricted, audit=restricted, enforce=baseline
+#   production ............. enforce=restricted
+#   kube-system, argo, etc.  left at cluster default (NEVER touch here)
+#
+# Why warn/audit at 'restricted' before enforce?
+#   Lets operators see violations in dev/staging BEFORE the prod namespace
+#   blocks the deploy. Classic shift-left: find the issue during staging rollout,
+#   not at 3am in production.
+#
+# How to apply:
+#   Each environment's Kustomize overlay should include its own Namespace
+#   resource with these labels. This file provides the canonical definitions.
+#
+# Usage (overlay):
+#   # k8s/overlays/gcp-prod/kustomization.yaml
+#   resources:
+#     - ../../base
+#     - namespace.yaml          # copy the prod section below
+#
+# References:
+#   https://kubernetes.io/docs/concepts/security/pod-security-standards/
+#   https://kubernetes.io/docs/concepts/security/pod-security-admission/
+# =============================================================================
+---
+# -----------------------------------------------------------------------------
+# DEV namespace — enforce=baseline, warn/audit=restricted
+# -----------------------------------------------------------------------------
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: "{service}-dev"
+  labels:
+    # Enforcement: reject Pods that violate 'baseline' profile
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/enforce-version: latest
+
+    # Warnings & audit: log/warn on 'restricted' violations (shift-left)
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/warn-version: latest
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/audit-version: latest
+
+---
+# -----------------------------------------------------------------------------
+# STAGING namespace — same as dev (validates upgrade path before prod)
+# -----------------------------------------------------------------------------
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: "{service}-staging"
+  labels:
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/warn-version: latest
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/audit-version: latest
+
+---
+# -----------------------------------------------------------------------------
+# PROD namespace — enforce=restricted (strictest)
+# -----------------------------------------------------------------------------
+# Pods in this namespace MUST:
+#   * runAsNonRoot: true
+#   * allowPrivilegeEscalation: false
+#   * capabilities.drop: [ALL]
+#   * seccompProfile.type: RuntimeDefault
+#   * no hostPath / hostNetwork / hostPID / hostIPC
+# See templates/k8s/base/deployment.yaml for the securityContext block.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: "{service}-production"
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/warn-version: latest
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/audit-version: latest

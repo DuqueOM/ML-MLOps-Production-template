@@ -246,6 +246,8 @@ GitHub Actions flow with required_reviewers.
 | D-26 | Deploys go directly to prod without staging validation | Four-job chain (build → dev → staging → prod) with GitHub Environment Protection: 1 reviewer at staging, 2 reviewers + wait_timer + tag-only at prod (ADR-011) |
 | D-27 | Deployment without PodDisruptionBudget | Every Deployment ships with `PodDisruptionBudget` (`minAvailable: 1`). HPA `minReplicas >= 2`. `minAvailable: 0` requires `mlops.template/pdb-zero-acknowledged` annotation referencing an ADR |
 | D-28 | Breaking API change without version bump + snapshot update | Update `tests/contract/openapi.snapshot.json` via `scripts/refresh_contract.py`, bump `app.version` in `main.py` (semver: additive=minor, renames/narrows=major), announce in `CHANGELOG.md ### API Contract`. CI rejects snapshot changes without matching version bump |
+| D-29 | Namespace without Pod Security Standards labels | Label prod namespaces `pod-security.kubernetes.io/enforce: restricted`; dev/staging `enforce: baseline` + `warn/audit: restricted`. See `templates/k8s/policies/pod-security-standards.yaml`. Container `securityContext` drops ALL capabilities, `allowPrivilegeEscalation: false`, `runAsNonRoot: true` |
+| D-30 | Production image without SBOM attestation | Deploy workflow MUST generate an SBOM (Syft / CycloneDX) and attach it as a Cosign attestation (`cosign attest --type cyclonedx`). Full SLSA L3 provenance is documented as roadmap in `deploy-gcp.yml` §1b |
 
 ## Session Initialization Protocol
 

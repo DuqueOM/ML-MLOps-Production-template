@@ -65,7 +65,28 @@ jobs:
           COSIGN_EXPERIMENTAL: "true"
         run: |
           for SERVICE in ServiceA; do
-            cosign sign --yes ${{ env.REGISTRY }}/${SERVICE}:${{ steps.version.outputs.v }}
+            IMG="${{ env.REGISTRY }}/${SERVICE}:${{ steps.version.outputs.v }}"
+            cosign sign --yes "${IMG}"
+          done
+
+      # SBOM + attestation (SLSA L1). Full L3 provenance via
+      # slsa-github-generator is documented as ROADMAP in deploy-gcp.yml
+      # (same approach applies to AWS once Dockerfile is reproducible).
+      - name: Generate SBOM (Syft)
+        uses: anchore/sbom-action@v0
+        with:
+          image: "${{ env.REGISTRY }}/ServiceA:${{ steps.version.outputs.v }}"
+          format: cyclonedx-json
+          output-file: sbom-ServiceA.cyclonedx.json
+
+      - name: Attach SBOM as attestation
+        env:
+          COSIGN_EXPERIMENTAL: "true"
+        run: |
+          for SERVICE in ServiceA; do
+            IMG="${{ env.REGISTRY }}/${SERVICE}:${{ steps.version.outputs.v }}"
+            cosign attest --yes --type cyclonedx \
+              --predicate "sbom-${SERVICE}.cyclonedx.json" "${IMG}"
           done
 
   deploy-dev:
