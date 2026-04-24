@@ -110,72 +110,37 @@ spec:
 
   strategy:
     canary:
-      # Canary analysis — runs AnalysisTemplate at each step
+      # Canary analysis — runs '{service}-cc-online' (ADR-008).
+      # The AnalysisTemplate itself lives in
+      # analysistemplate-champion-challenger.yaml so the C/C rules are
+      # version-controlled independently of the rollout manifest.
+      # See that file for the 4 proxy metrics (prediction log health,
+      # error rate vs stable, score-distribution shift, p95 latency).
       analysis:
         templates:
-          - templateName: "{service}-canary-analysis"
+          - templateName: "{service}-cc-online"
         args:
           - name: service-name
             value: "{service}"
+          # Populated by Argo Rollouts at canary time:
+          - name: canary-version
+            valueFrom:
+              podTemplateHashValue: Latest
+          - name: stable-version
+            valueFrom:
+              podTemplateHashValue: Stable
 
-      # Progressive traffic shifting
+      # Progressive traffic shifting — 8 minutes total with analysis
+      # firing every 30s for a total of 8 measurements per step pair.
       steps:
         - setWeight: 10
-        - pause: "{ duration: 2m }"
+        - pause: { duration: 2m }
         - setWeight: 30
-        - pause: "{ duration: 2m }"
+        - pause: { duration: 2m }
         - setWeight: 60
-        - pause: "{ duration: 2m }"
+        - pause: { duration: 2m }
         - setWeight: 100
 
       # Auto-rollback on failure
       maxSurge: 1
       maxUnavailable: 0
-
----
-# =============================================================================
-# AnalysisTemplate — Prometheus-based canary health checks
-# =============================================================================
-# Checks:
-#   1. Error rate < 5% (HTTP 5xx / total requests)
-#   2. P95 latency < 500ms
-#
-# If either check fails, Argo automatically rolls back the canary.
-#
-# TODO: Adjust thresholds for your service SLA.
-# TODO: Verify Prometheus query matches your metric names.
-# =============================================================================
-apiVersion: argoproj.io/v1alpha1
-kind: AnalysisTemplate
-metadata:
-  name: "{service}-canary-analysis"
-spec:
-  args:
-    - name: service-name
-  metrics:
-    # Error rate check: < 5% HTTP 5xx
-    - name: error-rate
-      interval: 30s
-      failureLimit: 3
-      successCondition: "result[0] < 0.05"
-      provider:
-        prometheus:
-          address: http://prometheus.monitoring:9090
-          query: |
-            sum(rate({{args.service-name}}_requests_total{status=~"5.."}[2m]))
-            /
-            sum(rate({{args.service-name}}_requests_total[2m]))
-
-    # Latency check: P95 < 500ms
-    - name: p95-latency
-      interval: 30s
-      failureLimit: 3
-      successCondition: "result[0] < 0.5"
-      provider:
-        prometheus:
-          address: http://prometheus.monitoring:9090
-          query: |
-            histogram_quantile(0.95,
-              sum(rate({{args.service-name}}_request_duration_seconds_bucket[2m]))
-              by (le)
-            )

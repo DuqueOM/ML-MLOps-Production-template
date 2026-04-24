@@ -1,0 +1,218 @@
+# =============================================================================
+# Champion/Challenger AnalysisTemplates — ADR-008
+# =============================================================================
+# The template composes THREE layers of Champion/Challenger validation:
+#
+#   1. OFFLINE (retrain-service.yml + champion_challenger.py)
+#      - McNemar exact test + bootstrap ΔAUC 95% CI on the HOLDOUT set
+#      - Runs BEFORE the image is even built
+#      - Tri-state: promote / keep / block (exit codes 0 / 1 / 2)
+#      - Blocks image promotion on exit 2
+#
+#   2. ONLINE (this file — '{service}-cc-online')
+#      - Proxy metrics during the 8-minute canary window
+#      - Ground-truth labels have NOT arrived yet → cannot compute AUC/F1
+#      - Uses: prediction_log error rate, score-distribution shift,
+#        http error rate per version, p95 latency
+#      - Failures auto-rollback via Argo Rollouts
+#
+#   3. POST-DEPLOY (this file — '{service}-cc-post-deploy')
+#      - Real business metrics from performance_monitor CronJob
+#      - Runs as a scheduled CronJob after labels accumulate
+#      - Labels vary by service (hours to weeks)
+#      - Failure opens a GitHub issue (does NOT auto-rollback after promotion
+#        — promotion is sticky; rollback is a human STOP operation)
+#
+# Prerequisites (install alongside the service):
+#   - Prometheus + Pushgateway reachable at prometheus.monitoring:9090
+#   - performance_monitor CronJob pushing sliced metrics
+#   - Argo Rollouts v1.5+
+#
+# TODO: Replace {service} with your actual service name.
+# TODO: Adjust thresholds — baseline them against 7-day production metrics.
+# =============================================================================
+---
+# -----------------------------------------------------------------------------
+# ONLINE — runs during the canary rollout (2m intervals, 4 measurements)
+# -----------------------------------------------------------------------------
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: "{service}-cc-online"
+  labels:
+    app: "{service}"
+    analysis-type: online
+spec:
+  args:
+    - name: service-name
+    - name: canary-version      # injected by rollout-template as {.args.canary-version}
+    - name: stable-version
+
+  metrics:
+    # -------------------------------------------------------------------------
+    # 1. Prediction logging health (D-22) — canary must not degrade observability
+    # -------------------------------------------------------------------------
+    # If >5% of predictions fail to log, we are flying blind on the challenger's
+    # eventual performance measurement. Better to fail the canary than ship a
+    # version whose closed-loop metrics will be incomplete.
+    - name: prediction-log-error-rate
+      interval: 30s
+      count: 8
+      failureLimit: 2
+      successCondition: "result[0] < 0.05"
+      provider:
+        prometheus:
+          address: http://prometheus.monitoring:9090
+          query: |
+            sum(rate(prediction_log_errors_total{model_version="{{args.canary-version}}"}[2m]))
+            /
+            clamp_min(sum(rate(prediction_log_total{model_version="{{args.canary-version}}"}[2m])), 0.001)
+
+    # -------------------------------------------------------------------------
+    # 2. HTTP error rate per version — challenger must not regress
+    # -------------------------------------------------------------------------
+    # Direct comparison against the stable version, not an absolute threshold.
+    # This catches challenger-specific 5xx spikes that might be masked by
+    # overall low traffic.
+    - name: error-rate-vs-stable
+      interval: 30s
+      count: 8
+      failureLimit: 2
+      successCondition: "result[0] <= 1.5"
+      provider:
+        prometheus:
+          address: http://prometheus.monitoring:9090
+          query: |
+            (
+              sum(rate({{args.service-name}}_requests_total{status=~"5..",model_version="{{args.canary-version}}"}[2m]))
+              /
+              clamp_min(sum(rate({{args.service-name}}_requests_total{model_version="{{args.canary-version}}"}[2m])), 0.001)
+            )
+            /
+            clamp_min(
+              sum(rate({{args.service-name}}_requests_total{status=~"5..",model_version="{{args.stable-version}}"}[2m]))
+              /
+              sum(rate({{args.service-name}}_requests_total{model_version="{{args.stable-version}}"}[2m])),
+              0.001
+            )
+
+    # -------------------------------------------------------------------------
+    # 3. Score distribution shift (proxy for prediction drift)
+    # -------------------------------------------------------------------------
+    # Compare challenger's median prediction score against the stable version's
+    # over the same interval. Large shifts indicate the challenger is producing
+    # systematically different outputs — could be good (new signal) or bad
+    # (miscalibration). Above 20% absolute difference triggers investigation.
+    - name: score-distribution-shift
+      interval: 30s
+      count: 8
+      failureLimit: 3
+      successCondition: "result[0] < 0.20"
+      provider:
+        prometheus:
+          address: http://prometheus.monitoring:9090
+          query: |
+            abs(
+              histogram_quantile(0.5,
+                sum(rate({{args.service-name}}_prediction_score_bucket{model_version="{{args.canary-version}}"}[2m])) by (le)
+              )
+              -
+              histogram_quantile(0.5,
+                sum(rate({{args.service-name}}_prediction_score_bucket{model_version="{{args.stable-version}}"}[2m])) by (le)
+              )
+            )
+
+    # -------------------------------------------------------------------------
+    # 4. P95 latency absolute ceiling
+    # -------------------------------------------------------------------------
+    - name: p95-latency
+      interval: 30s
+      count: 8
+      failureLimit: 2
+      successCondition: "result[0] < 0.5"
+      provider:
+        prometheus:
+          address: http://prometheus.monitoring:9090
+          query: |
+            histogram_quantile(0.95,
+              sum(rate({{args.service-name}}_request_duration_seconds_bucket{model_version="{{args.canary-version}}"}[2m]))
+              by (le)
+            )
+
+---
+# -----------------------------------------------------------------------------
+# POST-DEPLOY — runs AFTER promotion, once ground-truth labels accumulate
+# -----------------------------------------------------------------------------
+# Trigger: scheduled Argo Rollouts ClusterAnalysisRun OR Experiment after
+# N days (N = typical label latency). Failure creates an issue (human STOP),
+# does NOT auto-revert — rollback at this stage is a governed operation.
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: "{service}-cc-post-deploy"
+  labels:
+    app: "{service}"
+    analysis-type: post-deploy
+spec:
+  args:
+    - name: service-name
+    - name: model-version
+
+  metrics:
+    # -------------------------------------------------------------------------
+    # 1. Global AUC must not regress below baseline (ADR-007)
+    # -------------------------------------------------------------------------
+    # performance_monitor pushes
+    #   '{service}_performance_metric{slice_name="__global__", slice_value="__all__", metric="auc"}'
+    # after every CronJob run. To get per-version metrics, ensure
+    # configs/slices.yaml declares 'model_version' as a slice so the monitor
+    # emits '{service}_performance_metric{slice_name="model_version", slice_value="<ver>", metric="auc"}'.
+    - name: per-version-auc
+      interval: 1h
+      count: 24       # evaluate over a 24h window
+      failureLimit: 3
+      successCondition: "result[0] >= 0.70"   # TODO: set per-service baseline
+      provider:
+        prometheus:
+          address: http://prometheus.monitoring:9090
+          query: |
+            max({{args.service-name}}_performance_metric{
+              slice_name="by_model_version",
+              slice_value="{{args.model-version}}",
+              metric="auc"
+            })
+
+    # -------------------------------------------------------------------------
+    # 2. No single slice drops below the per-slice alert threshold
+    # -------------------------------------------------------------------------
+    # Fails if any SlicedAUCBelowAlert is firing during the evaluation window.
+    - name: sliced-auc-alerts
+      interval: 1h
+      count: 24
+      failureLimit: 1
+      successCondition: "result[0] == 0"
+      provider:
+        prometheus:
+          address: http://prometheus.monitoring:9090
+          query: |
+            max(ALERTS{
+              alertname="SlicedAUCBelowAlert",
+              service="{{args.service-name}}",
+              alertstate="firing"
+            }) OR on() vector(0)
+
+    # -------------------------------------------------------------------------
+    # 3. Performance monitor heartbeat — closed-loop must be alive
+    # -------------------------------------------------------------------------
+    # If the monitor hasn't reported in 48h we can't trust the verdict
+    # above, so we fail defensively.
+    - name: monitor-heartbeat
+      interval: 1h
+      count: 24
+      failureLimit: 1
+      successCondition: "result[0] < 172800"   # 48h in seconds
+      provider:
+        prometheus:
+          address: http://prometheus.monitoring:9090
+          query: |
+            (time() - max({{args.service-name}}_performance_last_run_timestamp))

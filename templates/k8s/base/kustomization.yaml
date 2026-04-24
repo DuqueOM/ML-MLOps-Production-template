@@ -27,5 +27,6 @@ resources:
   - cronjob-drift.yaml
   - cronjob-performance.yaml
   - performance-prometheusrule.yaml
+  - analysistemplate-champion-challenger.yaml
   - networkpolicy.yaml
   - rbac.yaml
