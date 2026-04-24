@@ -1,0 +1,40 @@
+---
+description: Environment promotion + supply-chain signing for CI/CD
+globs: .github/workflows/*.yml, .github/workflows/*.yaml, **/cicd/*.yml
+---
+
+# GitHub Actions Rules
+
+## Environment promotion (D-26, ADR-011)
+- `dev → staging → prod` chained in ONE workflow
+- Use reusable `deploy-common.yml` — SSOT for build/apply/smoke-test
+- Prod gate: `environment: production` with
+  `required_reviewers: 2` + `wait_timer: 15` + tag-only
+- Staging gate: `required_reviewers: 1`
+
+## Permissions + secrets (D-17, D-18)
+- `permissions.id-token: write` for Cosign keyless OIDC
+- NO static cloud creds — IRSA (AWS) / WI (GCP) only
+- `GITHUB_TOKEN` least-privilege (default: contents:read)
+- Secrets via `secrets.<NAME>`, never literal; never echoed
+
+## SBOM + signing (D-19, D-30)
+For every prod deploy:
+1. Build image + tag with git sha
+2. `syft` → CycloneDX SBOM
+3. `cosign sign --yes` (keyless OIDC)
+4. `cosign attest --yes --type cyclonedx` SBOM
+5. `kubectl apply` via deploy-common.yml
+6. Smoke-test `/ready` before success
+
+## Forbidden
+- Standalone `deploy-prod.yml` (D-26)
+- `kubectl apply` outside deploy-common.yml
+- `uses: org/action@v1` — pin to sha
+- Dynamic secret interpolation (`run: eval $SECRET`)
+
+## Audit
+Every workflow appends to `ops/audit.jsonl`.
+CONSULT/STOP modes open a `audit`-tagged issue.
+
+See `.windsurf/rules/05-github-actions.md`, ADR-011.

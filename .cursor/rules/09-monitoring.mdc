@@ -1,0 +1,32 @@
+---
+description: Monitoring — metrics, alerts, Grafana dashboards
+globs: **/monitoring/*.py, **/prometheus*.yaml, **/grafana/**, **/alerts*.yaml
+---
+
+# Monitoring Rules
+
+## Mandatory Prometheus metrics
+- `{service}_requests_total{status,model_version}` (Counter)
+- `{service}_request_duration_seconds` (Histogram)
+- `{service}_prediction_score_bucket` (Histogram — C/C distribution)
+- `{service}_model_info{version,commit}` (Gauge)
+- `prediction_log_total` / `prediction_log_errors_total` (D-22)
+- `{service}_performance_metric{slice_name,slice_value,metric}` (ADR-007)
+- `{service}_psi_score{feature}` (ADR-006)
+- `{service}_performance_last_run_timestamp` (heartbeat, D-09)
+- Optional: `{service}_input_out_of_range_total{feature,direction}` (C4)
+
+## Mandatory alerts (pair every alert with a heartbeat)
+- GlobalAUCBelowAlert · SlicedAUCBelowAlert · PerformanceMonitorStale
+  · PredictionLogErrorsHigh · SLOBurnRate · PSIBreach
+
+## Grafana dashboards
+- `dashboard-template.json` (basics) + `dashboard-closed-loop.json` (SLO/CC/drift)
+
+## Invariants
+- D-06 metric > 0.99 → investigate before alerting
+- D-08 PSI uses QUANTILE bins, never uniform
+- D-09 Every alert has a matching heartbeat alert
+- D-22 Logger errors metered, never propagated to HTTP
+
+See `.windsurf/rules/09-monitoring.md`, `13-closed-loop-monitoring.md`, ADR-006/007.

@@ -1,0 +1,31 @@
+---
+description: API contract versioning + OpenAPI snapshot tests
+globs: **/app/*.py, **/app/schemas.py, **/tests/contract/**, **/scripts/refresh_contract.py
+---
+
+# API Contract Rules (D-28)
+
+## Invariants
+- Public schemas in `app/schemas.py` — single source of truth
+- `tests/contract/openapi.snapshot.json` is COMMITTED + auto-generated
+- Any snapshot change REQUIRES a matching `app.version` bump (semver)
+- CI `contract-check` diffs live OpenAPI vs snapshot → FAILS if diverged
+
+## Breaking (major bump)
+- Remove field, require new field, type change, rename endpoint/method
+
+## Additive (minor bump)
+- New optional field with default, new endpoint, new status code for NEW error
+
+## Workflow
+```
+Edit app/schemas.py → python scripts/refresh_contract.py
+  → if snapshot changed: bump app.version + commit together
+```
+
+## Forbidden
+- Commit snapshot change without version bump (CI rejects)
+- Hand-edit openapi.snapshot.json
+- Breaking change without ADR when service has ≥ 1 consumer
+
+See `.windsurf/rules/14-api-contracts.md`, AGENTS.md D-28.

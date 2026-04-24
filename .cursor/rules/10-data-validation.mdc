@@ -1,0 +1,26 @@
+---
+description: Pandera schemas + DVC data contracts
+globs: **/schemas.py, **/validation*.py, **/dvc*.yaml
+---
+
+# Data Validation Rules
+
+## Pandera invariants
+- D-14 `Check.in_range(lo,hi)` derives from `eda/artifacts/01_dtypes_map.json`
+- Nullable explicit (`nullable=True`), strict mode ON for prod inputs
+- Schemas in `src/{service}/schemas.py` — single source of truth
+
+## DVC
+- `data/raw/`, `data/processed/` DVC-tracked + gitignored
+- D-15 `eda/artifacts/02_baseline_distributions.pkl` DVC-tracked (drift input)
+- Remotes: GCS (primary) + S3 (secondary)
+
+## Lifecycle
+EDA phase 6 → `schema_proposal.py` → human review → merge into `schemas.py`.
+`test_schema_matches_eda.py` keeps ranges in sync. Never auto-overwrite.
+
+## Forbidden
+- Hardcoded ranges (`Check.in_range(0, 100)`) — derive from EDA
+- Silent column drop — always raise or log
+
+See AGENTS.md D-14/D-15, `.windsurf/rules/08-data-validation.md`, ADR-004.

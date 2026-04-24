@@ -66,16 +66,40 @@ Legend: ✓ = canonical coverage, · = reference/link to canonical, — = not in
    dedicated file; the invariant ID + commands are referenced from
    the main conventions file and `.claude/01-serving.md`.
 
-## Gaps accepted
+## Commands and skills parity (v1.9.0 update)
 
-- **`.claude/rules/`** does not have a dedicated `09-github-actions.md`
-  — deploy gate invariants (D-26) live in `03-kubernetes.md` +
-  AGENTS.md. Acceptable: Claude Code's path-scoped rules target
-  workflow files under `.github/` via path globs, not a dedicated rule.
+| Asset | .windsurf | .cursor | .claude |
+|-------|-----------|---------|---------|
+| **Rules** | 15 files | 12 files (added 09-monitoring, 10-data-validation, 11-api-contracts, 12-github-actions) | 14 files (added 09-mlops-conventions, 10-docker, 11-monitoring, 12-data-validation, 13-api-contracts, 14-github-actions) |
+| **Slash commands** | 12 workflows | **12 commands** in `.cursor/commands/` ✓ | **12 commands** in `.claude/commands/` ✓ |
+| **Skills** | 16 skills | 1 INDEX.md with pointers ✓ | 1 INDEX.md with pointers ✓ |
+
+## Parity strategy
+
+**Rules**: each IDE carries its own rule files with IDE-specific frontmatter
+(`trigger`/`globs` vs `paths`). Content is the SAME invariants expressed
+in the rule's natural format. Minimal duplication of detailed guidance —
+deep content lives in `.windsurf/` and AGENTS.md; Cursor/Claude rules
+are the IDE's entry point.
+
+**Slash commands**: `.claude/commands/` and `.cursor/commands/` contain
+pointer files that reference the canonical `.windsurf/workflows/`. Each
+pointer carries enough detail (30-60 lines) for the agent to execute
+without loading the canonical doc, but flags the canonical as
+authoritative.
+
+**Skills**: `.claude/skills/INDEX.md` and `.cursor/skills/INDEX.md`
+list all 16 skills with their authorization mode + link to the
+canonical `.windsurf/skills/<name>/SKILL.md`. Agents read the canonical
+file in full before executing. This avoids maintaining 16×3 copies
+of long procedural docs.
+
+## Gaps accepted (unchanged)
+
 - **`.cursor/rules/03-terraform.mdc`** does not exist — Terraform
   guidance is mentioned in `01-mlops-conventions.mdc` and covered by
-  `.windsurf/rules/03-terraform.md`. Adding a Cursor Terraform rule
-  is low priority (Cursor users typically work in Python contexts).
+  `.windsurf/rules/03-terraform.md`. Cursor users typically work in
+  Python contexts. Not a parity gap in practice.
 
 ## Next review trigger
 
