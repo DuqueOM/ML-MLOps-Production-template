@@ -78,19 +78,69 @@ Why `emptyDir` and not PVC: model is immutable during pod lifetime. No persisten
 ```yaml
 readinessProbe:
   httpGet:
-    path: /health
+    path: /ready      # D-23: 503 until model warm-up completes
     port: 8000
-  initialDelaySeconds: 30   # Wait for init container + model load
-  periodSeconds: 10
+  periodSeconds: 5
   failureThreshold: 3
 livenessProbe:
   httpGet:
-    path: /health
+    path: /health     # always 200 while event loop alive
     port: 8000
   initialDelaySeconds: 30
   periodSeconds: 15
   failureThreshold: 5
+startupProbe:         # D-23: absorbs cold-start + warm-up window
+  httpGet:
+    path: /health
+    port: 8000
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  failureThreshold: 24   # up to 120s total
 ```
+
+Liveness and readiness MUST target DIFFERENT paths. Using the same
+endpoint for both recreates the cold-start traffic-spike failure mode
+that `/ready` exists to prevent (D-23).
+
+## Graceful Shutdown (MANDATORY — D-25)
+
+Coordinate K8s `terminationGracePeriodSeconds` with uvicorn's
+`--timeout-graceful-shutdown` so in-flight requests complete on SIGTERM:
+
+```yaml
+spec:
+  template:
+    spec:
+      terminationGracePeriodSeconds: 30   # MUST be > uvicorn timeout
+      containers:
+        - args:
+            - "--timeout-graceful-shutdown=20"
+```
+
+The uvicorn timeout must be STRICTLY LESS than the pod grace period to
+leave headroom for SIGKILL handling.
+
+## PodDisruptionBudget (MANDATORY — D-27)
+
+Every Deployment MUST ship with a `PodDisruptionBudget`. Without one, a
+single `kubectl drain` of a node can evict all replicas simultaneously.
+
+```yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: "{service}-pdb"
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: "{service}"
+```
+
+For this PDB to be effective, HPA `minReplicas` MUST be >= 2. Setting
+`minAvailable: 0` is allowed ONLY with an annotation
+`mlops.template/pdb-zero-acknowledged: "<ADR-url>"` documenting the
+accepted downtime budget (enforced by OPA policy).
 
 ## Rolling Update Strategy
 

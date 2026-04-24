@@ -22,6 +22,7 @@ resources:
   - deployment.yaml
   - service.yaml
   - hpa.yaml
+  - pdb.yaml
   - serviceaccount.yaml
   - cronjob-drift.yaml
   - cronjob-performance.yaml

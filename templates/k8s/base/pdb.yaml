@@ -1,0 +1,29 @@
+# =============================================================================
+# PodDisruptionBudget (D-27)
+# =============================================================================
+# Protects the service against simultaneous pod eviction during VOLUNTARY
+# disruptions (kubectl drain, node upgrades, cluster auto-scaler scale-down).
+#
+# Without a PDB, a single `kubectl drain` of a node can evict ALL replicas
+# at once — a brief outage for something that should be a rolling operation.
+#
+# We target Deployment AND Argo Rollouts via the app label selector.
+# The HPA minReplicas MUST be >= minAvailable + 1 for this to be useful;
+# see hpa.yaml.
+# =============================================================================
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: "{service}-pdb"
+  labels:
+    app: "{service}"
+    managed-by: kustomize
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: "{service}"
+  # K8s 1.26+ (GKE 1.27+, EKS 1.28+): tolerate involuntary disruptions by
+  # still allowing eviction when the cluster is truly stuck. In older
+  # clusters this key is silently ignored — safe to leave in.
+  unhealthyPodEvictionPolicy: AlwaysAllow

@@ -9,7 +9,12 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: "{service}-predictor"
-  minReplicas: 1
+  # minReplicas MUST be >= 2 so PodDisruptionBudget.minAvailable: 1 can
+  # tolerate voluntary disruptions (node drain, rolling node upgrade).
+  # Single-replica services: set PDB minAvailable: 0 and document the
+  # downtime budget in an ADR. Do not leave minReplicas: 1 + PDB: 1 —
+  # voluntary disruptions become impossible (PDB blocks every drain).
+  minReplicas: 2
   maxReplicas: 5
 
   # CPU ONLY — NEVER use memory for ML services
