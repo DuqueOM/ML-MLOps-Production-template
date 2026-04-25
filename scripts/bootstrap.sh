@@ -135,7 +135,7 @@ if [[ "$CHECK_ONLY" == "false" ]]; then
     (cd "$REPO_ROOT" && pre-commit install >/dev/null 2>&1)
     success "pre-commit hooks installed"
   else
-    warn "pre-commit not available (install with: pip install pre-commit)"
+    warn "pre-commit not available (install with: uv pip install pre-commit, or pip install pre-commit inside a venv)"
   fi
 fi
 
@@ -153,7 +153,13 @@ fi
 if [[ "$SKIP_DEMO" == "false" ]] && [[ "$CHECK_ONLY" == "false" ]]; then
   header "Validating Example (fraud detection)"
   cd "$REPO_ROOT/examples/minimal"
-  if pip install -q -r requirements.txt; then
+  # PEP-668 safe install (ADR-014 §5.3): install_python_deps above already
+  # set up a venv. Use whichever pip is on PATH after activation.
+  PIP_BIN="pip"
+  if command -v uv >/dev/null 2>&1; then
+    PIP_BIN="uv pip"
+  fi
+  if $PIP_BIN install -q -r requirements.txt; then
     success "Example dependencies installed"
   else
     error "Failed to install example dependencies"

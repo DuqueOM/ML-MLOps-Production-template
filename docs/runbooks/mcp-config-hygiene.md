@@ -78,6 +78,12 @@ export GITHUB_PERSONAL_ACCESS_TOKEN="github_pat_..."
 
 ## Setup checklist (first time)
 
+> **Bootstrap note (ADR-014 §5.3)**: `scripts/bootstrap.sh` is now PEP-668
+> safe. It detects `uv` first, falls back to a project-local `.venv/`,
+> and refuses to call bare `pip` against the system interpreter. If you
+> prefer the fastest path: `curl -LsSf https://astral.sh/uv/install.sh | sh`
+> before running bootstrap.
+
 1. Create `~/.secrets.env` (chmod 600):
    ```bash
    touch ~/.secrets.env
