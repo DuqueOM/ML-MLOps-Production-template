@@ -46,7 +46,9 @@ jobs:
           format: json
 
       - name: Checkov
-        uses: bridgecrewio/checkov-action@master
+        # Pinned to immutable tag (D-19, ADR-014 §1.1). Dependabot updates
+        # via .github/dependabot.yml. Phase 5 will harden to commit-SHA.
+        uses: bridgecrewio/checkov-action@v12.2752.0
         with:
           directory: infra/terraform/${{ matrix.cloud }}
           quiet: true

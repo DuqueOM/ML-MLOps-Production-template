@@ -154,7 +154,9 @@ jobs:
           echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
 
       - name: Trivy vulnerability scan (blocker: HIGH/CRITICAL)
-        uses: aquasecurity/trivy-action@master
+        # Pinned to immutable tag (D-19, ADR-014 §1.1). Dependabot updates
+        # via .github/dependabot.yml. Phase 5 will harden to commit-SHA.
+        uses: aquasecurity/trivy-action@0.28.0
         with:
           image-ref: ${{ steps.build.outputs.image }}
           format: "table"

@@ -13,7 +13,7 @@ paths:
   build/apply/smoke-test (no duplication across GCP/AWS)
 - Prod job gated by `environment: production`:
   * `required_reviewers: 2`
-  * `wait_timer: 15` (minutes soak after staging success)
+  * `wait_timer: 5` (minutes soak after staging success — ADR-011)
   * `deployment_branch_policy: protected_tags` — only tag-based deploys
 - Staging: `required_reviewers: 1`, no tag restriction
 

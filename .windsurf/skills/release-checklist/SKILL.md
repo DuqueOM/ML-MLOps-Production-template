@@ -101,11 +101,26 @@ kubectl rollout status deployment --all -n {namespace} --timeout=300s
 - [ ] HPA functioning (correct replica counts)
 
 ### Smoke Tests
+
+Smoke tests run **inside** the deploy chain via `deploy-common.yml`
+(canonical SSOT). Each environment job invokes the smoke test step
+against the freshly-deployed pods; failure halts the chain.
+
 ```bash
-# Run automated smoke tests
-python scripts/smoke_test.py --cloud gcp --services all
-python scripts/smoke_test.py --cloud aws --services all
+# Manual invocation (one service, one cloud) for debugging:
+kubectl --context=$CLUSTER -n $NAMESPACE port-forward svc/$SERVICE 8000:8000 &
+curl -fsS http://localhost:8000/health    # liveness
+curl -fsS http://localhost:8000/ready     # readiness (gates traffic)
+curl -fsS -X POST http://localhost:8000/predict \
+     -H 'content-type: application/json' \
+     -d "$(cat tests/fixtures/smoke_payload.json)"
+kill %1
 ```
+
+For a multi-service / multi-cloud sweep, drive the loop from a
+runbook page or a CI workflow-dispatch — the template does not ship
+a `scripts/smoke_test.py` script (would compete with `deploy-common.yml`
+as SSOT).
 
 ## Rollback Plan
 

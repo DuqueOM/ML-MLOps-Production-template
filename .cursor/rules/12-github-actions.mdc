@@ -9,7 +9,7 @@ globs: .github/workflows/*.yml, .github/workflows/*.yaml, **/cicd/*.yml
 - `dev → staging → prod` chained in ONE workflow
 - Use reusable `deploy-common.yml` — SSOT for build/apply/smoke-test
 - Prod gate: `environment: production` with
-  `required_reviewers: 2` + `wait_timer: 15` + tag-only
+  `required_reviewers: 2` + `wait_timer: 5` + tag-only (ADR-011)
 - Staging gate: `required_reviewers: 1`
 
 ## Permissions + secrets (D-17, D-18)
