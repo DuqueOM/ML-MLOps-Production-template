@@ -274,6 +274,9 @@ When starting a new session in a project derived from this template:
 - `release-checklist` — full multi-cloud release process
 - `rollback` — STOP-class emergency revert (Argo Rollouts abort + undo, MLflow revert, alert silencing)
 - `cost-audit` — monthly cloud cost review
+- `batch-inference` — scaffold + run batch scoring jobs (CronJob + Parquet output) reusing the service's model and feature-engineering code
+- `performance-degradation-rca` — end-to-end RCA for a performance-degradation incident: correlates sliced metrics, drift, deploy history, upstream data changes, and prediction logs into one evidence-backed root cause
+- `rule-audit` — automated scan of a service/repo for compliance with AGENTS.md invariants D-01 through D-30; produces a PASS/FAIL report with file:line evidence
 
 **Workflows** (user-triggered via slash commands):
 - `/new-service` — end-to-end service creation
@@ -286,6 +289,8 @@ When starting a new session in a project derived from this template:
 - `/new-adr` — create Architecture Decision Record
 - `/eda` — run 6-phase exploratory data analysis on a new dataset
 - `/secret-breach` — incident workflow for leaked secrets (STOP pipeline, rotate, audit)
+- `/performance-review` — monthly sliced-performance review using ground-truth metrics (detect silent concept drift, document findings)
+- `/rollback` — emergency rollback of a production ML service — pairs with the `rollback` skill (STOP-class operation)
 
 ## Agentic Configuration
 

@@ -279,10 +279,15 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Validate agentic configuration
+      - name: Validate agentic configuration (strict)
         # Verifies: rule frontmatter + glob matching, skill SKILL.md contracts,
         # workflow frontmatter, and AGENTS.md cross-references.
-        run: python scripts/validate_agentic.py
+        # --strict treats warnings (missing fields, broken cross-references)
+        # as failures. Glob misses are reported as informational notes only,
+        # so this stays green as the template grows downstream-only patterns.
+        run: |
+          pip install --quiet pyyaml
+          python scripts/validate_agentic.py --strict
 
       - name: Shell script syntax check
         run: |
