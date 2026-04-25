@@ -86,6 +86,58 @@ jobs:
           name: test-results-${{ matrix.service }}-py${{ matrix.python-version }}
           path: ${{ matrix.service }}/results/
 
+  contract-check:
+    name: API contract — snapshot ↔ version pair-change (D-28)
+    runs-on: ubuntu-latest
+    needs: [test]
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: read
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - {ServiceName}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Need the PR base + HEAD to diff against.
+          fetch-depth: 0
+
+      - name: Detect snapshot ↔ version pair-change
+        run: |
+          set -euo pipefail
+          BASE="${{ github.event.pull_request.base.sha }}"
+          HEAD="${{ github.event.pull_request.head.sha }}"
+          SVC="${{ matrix.service }}"
+
+          SNAPSHOT="${SVC}/tests/contract/openapi.snapshot.json"
+          MAIN="${SVC}/app/main.py"
+
+          # Did the PR change the snapshot?
+          if git diff --name-only "$BASE" "$HEAD" | grep -qx "$SNAPSHOT"; then
+            echo "Snapshot changed in this PR — verifying paired version bump."
+
+            # main.py must also have changed.
+            if ! git diff --name-only "$BASE" "$HEAD" | grep -qx "$MAIN"; then
+              echo "::error file=$SNAPSHOT::OpenAPI snapshot changed without a matching change to $MAIN. Bump app.version per rule 14 §semver."
+              exit 1
+            fi
+
+            # And the version literal must be different between base and head.
+            BASE_V=$(git show "${BASE}:${MAIN}" 2>/dev/null | grep -E "^\s*version\s*=" | head -1 || true)
+            HEAD_V=$(git show "${HEAD}:${MAIN}" 2>/dev/null | grep -E "^\s*version\s*=" | head -1 || true)
+            if [ "$BASE_V" = "$HEAD_V" ] && [ -n "$BASE_V" ]; then
+              echo "::error file=$MAIN::Snapshot changed but app.version line is identical to base. Bump it (rule 14 §semver)."
+              exit 1
+            fi
+
+            echo "✓ Pair-change verified: snapshot AND app.version both updated."
+          else
+            echo "Snapshot unchanged — pair-change rule does not apply."
+          fi
+
   security-audit:
     name: Security Audit — secrets, SAST, IaC
     runs-on: ubuntu-latest
