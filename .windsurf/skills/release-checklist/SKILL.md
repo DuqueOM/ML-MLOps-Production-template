@@ -149,3 +149,39 @@ kubectl rollout status deployment --all -n {namespace}
 - [ ] Close related GitHub Issues
 - [ ] Update cost projections if resource changes
 - [ ] Schedule next drift detection run
+
+## Success criteria
+
+The release is complete when ALL of the following hold across BOTH clouds:
+
+- [ ] All quality gates green (CI test+lint+type, security audit, contract
+      snapshot, fairness DIR >= 0.80)
+- [ ] Image signed with Cosign keyless and SBOM attached as attestation
+      (D-19, D-30) — verified by Kyverno admission policy at deploy time
+- [ ] Six environment deploys succeeded in order:
+      gcp-dev → gcp-staging → gcp-prod ; aws-dev → aws-staging → aws-prod
+- [ ] Smoke tests pass on all 6 (`/health` 200, `/ready` 200, `/predict`
+      returns valid response, `/metrics` scraped by Prometheus)
+- [ ] Production environment Protection Rules honored:
+      2 reviewers + wait_timer: 5 + protected_tags only (ADR-011)
+- [ ] CHANGELOG.md updated and `releases/v<version>.md` published
+- [ ] Per-environment audit entry in `ops/audit.jsonl` with operation
+      = `release_deploy`, result = `success` for each cloud × env pair
+
+## Failure modes — must STOP before completion
+
+If any of these signals appears, the release is NOT complete and must
+be either rolled back via `/rollback` (STOP) or paused for human review:
+
+- Quality gate fail at any stage
+- Cosign verification fail at admission (Kyverno blocks the pod)
+- SBOM attestation older than 90 days (rule 14 §retention)
+- Smoke test 5xx rate > 0.5% in any environment for > 60s
+- Slice metric regression > 5pp on any monitored slice (ADR-007)
+
+## Related
+
+- Workflow: `.windsurf/workflows/release.md`
+- Skill: `rollback` (consequence path on any failure mode)
+- Skill: `security-audit` (gate before build)
+- ADR-011 — Environment promotion gates

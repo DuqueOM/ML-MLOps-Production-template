@@ -92,3 +92,28 @@ terraform plan -target=aws_budgets_budget.ml_budget
 ```
 
 Verify alerts fire at 50% and 90% of monthly budget.
+
+## Success criteria
+
+The audit is complete when ALL of the following hold:
+
+- [ ] Current costs collected from BOTH clouds (GCP billing + AWS Cost Explorer)
+- [ ] Cost breakdown table populated with concrete dollar amounts per category
+      (compute, storage, network, monitoring, MLflow tracking)
+- [ ] Variance vs previous month documented; any single category with > 5%
+      change has a one-line explanation
+- [ ] Each FinOps rule violation has a corrective action with owner + due date
+- [ ] Optimization opportunities ranked by estimated monthly savings
+- [ ] ADRs and service READMEs updated with real measured costs (not estimates)
+- [ ] Audit entry written to `ops/audit.jsonl` with operation=`cost_review`,
+      result=`success`, link to the report
+- [ ] Total spend < 120% of budget — else escalation_triggers fires STOP
+
+If `apply_optimizations` was invoked (STOP-class), an additional human
+sign-off must be linked from the audit entry per ADR-005.
+
+## Related
+
+- Rule: `.windsurf/rules/01-mlops-conventions.md` §FinOps
+- Workflow: `.windsurf/workflows/cost-review.md`
+- Invariants: cost-attribution labels per ADR-013

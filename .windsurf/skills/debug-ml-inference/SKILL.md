@@ -153,3 +153,29 @@ SchemaError means input data violates the Pandera schema → upstream data chang
 | HPA stuck | Memory-based metric | CPU-only HPA | D-02 |
 | Event loop block | `model.predict()` in async | `run_in_executor` | D-03 |
 | SHAP errors | TreeExplainer on ensemble | KernelExplainer | D-04 |
+
+## Success criteria
+
+The skill is complete when ALL of the following hold:
+
+- [ ] Root cause identified — every claim has command + output as evidence
+- [ ] If an anti-pattern (D-01..D-30) was violated, the specific ID is cited
+- [ ] Either:
+  * (dev) the fix has been applied AND the symptom no longer reproduces, OR
+  * (staging/prod) a remediation plan with concrete commands is written
+    and the operator has been handed off (CONSULT/STOP path)
+- [ ] If production-impacting, a regression test is added in
+      `tests/regression/` to prevent recurrence
+- [ ] Audit entry written to `ops/audit.jsonl` with the timeline
+      (symptom → diagnosis → fix or plan)
+- [ ] If escalation_triggers fired (P1 active, error budget exhausted),
+      the chain to `/rollback` or `/incident` was made explicit
+
+A "fix" without evidence is a guess. The skill blocks until evidence
+is collected.
+
+## Related
+
+- Workflow: `.windsurf/workflows/incident.md`
+- Skill: `rollback` (if a deploy is the cause)
+- Skill: `performance-degradation-rca` (if metric regression precedes)

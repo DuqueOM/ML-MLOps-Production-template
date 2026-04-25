@@ -201,3 +201,31 @@ The retrain workflow now runs Champion/Challenger offline BEFORE promotion
 statistical superiority must be proven.
 
 Chain to `/retrain` workflow for the full retraining process.
+
+## Success criteria
+
+The skill is complete when ALL of the following hold:
+
+- [ ] PSI report generated with per-feature scores (no NaN, no infinities)
+- [ ] Per-feature thresholds applied with explicit pass / warn / alert decisions
+- [ ] If labels available: sliced AUC/F1 report computed for the configured
+      slices in `configs/slices.yaml` (ADR-007)
+- [ ] Each feature with PSI above its alert threshold has a documented next
+      action: `monitor`, `retrain`, or `investigate` — never silent
+- [ ] `drift_detection_last_run_timestamp` pushed to Prometheus Pushgateway
+      (heartbeat — gap absence is itself an alert per ADR-009)
+- [ ] `ops/last_drift_report.json` updated so `risk_context.py` can read it
+      on the next agent decision
+- [ ] If `psi_over_2x_threshold` fired: agent emitted `[AGENT MODE: STOP]`
+      and did NOT proceed to retrain or alert silencing
+- [ ] Audit entry written to `ops/audit.jsonl` with operation=`drift_check`,
+      summary of severities, and any chain (retrain / RCA / incident)
+
+## Related
+
+- ADR-006 — Closed-loop monitoring
+- ADR-007 — Sliced performance analysis
+- ADR-008 — Champion/challenger gate
+- ADR-009 — Retraining triggers
+- Skill: `concept-drift-analysis` (deeper, single-slice)
+- Skill: `model-retrain` (consequence path when PSI + AUC agree)
