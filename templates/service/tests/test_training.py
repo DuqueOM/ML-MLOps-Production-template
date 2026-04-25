@@ -100,11 +100,22 @@ class TestDataLeakage:
     def test_temporal_split_no_future_data(self) -> None:
         """If temporal data exists, test set must not contain dates before train set.
 
-        TODO: Implement if your service has temporal features.
-        Example:
-            assert train_dates.max() < test_dates.min(), "Future data in train set"
+        Skipped until the service has a temporal feature in `sample_data`.
+        To enable:
+            1. Add a `transaction_date` (or similar) column to the
+               `sample_data` fixture.
+            2. Replace the body below with a real assertion, e.g.::
+
+                X_train, X_test, _, _ = train_test_split(X, y, test_size=0.2)
+                assert X_train['transaction_date'].max() < X_test['transaction_date'].min()
+
+        Tracking: D-13 (data validation) + ADR-006 (closed-loop monitoring
+        depends on temporally-ordered ground-truth labels).
         """
-        pass
+        pytest.skip(
+            "Service-specific: enable after adding a temporal feature to sample_data. "
+            "See test docstring for the assertion to write."
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -138,6 +149,27 @@ class TestQualityGates:
         assert y_prob.min() < 0.3, f"Min probability {y_prob.min():.3f} too high"
         assert y_prob.max() > 0.7, f"Max probability {y_prob.max():.3f} too low"
 
+    def test_predictions_deterministic_under_seed(self, sample_data: tuple) -> None:
+        """Two pipelines fit with the same random_state must produce
+        identical predictions on the same input.
+
+        Determinism is required for reproducible model promotion (ADR-002):
+        the same data + code + seed must give the same model SHA256.
+        """
+        X, y = sample_data
+        X_train, X_test, y_train, _ = train_test_split(X, y, test_size=0.2, random_state=42)
+
+        pipe_a = Pipeline([("model", GradientBoostingClassifier(random_state=42))])
+        pipe_b = Pipeline([("model", GradientBoostingClassifier(random_state=42))])
+        pipe_a.fit(X_train, y_train)
+        pipe_b.fit(X_train, y_train)
+
+        np.testing.assert_array_equal(
+            pipe_a.predict(X_test),
+            pipe_b.predict(X_test),
+            err_msg="Same-seed pipelines produced different predictions — non-deterministic training.",
+        )
+
 
 # ---------------------------------------------------------------------------
 # Feature Engineering Tests
@@ -163,15 +195,33 @@ class TestFeatureEngineering:
         assert not inf_mask.any(), "Infinite values found in features"
 
     def test_inference_uses_same_features(self, sample_data: tuple) -> None:
-        """transform() and transform_inference() must produce same columns.
+        """transform() and transform_inference() must produce identical columns.
 
-        TODO: Uncomment when FeatureEngineer is implemented.
+        Train/inference feature drift is one of the most common silent
+        failure modes in production. This test catches it at PR time.
+
+        Skipped until the scaffolded service implements FeatureEngineer.
+        To enable:
+            1. Implement `src.{service}.training.features.FeatureEngineer`
+               with `transform(df)` and `transform_inference(df)` methods.
+            2. Uncomment the assertion below.
         """
-        # fe = FeatureEngineer()
-        # X_train, y = fe.transform(full_df)
-        # X_infer = fe.transform_inference(full_df.drop(columns=["target"]))
-        # assert list(X_train.columns) == list(X_infer.columns)
-        pass
+        pytest.skip(
+            "Service-specific: enable after implementing FeatureEngineer in "
+            "src.{service}.training.features. Required by D-04 (SHAP feature "
+            "space consistency) and ADR-006 (training/serving parity)."
+        )
+        # When ready, replace the skip with:
+        #     from src.{service}.training.features import FeatureEngineer
+        #     X_df, y_series = sample_data
+        #     full_df = pd.concat([X_df, y_series.rename("target")], axis=1)
+        #     fe = FeatureEngineer()
+        #     X_train, _ = fe.transform(full_df)
+        #     X_infer = fe.transform_inference(full_df.drop(columns=["target"]))
+        #     assert list(X_train.columns) == list(X_infer.columns), (
+        #         "Train/inference feature drift detected: "
+        #         f"train={list(X_train.columns)} vs infer={list(X_infer.columns)}"
+        #     )
 
 
 # ---------------------------------------------------------------------------
