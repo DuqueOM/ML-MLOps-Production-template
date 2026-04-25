@@ -51,7 +51,16 @@ spec:
           attestors:
             - entries:
                 - keyless:
-                    subject: "https://github.com/{ORG}/{REPO}/.github/workflows/ci.yml@refs/heads/main"
+                    # Signature must come from one of the trusted signing
+                    # workflows in this repo. push+sign+attest live in the
+                    # deploy workflows because they are the only ones with
+                    # cloud creds (WIF for GCP, IRSA for AWS) needed to push
+                    # to the registry. ci.yml builds + scans only.
+                    # Use subjectRegExp (not subject) to match any of:
+                    #   .github/workflows/ci.yml          (future: when push moves to ci.yml)
+                    #   .github/workflows/deploy-gcp.yml  (current: GCP push+sign)
+                    #   .github/workflows/deploy-aws.yml  (current: AWS push+sign)
+                    subjectRegExp: "https://github.com/{ORG}/{REPO}/.github/workflows/(ci|deploy-gcp|deploy-aws)\\.yml@.*"
                     issuer: "https://token.actions.githubusercontent.com"
                     rekor:
                       url: https://rekor.sigstore.dev
@@ -74,7 +83,9 @@ spec:
               attestors:
                 - entries:
                     - keyless:
-                        subject: "https://github.com/{ORG}/{REPO}/.github/workflows/ci.yml@refs/heads/main"
+                        # Same trust set as the signature rule above. SBOM
+                        # attestation is attached in the same job that signs.
+                        subjectRegExp: "https://github.com/{ORG}/{REPO}/.github/workflows/(ci|deploy-gcp|deploy-aws)\\.yml@.*"
                         issuer: "https://token.actions.githubusercontent.com"
                         rekor:
                           url: https://rekor.sigstore.dev

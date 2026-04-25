@@ -228,31 +228,16 @@ jobs:
           path: sbom.*.json
           retention-days: 90
 
-      # TODO: Push to registry (uncomment and configure per cloud)
-      # - name: Push to GCP Artifact Registry
-      #   id: push
-      #   run: |
-      #     # Use Workload Identity Federation, NOT a JSON key (D-18)
-      #     gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
-      #     FULL_REF="${GCP_REGISTRY}/${{ matrix.service }}:${{ github.sha }}"
-      #     docker tag "${{ steps.build.outputs.image }}" "$FULL_REF"
-      #     DIGEST=$(docker push "$FULL_REF" | tee /dev/stderr | grep -oE 'sha256:[a-f0-9]{64}')
-      #     echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
-
-      - name: Install Cosign
+      # Push + sign + attest live in deploy-{gcp,aws}.yml (D-19, ADR-014 §3.2).
+      # Why not here:
+      #   - cosign sign requires an image+digest in a registry → push first
+      #   - push requires cloud creds (WIF for GCP, IRSA for AWS) which are
+      #     scoped to the deploy workflows by environment Protection Rules
+      # Kyverno's trust regexp in templates/k8s/policies/kyverno-image-verification.yaml
+      # accepts signatures from ci.yml, deploy-gcp.yml, or deploy-aws.yml so
+      # the trust chain stays honest about where signing actually happens.
+      - name: Install Cosign (used by deploy workflows; verify-only here)
         uses: sigstore/cosign-installer@v3
-
-      # - name: Sign image with Cosign (keyless, OIDC) — D-19
-      #   run: |
-      #     # Keyless signing: identity proven via GitHub OIDC; no private key management
-      #     cosign sign --yes "${GCP_REGISTRY}/${{ matrix.service }}@${{ steps.push.outputs.digest }}"
-
-      # - name: Attest SBOM — SLSA L2
-      #   run: |
-      #     cosign attest --yes \
-      #       --predicate sbom.cyclonedx.json \
-      #       --type cyclonedx \
-      #       "${GCP_REGISTRY}/${{ matrix.service }}@${{ steps.push.outputs.digest }}"
 
       - name: Emit build provenance summary
         run: |
