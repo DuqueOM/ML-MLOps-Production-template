@@ -1,213 +1,212 @@
 """API endpoint tests for {ServiceName}.
 
-Uses FastAPI TestClient for integration testing of all endpoints.
-Covers health, predict, batch predict, metrics, and error handling.
+Real integration tests using FastAPI TestClient and the mocked-model
+fixtures from ``conftest.py``. Covers:
+
+- liveness `/health` and readiness `/ready` (D-23)
+- single prediction `/predict` (+ ?explain=true SHAP path)
+- batch prediction `/predict_batch`
+- Prometheus `/metrics`
+- model metadata `/model/info`
+- error handling (422 on invalid input)
 
 How to run:
     pytest tests/test_api.py -v
     pytest tests/test_api.py -v -k "predict"
 
-TODO: Replace {service} with your actual service name in imports.
-TODO: Update VALID_PAYLOAD to match your service's Pydantic schema.
-TODO: Ensure a trained model exists at MODEL_PATH before running.
+Customization checklist after scaffolding:
+    1. Replace `feature_a/b/c` with your real feature names everywhere.
+    2. Adjust `valid_payload` in conftest.py to your schema.
+    3. If you add new endpoints, add a corresponding test class here.
 """
 
-from unittest.mock import MagicMock
+from __future__ import annotations
 
-import numpy as np
-import pytest
-
-# TODO: Uncomment when your service is ready
-# os.environ["MODEL_PATH"] = "models/model.joblib"
-# from app.main import app
-# client = TestClient(app)
-
-# ---------------------------------------------------------------------------
-# Sample payloads — customize per service
-# ---------------------------------------------------------------------------
-# TODO: Replace with your actual feature schema
-VALID_PAYLOAD = {
-    "feature_1": 42.0,
-    "feature_2": 600,
-    "feature_3": 1,
-    "feature_4": 50000.0,
-}
-
-INVALID_PAYLOAD_MISSING = {}  # Missing required fields
-INVALID_PAYLOAD_TYPES = {"feature_1": "not_a_number"}  # Wrong types
-
-BATCH_PAYLOAD = {
-    "instances": [VALID_PAYLOAD, VALID_PAYLOAD],
-}
+from fastapi.testclient import TestClient
 
 
 # ---------------------------------------------------------------------------
-# Fixtures
-# ---------------------------------------------------------------------------
-@pytest.fixture
-def mock_client():
-    """Create TestClient with mocked model loading.
-
-    TODO: Replace with real TestClient once your model is trained.
-    This mock bypasses model loading for faster unit tests.
-    """
-    mock_model = MagicMock()
-    mock_model.predict_proba.return_value = np.array([[0.3, 0.7]])
-    mock_model.predict.return_value = np.array([1])
-
-    # TODO: Uncomment and adjust for your service
-    # with patch("app.fastapi_app.model", mock_model):
-    #     client = TestClient(app)
-    #     yield client
-    yield None  # Placeholder until service is configured
-
-
-# ---------------------------------------------------------------------------
-# Health Endpoint Tests
+# Liveness `/health`
 # ---------------------------------------------------------------------------
 class TestHealthEndpoint:
-    """Tests for /health endpoint."""
+    """Liveness probe — must always return 200 once the process is alive."""
 
-    def test_health_returns_200(self, mock_client) -> None:
-        """Health endpoint should return 200 with status."""
-        # response = mock_client.get("/health")
-        # assert response.status_code == 200
-        # data = response.json()
-        # assert data["status"] in ("healthy", "degraded")
-        pass
+    def test_health_returns_200(self, client: TestClient) -> None:
+        response = client.get("/health")
+        assert response.status_code == 200
 
-    def test_health_includes_model_info(self, mock_client) -> None:
-        """Health should include model_loaded and version."""
-        # response = mock_client.get("/health")
-        # data = response.json()
-        # assert "model_loaded" in data
-        # assert "model_version" in data
-        pass
+    def test_health_includes_status(self, client: TestClient) -> None:
+        data = client.get("/health").json()
+        assert data["status"] == "healthy"
 
-    def test_health_degraded_without_model(self) -> None:
-        """Health should report degraded if no model loaded.
-
-        TODO: Test with MODEL_PATH pointing to nonexistent file.
-        """
-        pass
+    def test_health_includes_version(self, client: TestClient) -> None:
+        data = client.get("/health").json()
+        assert "version" in data
+        assert isinstance(data["version"], str)
 
 
 # ---------------------------------------------------------------------------
-# Predict Endpoint Tests
+# Readiness `/ready` (D-23)
+# ---------------------------------------------------------------------------
+class TestReadyEndpoint:
+    """Readiness probe — 503 until BOTH model loaded and warm-up done."""
+
+    def test_ready_returns_200_when_loaded(self, client: TestClient) -> None:
+        # The conftest fixture pre-populates _model_pipeline + _warmed_up.
+        response = client.get("/ready")
+        assert response.status_code == 200
+
+    def test_ready_payload_shape(self, client: TestClient) -> None:
+        data = client.get("/ready").json()
+        assert data["status"] in ("ready", "not_ready")
+        assert "model_loaded" in data
+        assert "warmed_up" in data
+        assert "version" in data
+
+
+# ---------------------------------------------------------------------------
+# Single prediction `/predict`
 # ---------------------------------------------------------------------------
 class TestPredictEndpoint:
-    """Tests for /predict endpoint."""
+    """Tests for /predict — happy path + validation errors."""
 
-    def test_predict_returns_200(self, mock_client) -> None:
-        """Valid prediction request should return 200."""
-        # response = mock_client.post("/predict", json=VALID_PAYLOAD)
-        # assert response.status_code == 200
-        pass
+    def test_predict_returns_200(self, client: TestClient, valid_payload: dict) -> None:
+        response = client.post("/predict", json=valid_payload)
+        assert response.status_code == 200, response.text
 
-    def test_predict_returns_probability(self, mock_client) -> None:
-        """Response should include probability between 0 and 1."""
-        # response = mock_client.post("/predict", json=VALID_PAYLOAD)
-        # data = response.json()
-        # assert 0.0 <= data["probability"] <= 1.0
-        pass
+    def test_predict_returns_required_fields(self, client: TestClient, valid_payload: dict) -> None:
+        data = client.post("/predict", json=valid_payload).json()
+        for field in ("prediction_id", "prediction_score", "risk_level", "model_version"):
+            assert field in data, f"missing field {field} in response: {data}"
 
-    def test_predict_returns_risk_level(self, mock_client) -> None:
-        """Response should include risk_level classification."""
-        # response = mock_client.post("/predict", json=VALID_PAYLOAD)
-        # data = response.json()
-        # assert data["risk_level"] in ("LOW", "MEDIUM", "HIGH")
-        pass
+    def test_predict_score_in_unit_interval(self, client: TestClient, valid_payload: dict) -> None:
+        data = client.post("/predict", json=valid_payload).json()
+        assert 0.0 <= data["prediction_score"] <= 1.0
 
-    def test_predict_invalid_input_422(self, mock_client) -> None:
-        """Invalid input should return 422 Unprocessable Entity."""
-        # response = mock_client.post("/predict", json=INVALID_PAYLOAD_MISSING)
-        # assert response.status_code == 422
-        pass
+    def test_predict_risk_level_enum(self, client: TestClient, valid_payload: dict) -> None:
+        data = client.post("/predict", json=valid_payload).json()
+        assert data["risk_level"] in ("LOW", "MEDIUM", "HIGH")
 
-    def test_predict_wrong_types_422(self, mock_client) -> None:
-        """Wrong field types should return 422."""
-        # response = mock_client.post("/predict", json=INVALID_PAYLOAD_TYPES)
-        # assert response.status_code == 422
-        pass
+    def test_predict_missing_fields_422(self, client: TestClient) -> None:
+        response = client.post("/predict", json={})
+        assert response.status_code == 422
 
-    def test_predict_has_shap_explanation(self, mock_client) -> None:
-        """Response should include SHAP feature importances if enabled."""
-        # response = mock_client.post("/predict", json=VALID_PAYLOAD)
-        # data = response.json()
-        # if "feature_importances" in data:
-        #     assert isinstance(data["feature_importances"], dict)
-        #     assert len(data["feature_importances"]) > 0
-        pass
+    def test_predict_wrong_type_422(self, client: TestClient, valid_payload: dict) -> None:
+        bad = {**valid_payload, "feature_a": "not_a_number"}
+        response = client.post("/predict", json=bad)
+        assert response.status_code == 422
+
+    def test_predict_missing_entity_id_422(self, client: TestClient, valid_payload: dict) -> None:
+        bad = {k: v for k, v in valid_payload.items() if k != "entity_id"}
+        response = client.post("/predict", json=bad)
+        assert response.status_code == 422
+
+    def test_predict_with_explain_true_returns_explanation(
+        self, client: TestClient, valid_payload: dict
+    ) -> None:
+        """The ?explain=true path triggers SHAP. Mock explainer may yield
+        an Explanation with detail='unavailable'; we only assert presence
+        of the explanation key (D-04, D-24)."""
+        response = client.post("/predict?explain=true", json=valid_payload)
+        assert response.status_code == 200
+        data = response.json()
+        # `explanation` is Optional in the schema; accept either an object
+        # (KernelExplainer ran) or a "unavailable" stub.
+        assert "explanation" in data
 
 
 # ---------------------------------------------------------------------------
-# Batch Predict Endpoint Tests
+# Batch prediction `/predict_batch`
 # ---------------------------------------------------------------------------
 class TestBatchPredictEndpoint:
-    """Tests for /predict_batch endpoint."""
+    """Tests for /predict_batch (note: underscore, not slash)."""
 
-    def test_batch_returns_200(self, mock_client) -> None:
-        """Valid batch request should return 200."""
-        # response = mock_client.post("/predict_batch", json=BATCH_PAYLOAD)
-        # assert response.status_code == 200
-        pass
+    def test_batch_returns_200(self, client: TestClient, batch_payload: dict) -> None:
+        response = client.post("/predict_batch", json=batch_payload)
+        assert response.status_code == 200, response.text
 
-    def test_batch_returns_correct_count(self, mock_client) -> None:
-        """Batch should return same number of predictions as inputs."""
-        # response = mock_client.post("/predict_batch", json=BATCH_PAYLOAD)
-        # data = response.json()
-        # assert len(data["predictions"]) == len(BATCH_PAYLOAD["customers"])
-        pass
+    def test_batch_returns_correct_count(self, client: TestClient, batch_payload: dict) -> None:
+        data = client.post("/predict_batch", json=batch_payload).json()
+        assert data["total_customers"] == len(batch_payload["customers"])
+        assert len(data["predictions"]) == len(batch_payload["customers"])
 
-    def test_batch_empty_returns_error(self, mock_client) -> None:
-        """Empty batch should return 422."""
-        # response = mock_client.post("/predict_batch", json={"customers": []})
-        # assert response.status_code == 422
-        pass
+    def test_batch_predictions_have_required_fields(
+        self, client: TestClient, batch_payload: dict
+    ) -> None:
+        data = client.post("/predict_batch", json=batch_payload).json()
+        for pred in data["predictions"]:
+            for field in ("prediction_id", "prediction_score", "risk_level"):
+                assert field in pred
+
+    def test_batch_empty_returns_422(self, client: TestClient) -> None:
+        response = client.post("/predict_batch", json={"customers": []})
+        assert response.status_code == 422
+
+    def test_batch_missing_customers_key_422(self, client: TestClient) -> None:
+        response = client.post("/predict_batch", json={})
+        assert response.status_code == 422
+
+    def test_batch_too_many_returns_422(self, client: TestClient, valid_payload: dict) -> None:
+        # Schema enforces max_length=1000.
+        too_many = {"customers": [valid_payload] * 1001}
+        response = client.post("/predict_batch", json=too_many)
+        assert response.status_code == 422
 
 
 # ---------------------------------------------------------------------------
-# Metrics Endpoint Tests
+# Metrics `/metrics`
 # ---------------------------------------------------------------------------
 class TestMetricsEndpoint:
-    """Tests for /metrics endpoint (Prometheus)."""
+    """Prometheus exposition format checks."""
 
-    def test_metrics_returns_200(self, mock_client) -> None:
-        """Metrics endpoint should return Prometheus format."""
-        # response = mock_client.get("/metrics")
-        # assert response.status_code == 200
-        # assert "text/plain" in response.headers["content-type"]
-        pass
+    def test_metrics_returns_200(self, client: TestClient) -> None:
+        response = client.get("/metrics")
+        assert response.status_code == 200
 
-    def test_metrics_includes_counters(self, mock_client) -> None:
-        """Metrics should include prediction request counters."""
-        # response = mock_client.get("/metrics")
-        # assert "{service}_requests_total" in response.text
-        pass
+    def test_metrics_content_type_is_prometheus(self, client: TestClient) -> None:
+        response = client.get("/metrics")
+        # prometheus_client uses text/plain with version=0.0.4
+        assert "text/plain" in response.headers.get("content-type", "")
 
-    def test_metrics_includes_latency(self, mock_client) -> None:
-        """Metrics should include latency histogram."""
-        # response = mock_client.get("/metrics")
-        # assert "{service}_request_duration_seconds" in response.text
-        pass
+    def test_metrics_includes_request_counter(self, client: TestClient, valid_payload: dict) -> None:
+        # Hit /predict once to ensure the counter has been incremented.
+        client.post("/predict", json=valid_payload)
+        body = client.get("/metrics").text
+        assert "requests_total" in body
+
+    def test_metrics_includes_latency_histogram(self, client: TestClient, valid_payload: dict) -> None:
+        client.post("/predict", json=valid_payload)
+        body = client.get("/metrics").text
+        assert "request_latency" in body or "request_duration" in body
 
 
 # ---------------------------------------------------------------------------
-# Model Info Endpoint Tests
+# Model metadata `/model/info`
 # ---------------------------------------------------------------------------
 class TestModelInfoEndpoint:
-    """Tests for /model/info endpoint."""
+    def test_model_info_returns_200(self, client: TestClient) -> None:
+        response = client.get("/model/info")
+        assert response.status_code == 200
 
-    def test_model_info_returns_200(self, mock_client) -> None:
-        """Model info should return 200."""
-        # response = mock_client.get("/model/info")
-        # assert response.status_code == 200
-        pass
+    def test_model_info_includes_required_fields(self, client: TestClient) -> None:
+        data = client.get("/model/info").json()
+        for field in ("model_loaded", "model_type", "version", "model_path"):
+            assert field in data
 
-    def test_model_info_includes_version(self, mock_client) -> None:
-        """Model info should include version and type."""
-        # response = mock_client.get("/model/info")
-        # data = response.json()
-        # assert "model_version" in data
-        # assert "model_type" in data
-        pass
+    def test_model_info_reports_loaded(self, client: TestClient) -> None:
+        # The conftest mock pre-populates _model_pipeline.
+        data = client.get("/model/info").json()
+        assert data["model_loaded"] is True
+
+
+# ---------------------------------------------------------------------------
+# Root `/`
+# ---------------------------------------------------------------------------
+class TestRootEndpoint:
+    def test_root_returns_200(self, client: TestClient) -> None:
+        response = client.get("/")
+        assert response.status_code == 200
+
+    def test_root_links_to_docs(self, client: TestClient) -> None:
+        data = client.get("/").json()
+        assert data["docs"] == "/docs"
