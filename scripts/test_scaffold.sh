@@ -235,12 +235,82 @@ else
 fi
 
 # ════════════════════════════════════════════════
+# Validation 8 — Smoke: install deps + snapshot + pytest (optional)
+# ════════════════════════════════════════════════
+# These validations exercise what a freshly-scaffolded service can DO,
+# not just what files it has. They are guarded by SCAFFOLD_SMOKE=1 so
+# the lightweight structural checks above stay fast for local runs.
+# CI (validate-templates.yml) sets the flag to enable the full chain.
+if [[ "${SCAFFOLD_SMOKE:-0}" == "1" ]]; then
+  info "Running smoke chain (install + snapshot + pytest)..."
+
+  # Use a venv to avoid PEP-668 friction on Ubuntu 22.04+ runners.
+  if python3 -m venv "$TEMP_ROOT/venv" 2>/dev/null; then
+    # shellcheck disable=SC1091
+    source "$TEMP_ROOT/venv/bin/activate"
+    pass "Created venv: $TEMP_ROOT/venv"
+  else
+    echo -e "${YELLOW}⚠${NC} venv unavailable — skipping smoke chain"
+    SCAFFOLD_SMOKE=0
+  fi
+fi
+
+if [[ "${SCAFFOLD_SMOKE:-0}" == "1" ]]; then
+  # 8a. Install scaffolded service deps. Bound by 5 min to fail fast on
+  # network outages. Warning-only: dep resolution failure is not a
+  # scaffolder bug per se.
+  info "Installing scaffolded service dependencies (timeout 300s)..."
+  if (cd "$SERVICE_DIR" && timeout 300 pip install --quiet --upgrade pip \
+        && timeout 300 pip install --quiet -r requirements.txt) 2>"$TEMP_ROOT/pip.log"; then
+    pass "Dependencies installed"
+  else
+    echo -e "${YELLOW}⚠${NC} pip install failed — skipping rest of smoke chain"
+    echo "    log tail:"
+    tail -5 "$TEMP_ROOT/pip.log" >&2 || true
+    SCAFFOLD_SMOKE=0
+  fi
+fi
+
+if [[ "${SCAFFOLD_SMOKE:-0}" == "1" ]]; then
+  # 8b. Bootstrap the OpenAPI contract snapshot (D-28). Required by
+  # tests/contract/test_openapi_snapshot.py::test_snapshot_file_exists.
+  info "Generating openapi.snapshot.json via refresh_contract.py..."
+  if (cd "$SERVICE_DIR" && PYTHONPATH=. python scripts/refresh_contract.py) \
+        > "$TEMP_ROOT/refresh.log" 2>&1; then
+    if [[ -f "$SERVICE_DIR/tests/contract/openapi.snapshot.json" ]]; then
+      pass "OpenAPI snapshot bootstrapped"
+    else
+      fail "refresh_contract.py exited 0 but snapshot file is missing"
+    fi
+  else
+    fail "refresh_contract.py failed:"
+    tail -10 "$TEMP_ROOT/refresh.log" >&2
+  fi
+fi
+
+if [[ "${SCAFFOLD_SMOKE:-0}" == "1" ]]; then
+  # 8c. Run the real test suite (test_api.py + test_training.py +
+  # contract/*.py). Validates that the scaffolded service is testable
+  # AND its tests pass against a freshly-generated snapshot.
+  info "Running pytest (test_api.py + test_training.py + contract/)..."
+  if (cd "$SERVICE_DIR" && PYTHONPATH=. timeout 180 pytest \
+        tests/test_api.py tests/test_training.py tests/contract/ \
+        -q --tb=short --no-cov) > "$TEMP_ROOT/pytest.log" 2>&1; then
+    pass "pytest passed on freshly-scaffolded service"
+  else
+    fail "pytest failed:"
+    tail -20 "$TEMP_ROOT/pytest.log" >&2
+  fi
+fi
+
+# ════════════════════════════════════════════════
 # Summary
 # ════════════════════════════════════════════════
 echo ""
 if [[ "$FAILURES" -eq 0 ]]; then
   echo -e "${GREEN}━━━ SCAFFOLD TEST PASSED ━━━${NC}"
   echo "  new-service.sh produces a valid service structure."
+  [[ "${SCAFFOLD_SMOKE:-0}" == "1" ]] && echo "  Smoke chain: install + snapshot + pytest all green."
   exit 0
 else
   echo -e "${RED}━━━ SCAFFOLD TEST FAILED ━━━${NC}"

@@ -207,10 +207,15 @@ jobs:
           kustomize version
 
       - name: Run scaffolder end-to-end test
-        # Executes templates/scripts/new-service.sh in a tmp dir, verifies:
-        # - zero unreplaced {ServiceName}/{service}/{SERVICE} placeholders
-        # - critical files + directories exist
-        # - all generated Python parses
-        # - both kustomize overlays render (GCP + AWS)
-        # - pytest can collect the scaffolded tests
+        # Executes templates/scripts/new-service.sh in a tmp dir. With
+        # SCAFFOLD_SMOKE=1, additionally:
+        #   - creates a venv for the scaffolded service
+        #   - installs requirements.txt
+        #   - generates tests/contract/openapi.snapshot.json
+        #   - runs pytest on test_api.py + test_training.py + contract/
+        #
+        # Without the flag, only structural validations run (kustomize,
+        # placeholders, syntax) — kept fast for local invocation.
+        env:
+          SCAFFOLD_SMOKE: "1"
         run: bash scripts/test_scaffold.sh
