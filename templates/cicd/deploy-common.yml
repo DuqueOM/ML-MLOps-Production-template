@@ -35,9 +35,9 @@ on:
         required: true
         type: string
       services:
-        description: "JSON array of service dirnames, e.g. '[\"ServiceA\",\"ServiceB\"]'"
+        description: "JSON array of service dirnames, e.g. '[\"billing\",\"fraud\"]'. Scaffolder substitutes {ServiceName} for single-service repos."
         required: false
-        default: '["ServiceA"]'
+        default: '["{ServiceName}"]'
         type: string
     secrets:
       GCP_SA_KEY:

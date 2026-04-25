@@ -42,10 +42,9 @@ jobs:
       matrix:
         python-version: ["3.11", "3.12"]
         service:
-          # TODO: Add your services here
-          - ServiceA
-          # - ServiceB
-          # - ServiceC
+          # Single-service repo: scaffolder substitutes {ServiceName}.
+          # Multi-service repo: replace with explicit list, e.g. - billing, - fraud.
+          - {ServiceName}
     steps:
       - uses: actions/checkout@v4
 
@@ -141,8 +140,7 @@ jobs:
       fail-fast: false
       matrix:
         service:
-          # TODO: Add your services here
-          - ServiceA
+          - {ServiceName}
     steps:
       - uses: actions/checkout@v4
 

@@ -55,7 +55,9 @@ jobs:
 
       - name: Build and push
         run: |
-          for SERVICE in ServiceA; do
+          # Single-service: scaffolder substitutes {ServiceName}.
+          # Multi-service: replace the literal with the list (space-separated).
+          for SERVICE in {ServiceName}; do
             docker build -t ${{ env.REGISTRY }}/${SERVICE}:${{ steps.version.outputs.v }} ${SERVICE}/
             docker push ${{ env.REGISTRY }}/${SERVICE}:${{ steps.version.outputs.v }}
           done
@@ -64,7 +66,7 @@ jobs:
         env:
           COSIGN_EXPERIMENTAL: "true"
         run: |
-          for SERVICE in ServiceA; do
+          for SERVICE in {ServiceName}; do
             IMG="${{ env.REGISTRY }}/${SERVICE}:${{ steps.version.outputs.v }}"
             cosign sign --yes "${IMG}"
           done
@@ -75,15 +77,15 @@ jobs:
       - name: Generate SBOM (Syft)
         uses: anchore/sbom-action@v0
         with:
-          image: "${{ env.REGISTRY }}/ServiceA:${{ steps.version.outputs.v }}"
+          image: "${{ env.REGISTRY }}/{ServiceName}:${{ steps.version.outputs.v }}"
           format: cyclonedx-json
-          output-file: sbom-ServiceA.cyclonedx.json
+          output-file: sbom-{ServiceName}.cyclonedx.json
 
       - name: Attach SBOM as attestation
         env:
           COSIGN_EXPERIMENTAL: "true"
         run: |
-          for SERVICE in ServiceA; do
+          for SERVICE in {ServiceName}; do
             IMG="${{ env.REGISTRY }}/${SERVICE}:${{ steps.version.outputs.v }}"
             cosign attest --yes --type cyclonedx \
               --predicate "sbom-${SERVICE}.cyclonedx.json" "${IMG}"
@@ -99,7 +101,7 @@ jobs:
       region: ${{ vars.AWS_REGION }}
       overlay_path: k8s/overlays/aws-dev
       version: ${{ needs.build.outputs.version }}
-      services: '["ServiceA"]'
+      services: '["{ServiceName}"]'
     secrets:
       AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
 
@@ -114,7 +116,7 @@ jobs:
       region: ${{ vars.AWS_REGION }}
       overlay_path: k8s/overlays/aws-staging
       version: ${{ needs.build.outputs.version }}
-      services: '["ServiceA"]'
+      services: '["{ServiceName}"]'
     secrets:
       AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
 
@@ -129,6 +131,6 @@ jobs:
       region: ${{ vars.AWS_REGION }}
       overlay_path: k8s/overlays/aws-prod
       version: ${{ needs.build.outputs.version }}
-      services: '["ServiceA"]'
+      services: '["{ServiceName}"]'
     secrets:
       AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}

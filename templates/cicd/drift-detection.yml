@@ -22,9 +22,9 @@ jobs:
       fail-fast: false
       matrix:
         service:
-          # TODO: Add your services here
-          - ServiceA
-          # - ServiceB
+          # Single-service: scaffolder substitutes {ServiceName}.
+          # Multi-service: replace with explicit list of service dirnames.
+          - {ServiceName}
     steps:
       - uses: actions/checkout@v4
 
