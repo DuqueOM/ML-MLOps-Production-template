@@ -178,6 +178,20 @@ Every agentic operation MUST produce an `AuditEntry` (defined in
 `common_utils/agent_context.py`). Entries are append-only JSONL in
 `ops/audit.jsonl` and mirrored to the GitHub Actions step summary in CI.
 
+The protocol is OPERATIONAL (ADR-014 §3.5):
+- **CLI wrapper**: `scripts/audit_record.py` — invoked from any CI step
+  or local skill execution; takes `--agent --operation --environment
+  --base-mode --final-mode --result --inputs --outputs --approver` and
+  writes the entry plus a GHA step-summary section.
+- **Deploy chain**: `templates/cicd/deploy-common.yml` invokes
+  `audit_record.py` on every deploy (success AND failure via
+  `if: always()`), passing the dynamically-computed `final_mode` from
+  the `Compute dynamic risk mode` step (ADR-014 §4.2).
+- **Risk context wiring**: `risk_signals` field is populated automatically
+  from `risk_context.RiskContext` when one is passed to
+  `AuditLog.record_operation`, so the same audit entry records BOTH
+  the static base mode AND the live signal that escalated it.
+
 Minimum fields:
 - `agent`, `operation`, `environment`, `mode`
 - `inputs` (what was requested)
@@ -266,7 +280,7 @@ When starting a new session in a project derived from this template:
 - `eda-analysis` — 6-phase exploratory analysis with leakage gate + baseline distributions
 - `security-audit` — pre-build/pre-deploy scans: gitleaks, trivy, cosign verify, IAM review
 - `secret-breach-response` — incident playbook when a secret is leaked (detect → rotate → audit → postmortem)
-- `debug-ml-inference` — diagnose serving issues (starts with D-01→D-27 checklist)
+- `debug-ml-inference` — diagnose serving issues (starts with D-01..D-30 checklist)
 - `drift-detection` — analyze PSI drift + concept drift (sliced performance)
 - `concept-drift-analysis` — root-cause sliced performance regressions with ground truth
 - `model-retrain` — execute retraining with quality gates + Champion/Challenger
@@ -370,7 +384,7 @@ skills/workflows — those are invoked via conversation in any IDE).
 └── 07-security-secrets.md  # paths: **/* (always-applicable)
 
 .cursor/rules/          # Cursor IDE — globs: frontmatter
-├── 01-mlops-conventions.mdc  # globs: **/* — session protocol, D-01→D-27, Behavior Protocol
+├── 01-mlops-conventions.mdc  # globs: **/* — session protocol, D-01..D-30, Behavior Protocol (static + dynamic per ADR-010)
 ├── 02-kubernetes.mdc         # globs: k8s/**/*.yaml — HPA, init container
 ├── 03-python-serving.mdc     # globs: **/app/*.py — async, SHAP
 ├── 04-python-training.mdc    # globs: **/training/*.py — pipeline, gates
@@ -383,7 +397,7 @@ skills/workflows — those are invoked via conversation in any IDE).
 
 | Invariant group | Windsurf | Cursor | Claude |
 |-----------------|----------|--------|--------|
-| Core + D-01→D-12 | `01-mlops-conventions.md` (always_on) | `01-mlops-conventions.mdc` | `01-serving.md` + `02-training.md` |
+| Core + D-01→D-30 | `01-mlops-conventions.md` (always_on) | `01-mlops-conventions.mdc` | `01-serving.md` + `02-training.md` |
 | Closed-loop (D-20→D-22) | `13-closed-loop-monitoring.md` | `08-closed-loop.mdc` | `08-closed-loop.md` |
 | Kubernetes (D-02) | `02-kubernetes.md` | `02-kubernetes.mdc` | `03-kubernetes.md` |
 | Terraform | `03-terraform.md` | — (covered in 01) | `04-terraform.md` |
@@ -393,8 +407,8 @@ skills/workflows — those are invoked via conversation in any IDE).
 | Data validation (D-14) | `08-data-validation.md` | — | — |
 | EDA (D-13→D-16) | `11-data-eda.md` | `06-data-eda.mdc` | `06-data-eda.md` |
 | Security (D-17→D-19) | `12-security-secrets.md` (always_on) | `07-security-secrets.mdc` (always) | `07-security-secrets.md` (always) |
-| Skills (procedures) | `skills/**/SKILL.md` (12 skills) | *(invoked in conversation)* | *(invoked in conversation)* |
-| Workflows (slash cmds) | `workflows/*.md` (11 workflows) | *(invoked in conversation)* | *(invoked in conversation)* |
+| Skills (procedures) | `skills/**/SKILL.md` (16 skills) | `.cursor/skills/INDEX.md` pointers | `.claude/skills/INDEX.md` pointers |
+| Workflows (slash cmds) | `workflows/*.md` (12 workflows) | `.cursor/commands/*.md` pointers | `.claude/commands/*.md` pointers |
 
 All three IDEs enforce the same **Agent Behavior Protocol** (AUTO/CONSULT/STOP) —
 it is referenced from `AGENTS.md` which all IDEs read first per the session protocol.
