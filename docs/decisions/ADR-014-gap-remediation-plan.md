@@ -64,7 +64,7 @@ does. Detected by `scripts/validate_doc_drift.sh` (new, simple grep-based).
 | `1.9 fix(docs): bump CHECKLIST_RELEASE.md and CONTRIBUTING.md to D-30` | #20, #21 | `templates/docs/CHECKLIST_RELEASE.md`, `CONTRIBUTING.md` | manual: D-30 mentioned, `--workers 1` removed |
 | `1.10 fix(skill): remove broken smoke_test.py reference` | #22 | `.windsurf/skills/release-checklist/SKILL.md` | grep `smoke_test.py` returns 0 |
 | `1.11 fix(editorial): cursor INDEX header + parity counts` | #26, #27 | `.cursor/skills/INDEX.md`, `docs/ide-parity-audit.md` | manual review |
-| `1.12 fix(state): move incident_active.json to ops/state/` | #52 | `templates/common_utils/risk_context.py`, `.gitignore` | unit test `test_risk_context.py` still passes |
+| ~~`1.12 fix(state): move incident_active.json to ops/state/`~~ | ~~#52~~ | — | **Closed without code change**: §52 in the resolution table was a misread; the actual filename is `ops/incident_state.json` and the gitignore pattern is correct. See the §52 row above. |
 
 **Phase 1 deliverable**: `scripts/validate_doc_drift.sh` codifies all greps
 above. Runs in CI as part of `validate-templates.yml` (read-only, fast).
