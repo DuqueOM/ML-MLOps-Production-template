@@ -5,9 +5,9 @@ Date: 2026-04-24 (v1.9.0)
 AGENTS.md §IDE Parity Matrix claims the template's invariants (D-01..D-30)
 are mirrored across three IDE-specific rule directories:
 
-- `.windsurf/rules/` — 14 files, primary source
-- `.cursor/rules/` — 8 files (glob-scoped)
-- `.claude/rules/` — 8 files (path-scoped)
+- `.windsurf/rules/` — 15 files, primary source
+- `.cursor/rules/` — 12 files (glob-scoped)
+- `.claude/rules/` — 14 files (path-scoped)
 
 This audit confirms the state after v1.9.0 and documents where each
 invariant has primary + secondary coverage.

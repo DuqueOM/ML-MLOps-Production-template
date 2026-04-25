@@ -114,17 +114,33 @@ jobs:
       - if ANY FAIL: open GitHub Issue
 ```
 
-## Required Secrets
+## Required Secrets — cloud-native delegation only (D-18)
 
-Document all required GitHub Secrets in the workflow comments:
+**Never** put long-lived cloud credentials in GitHub Secrets. Use OIDC
+federation: GitHub mints a short-lived token, the cloud provider
+exchanges it for a scoped role/SA via Workload Identity Federation
+(GCP) or IAM Identity Provider (AWS).
+
+Document the OIDC binding in the workflow comments — not the keys:
+
 ```yaml
-# Required secrets:
-# GCP_SA_KEY — GCP service account key (JSON)
-# AWS_ACCESS_KEY_ID — AWS access key
-# AWS_SECRET_ACCESS_KEY — AWS secret key
-# GCP_PROJECT_ID — GCP project ID
-# MLFLOW_TRACKING_URI — MLflow server URL
+# Identity (OIDC, no static credentials):
+# GCP   — Workload Identity Federation (provider + service account)
+#         google-github-actions/auth@v2 with workload_identity_provider
+# AWS   — IAM Identity Provider for token.actions.githubusercontent.com
+#         aws-actions/configure-aws-credentials@v4 with role-to-assume
+#
+# Non-secret config (GitHub Variables, not Secrets):
+# GCP_PROJECT_ID, GCP_REGION, AWS_REGION, AWS_ACCOUNT_ID
+#
+# Secrets (per Environment, never repo-wide):
+# MLFLOW_TRACKING_URI    — MLflow server URL for the env
+# STAGING_KUBECONFIG / PRODUCTION_KUBECONFIG — kubeconfig blobs
 ```
+
+**STOP if you see** `GCP_SA_KEY`, `AWS_ACCESS_KEY_ID`, or any
+`*_SECRET_ACCESS_KEY` in a workflow — that is a D-17/D-18 violation.
+Replace with OIDC; document the migration in the same PR.
 
 ## Environment Promotion Gates (MANDATORY — D-26)
 

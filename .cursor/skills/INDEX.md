@@ -1,6 +1,6 @@
-# Claude Code Skills Index
+# Cursor Skills Index
 
-Claude Code discovers skills from this directory. To maintain a single
+Cursor discovers skills from this directory. To maintain a single
 source of truth, each skill here is a **pointer** to the canonical
 `.windsurf/skills/<name>/SKILL.md`. Agent behavior is identical.
 

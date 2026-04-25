@@ -23,22 +23,24 @@ bash templates/scripts/new-service.sh ServiceName service_slug
 ```
 
 ## What it does
-1. Copies `templates/service/` → `services/<slug>/` with placeholder substitution
-2. Copies `templates/eda/` for data exploration in the new service
+1. Copies `templates/service/` → `<repo-root>/<ServiceName>/` (PascalCase
+   directory at repo root) with placeholder substitution for
+   `{ServiceName}`, `{service}`, `{SERVICE}`
+2. Copies `templates/k8s/{base,overlays}` → `<ServiceName>/k8s/`
 3. Initializes DVC tracking for `data/`
 4. Creates first MLflow experiment
 5. Wires CI/CD (`.github/workflows/{ci,deploy-gcp,deploy-aws}.yml`)
 6. Generates Grafana dashboards from templates
 
 ## Validation
-- `pytest services/<slug>/tests/ --no-cov` should pass
-- `kustomize build services/<slug>/k8s/overlays/dev/` should render
+- `pytest <ServiceName>/tests/ --no-cov` should pass
+- `kustomize build <ServiceName>/k8s/overlays/dev/` should render
 - `make validate-templates` from repo root
 
 ## Next steps (after scaffold)
-1. Review `src/<slug>/schemas.py` — merge `schema_proposal.py` from EDA
-2. Edit `src/<slug>/features.py` — implement proposed transforms
-3. Edit `src/<slug>/training/train.py` — model choice
+1. Review `<ServiceName>/src/<service>/schemas.py` — merge `schema_proposal.py` from EDA
+2. Edit `<ServiceName>/src/<service>/features.py` — implement proposed transforms
+3. Edit `<ServiceName>/src/<service>/training/train.py` — model choice
 4. Run local training + MLflow tracking
 5. Open PR
 
