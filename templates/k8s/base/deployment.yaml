@@ -90,6 +90,10 @@ spec:
               value: "v1.0.0"
             - name: BACKGROUND_DATA_PATH
               value: /app/data/reference/background.csv
+            # Metric name prefix — fastapi_app.py reads this at import time
+            # to build Counter/Histogram names. Audit Critical-3.
+            - name: SERVICE_METRIC_PREFIX
+              value: "{service}"
           resources:
             requests:
               cpu: "500m"       # TODO: Set based on profiling

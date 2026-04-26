@@ -25,11 +25,14 @@ jobs:
         # examples/minimal pins the heavier deps (sklearn, fastapi, shap);
         # templates/tests/unit/ only need pytest + light helpers from
         # common_utils. One install covers both.
+        # Audit Medium-2: pyarrow (Parquet for prediction_logger tests) and
+        # pytest-asyncio (async client tests in test_api.py) were missing,
+        # so coverage looked clean while real tests silently skipped.
         run: |
           pip install -r examples/minimal/requirements.txt
-          pip install pytest pytest-cov
-          # common_utils imports — pulled by templates/tests/unit/
-          pip install pandas numpy pyyaml jsonschema
+          pip install pytest pytest-cov pytest-asyncio
+          # common_utils imports + integration test deps
+          pip install pandas numpy pyyaml jsonschema pyarrow httpx
 
       - name: Train model (prerequisite for examples tests)
         run: python examples/minimal/train.py

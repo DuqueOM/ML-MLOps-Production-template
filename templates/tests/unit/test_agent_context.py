@@ -143,6 +143,23 @@ class TestSecurityAudit:
                 passed=True,  # but passed claims True → reject
             )
 
+    def test_security_audit_high_findings_block_passed(self):
+        # Audit High-5: HIGH findings now BLOCK the gate (matches what the
+        # security-audit skill says). passed=True with trivy_high>0 should
+        # raise ValueError because computed=False.
+        with pytest.raises(ValueError, match="inconsistent"):
+            SecurityAuditResult(
+                service_name="s",
+                image_ref=self._build().image_ref,
+                signature_verified=True,
+                sbom_attested=True,
+                trivy_critical=0,
+                trivy_high=5,
+                gitleaks_findings=0,
+                iam_least_privilege_verified=True,
+                passed=True,
+            )
+
     def test_security_audit_components_pass(self):
         r = SecurityAuditResult(
             service_name="s",
@@ -150,7 +167,7 @@ class TestSecurityAudit:
             signature_verified=True,
             sbom_attested=True,
             trivy_critical=0,
-            trivy_high=5,  # high non-zero allowed; only critical blocks
+            trivy_high=0,  # Audit High-5: HIGH must also be zero
             gitleaks_findings=0,
             iam_least_privilege_verified=True,
             passed=True,

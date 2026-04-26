@@ -35,13 +35,29 @@ TODO: Copy this directory into your project root as common_utils/
 
 __version__ = "1.0.0"
 
-from .logging import get_logger
-from .model_persistence import load_model, save_model
-from .seed import set_seed
+# Re-exports are wrapped in try/except so a missing OPTIONAL dependency
+# (e.g., joblib for model_persistence on a CI runner that doesn't need ML
+# deps) does NOT break unrelated submodule imports such as
+# `from common_utils.agent_context import AuditLog` — used by
+# `scripts/audit_record.py` from CI, where joblib is not installed.
+# Audit High-1.
 
-__all__ = [
-    "set_seed",
-    "save_model",
-    "load_model",
-    "get_logger",
-]
+__all__: list[str] = []
+
+try:
+    from .logging import get_logger  # noqa: F401
+    __all__.append("get_logger")
+except ImportError:  # pragma: no cover — std-lib only, should never fail
+    pass
+
+try:
+    from .seed import set_seed  # noqa: F401
+    __all__.append("set_seed")
+except ImportError:  # pragma: no cover — numpy might be missing on minimal runners
+    pass
+
+try:
+    from .model_persistence import load_model, save_model  # noqa: F401
+    __all__.extend(["load_model", "save_model"])
+except ImportError:  # joblib may not be installed in lightweight CI/audit contexts
+    pass

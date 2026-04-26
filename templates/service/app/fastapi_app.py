@@ -81,46 +81,55 @@ _inference_executor = ThreadPoolExecutor(
 
 # ---------------------------------------------------------------------------
 # Prometheus metrics — scraped by Prometheus via /metrics endpoint
-# TODO: Replace {service} prefix with your actual service name
+#
+# The metric prefix is resolved at IMPORT time from $SERVICE_METRIC_PREFIX or
+# falls back to a literal placeholder "ml_service". This keeps the module
+# importable BEFORE the scaffolder substitutes `{service}` (otherwise
+# prometheus_client raises ValueError on names containing `{` / `}`).
+#
+# Production: deployment.yaml sets SERVICE_METRIC_PREFIX=<service>; metrics
+# are exposed as `<service>_predictions_total`, etc. Audit Critical-3.
 # ---------------------------------------------------------------------------
+_METRIC_PREFIX = os.getenv("SERVICE_METRIC_PREFIX", "ml_service").replace("-", "_")
+
 predictions_total = Counter(
-    "{service}_predictions_total",
+    f"{_METRIC_PREFIX}_predictions_total",
     "Total predictions by risk level and model version",
     ["risk_level", "model_version"],
 )
 
 request_latency = Histogram(
-    "{service}_request_duration_seconds",
+    f"{_METRIC_PREFIX}_request_duration_seconds",
     "Request latency in seconds",
     ["endpoint"],
     buckets=[0.05, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0],
 )
 
 prediction_score_distribution = Histogram(
-    "{service}_prediction_score",
+    f"{_METRIC_PREFIX}_prediction_score",
     "Distribution of model output probability scores",
     buckets=[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
 )
 
 model_loaded_info = Gauge(
-    "{service}_model_info",
+    f"{_METRIC_PREFIX}_model_info",
     "Model metadata (1 = loaded)",
     ["version"],
 )
 
 requests_total = Counter(
-    "{service}_requests_total",
+    f"{_METRIC_PREFIX}_requests_total",
     "Total HTTP requests by status",
     ["status"],
 )
 
 # Closed-loop monitoring instrumentation (ADR-006)
 prediction_log_total = Counter(
-    "{service}_prediction_log_total",
+    f"{_METRIC_PREFIX}_prediction_log_total",
     "Prediction events enqueued for closed-loop monitoring",
 )
 prediction_log_errors_total = Counter(
-    "{service}_prediction_log_errors_total",
+    f"{_METRIC_PREFIX}_prediction_log_errors_total",
     "Prediction-log errors swallowed by D-22 contract",
 )
 

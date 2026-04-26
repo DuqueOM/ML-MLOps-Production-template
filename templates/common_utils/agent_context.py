@@ -168,16 +168,34 @@ class SecurityAuditResult:
     created_at: str = field(default_factory=_utc_now)
 
     def __post_init__(self) -> None:
-        # Derive `passed` from components — prevents inconsistent state
+        # Derive `passed` from components — prevents inconsistent state.
+        # Audit High-5: trivy_high must also be zero. The security-audit skill
+        # declares HIGH+CRITICAL as blocking; without the explicit check here,
+        # a HIGH finding could pass the gate even though the skill said it
+        # shouldn't.
         computed = (
             self.signature_verified
             and self.sbom_attested
             and self.trivy_critical == 0
+            and self.trivy_high == 0
             and self.gitleaks_findings == 0
             and self.iam_least_privilege_verified
         )
         if self.passed != computed:
-            raise ValueError(f"SecurityAuditResult.passed ({self.passed}) inconsistent with components ({computed})")
+            raise ValueError(
+                "SecurityAuditResult.passed "
+                f"({self.passed}) inconsistent with components ({computed}). "
+                "Components: signature_verified={}, sbom_attested={}, "
+                "trivy_critical={}, trivy_high={}, gitleaks_findings={}, "
+                "iam_least_privilege_verified={}".format(
+                    self.signature_verified,
+                    self.sbom_attested,
+                    self.trivy_critical,
+                    self.trivy_high,
+                    self.gitleaks_findings,
+                    self.iam_least_privilege_verified,
+                )
+            )
 
 
 @dataclass(frozen=True)
