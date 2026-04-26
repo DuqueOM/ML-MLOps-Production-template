@@ -32,6 +32,7 @@ jobs:
       contents: read
     outputs:
       version: ${{ steps.version.outputs.v }}
+      image_digests: ${{ steps.digests.outputs.json }}
     steps:
       - uses: actions/checkout@v4
 
@@ -62,13 +63,40 @@ jobs:
             docker push ${{ env.REGISTRY }}/${SERVICE}:${{ steps.version.outputs.v }}
           done
 
-      - name: Sign images with Cosign (keyless OIDC)
-        env:
-          COSIGN_EXPERIMENTAL: "true"
+      # Capture digests for downstream pinning (audit Critical-2).
+      - name: Capture image digests
+        id: digests
         run: |
+          set -euo pipefail
+          DIGESTS_JSON='{}'
           for SERVICE in {ServiceName}; do
             IMG="${{ env.REGISTRY }}/${SERVICE}:${{ steps.version.outputs.v }}"
-            cosign sign --yes "${IMG}"
+            DIGEST=$(docker buildx imagetools inspect "$IMG" --format '{{ .Manifest.Digest }}')
+            if [ -z "$DIGEST" ] || [ "$DIGEST" = "<no value>" ]; then
+              echo "::error::Could not resolve digest for $IMG"
+              exit 1
+            fi
+            DIGESTS_JSON=$(echo "$DIGESTS_JSON" | jq --arg s "$SERVICE" --arg d "$DIGEST" '. + {($s): $d}')
+            echo "✓ $SERVICE → $DIGEST"
+          done
+          echo "json=$(echo $DIGESTS_JSON | jq -c .)" >> $GITHUB_OUTPUT
+
+      # Cosign installer pin (audit High-3). Without this, `cosign sign`
+      # fails on a clean ubuntu-latest runner.
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3.7.0
+        with:
+          cosign-release: v2.4.0
+
+      - name: Sign images with Cosign (keyless OIDC, by digest — D-19)
+        env:
+          COSIGN_EXPERIMENTAL: "true"
+          DIGESTS: ${{ steps.digests.outputs.json }}
+        run: |
+          for SERVICE in {ServiceName}; do
+            DIGEST=$(echo "$DIGESTS" | jq -r --arg s "$SERVICE" '.[$s]')
+            REPO="${{ env.REGISTRY }}/${SERVICE}"
+            cosign sign --yes "${REPO}@${DIGEST}"
           done
 
       # SBOM + attestation (SLSA L1). Full L3 provenance via
@@ -86,14 +114,16 @@ jobs:
             echo "✓ SBOM generated: sbom-${SERVICE}.cyclonedx.json"
           done
 
-      - name: Attach SBOM as attestation
+      - name: Attach SBOM as attestation (by digest)
         env:
           COSIGN_EXPERIMENTAL: "true"
+          DIGESTS: ${{ steps.digests.outputs.json }}
         run: |
           for SERVICE in {ServiceName}; do
-            IMG="${{ env.REGISTRY }}/${SERVICE}:${{ steps.version.outputs.v }}"
+            DIGEST=$(echo "$DIGESTS" | jq -r --arg s "$SERVICE" '.[$s]')
+            REPO="${{ env.REGISTRY }}/${SERVICE}"
             cosign attest --yes --type cyclonedx \
-              --predicate "sbom-${SERVICE}.cyclonedx.json" "${IMG}"
+              --predicate "sbom-${SERVICE}.cyclonedx.json" "${REPO}@${DIGEST}"
           done
 
   deploy-dev:
@@ -107,6 +137,7 @@ jobs:
       overlay_path: k8s/overlays/aws-dev
       version: ${{ needs.build.outputs.version }}
       services: '["{ServiceName}"]'
+      image_digests: ${{ needs.build.outputs.image_digests }}
     secrets:
       AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
 
@@ -122,6 +153,7 @@ jobs:
       overlay_path: k8s/overlays/aws-staging
       version: ${{ needs.build.outputs.version }}
       services: '["{ServiceName}"]'
+      image_digests: ${{ needs.build.outputs.image_digests }}
     secrets:
       AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
 
@@ -137,5 +169,6 @@ jobs:
       overlay_path: k8s/overlays/aws-prod
       version: ${{ needs.build.outputs.version }}
       services: '["{ServiceName}"]'
+      image_digests: ${{ needs.build.outputs.image_digests }}
     secrets:
       AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}

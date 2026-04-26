@@ -39,13 +39,26 @@ on:
         required: false
         default: '["{ServiceName}"]'
         type: string
-    # No long-lived credentials accepted. GCP uses Workload Identity
-    # Federation; AWS uses IAM Identity Provider for OIDC. Both source
-    # their identity from the GitHub OIDC token at runtime.
+      image_digests:
+        description: "JSON object mapping service name → image digest (sha256:...). Required for staging/prod (D-19 + Kyverno digest gate). Falls back to overlay's tag if empty (dev only)."
+        required: false
+        default: '{}'
+        type: string
+      namespace:
+        description: "K8s namespace where the deploy lands (default: {service}-{env}). Used by smoke test to address services with FQDN."
+        required: false
+        default: ''
+        type: string
+    # GCP uses WIF (no secrets needed). AWS needs the federated role ARN
+    # passed by the caller because role-to-assume cannot live in `vars`
+    # if it differs per environment-namespace (governance + blast radius).
     # Required GitHub Variables (per repo Settings → Variables):
     #   GCP   — GCP_WIF_PROVIDER, GCP_SERVICE_ACCOUNT, GCP_PROJECT_ID, GCP_REGION
-    #   AWS   — AWS_ROLE_ARN, AWS_REGION, AWS_ACCOUNT_ID
-    secrets: {}
+    #   AWS   — AWS_REGION, AWS_ACCOUNT_ID  (the ROLE_ARN is a per-env secret)
+    secrets:
+      AWS_ROLE_ARN:
+        description: "AWS IAM Role ARN for OIDC federated assumption. Required when cloud=aws."
+        required: false
 
 jobs:
   deploy:
@@ -106,6 +119,21 @@ jobs:
             exit 1
           fi
 
+      - name: Resolve target namespace
+        id: ns
+        run: |
+          NS="${{ inputs.namespace }}"
+          if [ -z "$NS" ]; then
+            # Default: first service name + env (matches overlay's namespace.yaml)
+            FIRST_SVC=$(echo '${{ inputs.services }}' | jq -r '.[0]' | tr 'A-Z' 'a-z')
+            ENV_SUFFIX="${{ inputs.environment }}"
+            # Map 'production' to 'prod' to align with overlay names
+            [ "$ENV_SUFFIX" = "production" ] && ENV_SUFFIX="prod"
+            NS="${FIRST_SVC}-${ENV_SUFFIX}"
+          fi
+          echo "namespace=${NS}" >> $GITHUB_OUTPUT
+          echo "→ Target namespace: ${NS}"
+
       # -------------------------------------------------------------------
       # Dynamic Behavior Protocol pre-check (ADR-010, ADR-014 §4.2).
       # Query risk_context. If live signals would escalate the static mode
@@ -147,30 +175,80 @@ jobs:
           exit 1
 
       # -------------------------------------------------------------------
-      # Build + push (only for callers with CI-built images; otherwise
-      # image is already pushed by the CI workflow, and we just apply)
+      # Pin image by digest (D-19 + Kyverno gate, audit Critical-2).
+      # The build job emits a JSON map service→digest. We patch the
+      # overlay's kustomization.yaml in place so `kubectl apply -k`
+      # ships the EXACT image that was scanned/signed/attested.
+      # If image_digests is empty (legacy callers / dev workflow_dispatch),
+      # we WARN but don't fail — prod gate via Kyverno catches it later.
       # -------------------------------------------------------------------
+      - name: Install kustomize
+        run: |
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+          sudo mv kustomize /usr/local/bin/
+
+      - name: Pin image to digest
+        env:
+          DIGESTS: ${{ inputs.image_digests }}
+        run: |
+          set -euo pipefail
+          if [ -z "$DIGESTS" ] || [ "$DIGESTS" = "{}" ]; then
+            echo "::warning::No image_digests provided. Falling back to overlay tag."
+            echo "  Production deploys with Kyverno digest enforcement WILL be rejected."
+            exit 0
+          fi
+          cd ${{ inputs.overlay_path }}
+          for svc in $(echo "$DIGESTS" | jq -r 'keys[]'); do
+            DIGEST=$(echo "$DIGESTS" | jq -r --arg s "$svc" '.[$s]')
+            # kustomize edit set image NAME=NEWNAME@DIGEST replaces the image.
+            # The image NAME (left side) must match what overlays/<env>/kustomization.yaml
+            # has under `images: - name:` — the scaffolder uses "<svc>-predictor".
+            IMG_NAME="$(echo $svc | tr 'A-Z' 'a-z')-predictor"
+            # Get the current newName (registry path) from kustomization
+            NEW_NAME=$(yq '.images[] | select(.name == "'"$IMG_NAME"'") | .newName' kustomization.yaml)
+            if [ -z "$NEW_NAME" ] || [ "$NEW_NAME" = "null" ]; then
+              echo "::error::Image $IMG_NAME not found in $(pwd)/kustomization.yaml"
+              exit 1
+            fi
+            echo "→ Pinning $IMG_NAME to $NEW_NAME@$DIGEST"
+            kustomize edit set image "${IMG_NAME}=${NEW_NAME}@${DIGEST}"
+          done
+          echo "Final image refs in overlay:"
+          grep -A2 '^images:' kustomization.yaml
+
       - name: Apply Kustomize overlay
         run: |
           kubectl apply -k ${{ inputs.overlay_path }}
 
       - name: Wait for rollout
+        env:
+          NAMESPACE: ${{ steps.ns.outputs.namespace }}
         run: |
           for svc in $(echo '${{ inputs.services }}' | jq -r '.[]'); do
             DEPLOY="$(echo $svc | tr 'A-Z' 'a-z')-predictor"
-            kubectl rollout status "deployment/${DEPLOY}" --timeout=600s
+            kubectl rollout status "deployment/${DEPLOY}" -n "${NAMESPACE}" --timeout=600s
           done
 
+      # -------------------------------------------------------------------
+      # Smoke test — audit Medium-5: namespace-aware + FQDN.
+      # Pod runs in the SERVICE's namespace so the short DNS name resolves.
+      # FQDN form keeps the test resilient if cluster's DNS search domains
+      # are non-default.
+      # -------------------------------------------------------------------
       - name: Post-deploy smoke test
+        env:
+          NAMESPACE: ${{ steps.ns.outputs.namespace }}
         run: |
           for svc in $(echo '${{ inputs.services }}' | jq -r '.[]'); do
             LOWER=$(echo $svc | tr 'A-Z' 'a-z')
-            kubectl run smoke-${LOWER}-${GITHUB_RUN_ID} \
+            FQDN="${LOWER}-service.${NAMESPACE}.svc.cluster.local"
+            POD="smoke-${LOWER}-${GITHUB_RUN_ID}"
+            echo "→ Smoke test: GET http://${FQDN}/ready"
+            kubectl run "${POD}" -n "${NAMESPACE}" \
               --rm -i --restart=Never \
-              --image=curlimages/curl \
-              -- curl -sfw '%{http_code}\n' "http://${LOWER}-service/ready" \
-              | grep -q 200 \
-              || { echo "::error::Smoke test failed for ${svc}"; exit 1; }
+              --image=curlimages/curl:8.10.1 \
+              -- curl -sf --max-time 30 "http://${FQDN}/ready" \
+              || { echo "::error::Smoke test failed for ${svc} in namespace ${NAMESPACE}"; exit 1; }
           done
 
       # ---------------------------------------------------------------------
