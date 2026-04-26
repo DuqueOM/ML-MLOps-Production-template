@@ -123,6 +123,7 @@ def main() -> int:
 if __name__ == "__main__":
     try:
         import joblib  # noqa: F401
+
         raise SystemExit(main())
     except ImportError:
         print("joblib not installed — add it to the service requirements", file=sys.stderr)

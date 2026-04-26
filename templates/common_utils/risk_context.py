@@ -185,9 +185,9 @@ _PROMETHEUS_QUERIES = {
     # incident_active: any P1/P2 alert currently firing
     "incident_active": 'sum(ALERTS{severity=~"P1|P2",alertstate="firing"})',
     # drift_severe: any feature with PSI exceeding 2x its alert threshold
-    "drift_severe": 'max((feature_psi_score / on(feature) feature_psi_alert_threshold)) > 2',
+    "drift_severe": "max((feature_psi_score / on(feature) feature_psi_alert_threshold)) > 2",
     # error_budget_exhausted: SLO burn rate over 100% on the 30-day window
-    "error_budget_exhausted": '(1 - slo_availability_ratio_rate30d) > slo_error_budget_target',
+    "error_budget_exhausted": "(1 - slo_availability_ratio_rate30d) > slo_error_budget_target",
 }
 
 
@@ -306,6 +306,7 @@ def get_risk_context(
             file_ctx = _load_file_signals(Path(ops_dir))
             if file_ctx.recent_rollback and not ctx.recent_rollback:
                 from dataclasses import replace
+
                 ctx = replace(ctx, recent_rollback=True)
     else:
         ctx = _load_file_signals(Path(ops_dir))

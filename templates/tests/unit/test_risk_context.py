@@ -242,12 +242,16 @@ class TestPrometheusSignals:
         assert ctx.source == "unavailable"
 
     def test_non_success_status_degrades(self, monkeypatch):
-        rc = self._patch_urlopen(
-            monkeypatch,
-            [{"status": "error", "error": "query failed", "data": {}}],
-        )
+        # _load_prometheus_signals issues one query per signal in
+        # _PROMETHEUS_QUERIES (currently 3); each fakes urlopen pulls
+        # one response off the iterator. Provide one error response per
+        # call so the test does not exhaust the iterator (StopIteration)
+        # before the loader has a chance to evaluate the failures.
+        error_response = {"status": "error", "error": "query failed", "data": {}}
+        rc = self._patch_urlopen(monkeypatch, [error_response, error_response, error_response])
         ctx = rc._load_prometheus_signals("http://prom.local:9090")
         assert ctx.available is False
+        assert ctx.source == "unavailable"
 
     def test_get_risk_context_uses_prometheus_when_url_set(self, monkeypatch, tmp_path):
         rc = self._patch_urlopen(

@@ -40,7 +40,6 @@ from typing import Any
 
 import pytest
 
-
 SNAP = Path(__file__).parent / "openapi.snapshot.json"
 
 
@@ -135,8 +134,7 @@ def test_no_path_removed(previous: dict, current: dict) -> None:
     """Removing a path is BREAKING — bump major or restore the path."""
     removed = _paths(previous) - _paths(current)
     assert not removed, (
-        f"BREAKING: path(s) removed: {sorted(removed)}. "
-        "Either restore them or bump app.version major (X.0.0)."
+        f"BREAKING: path(s) removed: {sorted(removed)}. " "Either restore them or bump app.version major (X.0.0)."
     )
 
 
@@ -148,8 +146,7 @@ def test_no_required_request_field_added(previous: dict, current: dict) -> None:
         if added:
             breakages.append(f"{name}: +{sorted(added)}")
     assert not breakages, (
-        "BREAKING: required request field(s) added: "
-        f"{breakages}. Either make them optional or bump major."
+        "BREAKING: required request field(s) added: " f"{breakages}. Either make them optional or bump major."
     )
 
 
@@ -161,28 +158,20 @@ def test_no_required_response_field_removed(previous: dict, current: dict) -> No
         removed = _required_fields(previous, name) - _required_fields(current, name)
         if removed:
             breakages.append(f"{name}: -{sorted(removed)}")
-    assert not breakages, (
-        "BREAKING: required response field(s) removed: "
-        f"{breakages}. Either restore or bump major."
-    )
+    assert not breakages, "BREAKING: required response field(s) removed: " f"{breakages}. Either restore or bump major."
 
 
 def test_no_field_type_narrowed(previous: dict, current: dict) -> None:
     """Changing a field's declared type is BREAKING for typed clients."""
     narrowings: list[str] = []
     for name in _schema_names(previous) & _schema_names(current):
-        prev_props = (
-            previous.get("components", {}).get("schemas", {}).get(name, {}).get("properties", {})
-        )
+        prev_props = previous.get("components", {}).get("schemas", {}).get(name, {}).get("properties", {})
         for field in prev_props:
             prev_t = _field_type(previous, name, field)
             curr_t = _field_type(current, name, field)
             if prev_t and curr_t and prev_t != curr_t:
                 narrowings.append(f"{name}.{field}: {prev_t} -> {curr_t}")
-    assert not narrowings, (
-        "BREAKING: field type changed: "
-        f"{narrowings}. Either revert or bump major."
-    )
+    assert not narrowings, "BREAKING: field type changed: " f"{narrowings}. Either revert or bump major."
 
 
 def test_version_bump_when_contract_changed(previous: dict, current: dict) -> None:
@@ -195,8 +184,7 @@ def test_version_bump_when_contract_changed(previous: dict, current: dict) -> No
     prev_version = previous.get("info", {}).get("version", "")
     curr_version = current.get("info", {}).get("version", "")
     assert curr_version != prev_version, (
-        f"Snapshot changed but app.version is still {curr_version!r}. "
-        "Bump it in app/main.py per rule 14 §semver."
+        f"Snapshot changed but app.version is still {curr_version!r}. " "Bump it in app/main.py per rule 14 §semver."
     )
 
 

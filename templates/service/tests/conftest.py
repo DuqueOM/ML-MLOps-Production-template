@@ -44,8 +44,21 @@ class _MockPipeline:
 
 @pytest.fixture(scope="session", autouse=True)
 def _patch_model_loading() -> Iterator[None]:
-    """Patch load_model_artifacts + warm_up_model so the FastAPI lifespan
-    does not require real files. Active for the whole test session.
+    """Patch load_model_artifacts so the FastAPI lifespan does not require
+    real files. Active for the whole test session.
+
+    NOTE: We deliberately do NOT patch ``warm_up_model``. The real function
+    returns ``{"status": "skipped", ...}`` cleanly when ``_background_data``
+    is None (the mock does not set it), which is the desired behaviour for
+    these structural tests AND lets the dedicated unit tests in
+    ``templates/tests/unit/test_warmup.py`` exercise the real implementation
+    even when both test directories are collected in the same pytest
+    session (see CI: .github/workflows/ci-examples.yml).
+
+    Patching ``warm_up_model`` here previously leaked across the session
+    boundary because session-scope autouse fixtures stay active until
+    teardown, making the contract-level fake visible to tests outside this
+    conftest's directory.
     """
     from unittest.mock import patch
 
@@ -56,21 +69,12 @@ def _patch_model_loading() -> Iterator[None]:
     def _fake_load() -> None:
         fastapi_app_mod._model_pipeline = mock_pipeline
 
-    def _fake_warmup() -> dict:
-        return {
-            "model_loaded": True,
-            "explainer_built": True,
-            "first_predict_latency_ms": 1.0,
-        }
-
     # Set MODEL_VERSION so the API exposes a deterministic value.
     os.environ.setdefault("MODEL_VERSION", "test-0.0.1")
 
     with patch.object(fastapi_app_mod, "load_model_artifacts", _fake_load), patch.object(
-        fastapi_app_mod, "warm_up_model", _fake_warmup
-    ), patch.object(fastapi_app_mod, "_start_prediction_logger", MagicMock()), patch.object(
-        fastapi_app_mod, "_stop_prediction_logger", MagicMock()
-    ):
+        fastapi_app_mod, "_start_prediction_logger", MagicMock()
+    ), patch.object(fastapi_app_mod, "_stop_prediction_logger", MagicMock()):
         # Pre-populate the global so endpoints that read it directly succeed.
         fastapi_app_mod._model_pipeline = mock_pipeline
         yield

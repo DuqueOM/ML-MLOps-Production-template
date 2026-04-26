@@ -101,9 +101,7 @@ class TestPredictEndpoint:
         response = client.post("/predict", json=bad)
         assert response.status_code == 422
 
-    def test_predict_with_explain_true_returns_explanation(
-        self, client: TestClient, valid_payload: dict
-    ) -> None:
+    def test_predict_with_explain_true_returns_explanation(self, client: TestClient, valid_payload: dict) -> None:
         """The ?explain=true path triggers SHAP. Mock explainer may yield
         an Explanation with detail='unavailable'; we only assert presence
         of the explanation key (D-04, D-24)."""
@@ -130,9 +128,7 @@ class TestBatchPredictEndpoint:
         assert data["total_customers"] == len(batch_payload["customers"])
         assert len(data["predictions"]) == len(batch_payload["customers"])
 
-    def test_batch_predictions_have_required_fields(
-        self, client: TestClient, batch_payload: dict
-    ) -> None:
+    def test_batch_predictions_have_required_fields(self, client: TestClient, batch_payload: dict) -> None:
         data = client.post("/predict_batch", json=batch_payload).json()
         for pred in data["predictions"]:
             for field in ("prediction_id", "prediction_score", "risk_level"):

@@ -104,9 +104,7 @@ class InputQualityChecker:
                 q_high = float(spec["p99"])
                 qs[feat] = FeatureQuantiles(feature=feat, q_low=q_low, q_high=q_high)
             except (KeyError, TypeError, ValueError) as exc:
-                logger.warning(
-                    "InputQualityChecker: skip %s (bad quantile spec: %s)", feat, exc
-                )
+                logger.warning("InputQualityChecker: skip %s (bad quantile spec: %s)", feat, exc)
         return cls(quantiles=qs, enabled=bool(qs))
 
     def check(self, features: dict[str, Any]) -> list[str]:
