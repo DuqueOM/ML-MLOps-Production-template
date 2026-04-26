@@ -175,6 +175,49 @@ class TestMetricsEndpoint:
         body = client.get("/metrics").text
         assert "request_latency" in body or "request_duration" in body
 
+    def test_metrics_contract_matches_slo_prometheusrule(self, client: TestClient, valid_payload: dict) -> None:
+        """Pin the exact metric names + labels the SLO PrometheusRule depends on.
+
+        ``k8s/base/slo-prometheusrule.yaml`` queries:
+
+            <prefix>_requests_total{status=~"5.."}
+            <prefix>_request_duration_seconds_bucket{le="0.5"}
+            <prefix>_request_duration_seconds_count
+
+        Where ``<prefix>`` is the value of ``SERVICE_METRIC_PREFIX``
+        (set by the scaffolder + deployment.yaml). If any of these
+        change shape, every burn-rate alert silently goes blind \u2014 so
+        we assert the exact tokens here, not just substrings.
+        """
+        import os
+        import re
+
+        client.post("/predict", json=valid_payload)
+        body = client.get("/metrics").text
+
+        prefix = os.getenv("SERVICE_METRIC_PREFIX", "ml_service").replace("-", "_")
+
+        # 1. Counter: <prefix>_requests_total with a `status` label
+        counter_re = re.compile(rf'^{re.escape(prefix)}_requests_total\{{[^}}]*status="\d+"', re.MULTILINE)
+        assert counter_re.search(body), (
+            f"Expected `{prefix}_requests_total{{status=...}}` in /metrics. "
+            "SLO availability burn-rate rules will be blind without it."
+        )
+
+        # 2. Histogram bucket: <prefix>_request_duration_seconds_bucket{le="0.5"}
+        bucket_re = re.compile(rf'^{re.escape(prefix)}_request_duration_seconds_bucket\{{[^}}]*le="0\.5"', re.MULTILINE)
+        assert bucket_re.search(body), (
+            f'Expected `{prefix}_request_duration_seconds_bucket{{le="0.5"}}` in /metrics. '
+            "SLO latency_500ms recording rule depends on it."
+        )
+
+        # 3. Histogram count: <prefix>_request_duration_seconds_count
+        count_re = re.compile(rf"^{re.escape(prefix)}_request_duration_seconds_count(\{{|\s)", re.MULTILINE)
+        assert count_re.search(body), (
+            f"Expected `{prefix}_request_duration_seconds_count` in /metrics. "
+            "SLO latency_500ms recording rule depends on it."
+        )
+
 
 # ---------------------------------------------------------------------------
 # Model metadata `/model/info`

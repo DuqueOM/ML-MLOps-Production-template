@@ -66,19 +66,22 @@ jobs:
             echo "::error::DATA_BUCKET_KIND and DATA_BUCKET vars are required for retraining."
             exit 1
           fi
-          mkdir -p "${SERVICE}/data"
+          # Paths must match what `Validate data`, `Execute training`,
+          # and the Champion/Challenger evaluation step read — those
+          # use `data/raw/latest.csv` and `data/raw/holdout.csv`.
+          mkdir -p "${SERVICE}/data/raw"
           case "$KIND" in
-            gcs) gcloud storage cp "gs://${BUCKET}/${SERVICE}/training/latest.csv" "${SERVICE}/data/training.csv" ;;
-            s3)  aws s3 cp "s3://${BUCKET}/${SERVICE}/training/latest.csv" "${SERVICE}/data/training.csv" ;;
+            gcs) gcloud storage cp "gs://${BUCKET}/${SERVICE}/training/latest.csv" "${SERVICE}/data/raw/latest.csv" ;;
+            s3)  aws s3 cp "s3://${BUCKET}/${SERVICE}/training/latest.csv" "${SERVICE}/data/raw/latest.csv" ;;
             *)   echo "::error::Unsupported DATA_BUCKET_KIND=$KIND"; exit 1 ;;
           esac
           # Holdout for Champion/Challenger evaluation
           case "$KIND" in
-            gcs) gcloud storage cp "gs://${BUCKET}/${SERVICE}/holdout/latest.csv" "${SERVICE}/data/holdout.csv" ;;
-            s3)  aws s3 cp "s3://${BUCKET}/${SERVICE}/holdout/latest.csv" "${SERVICE}/data/holdout.csv" ;;
+            gcs) gcloud storage cp "gs://${BUCKET}/${SERVICE}/holdout/latest.csv" "${SERVICE}/data/raw/holdout.csv" ;;
+            s3)  aws s3 cp "s3://${BUCKET}/${SERVICE}/holdout/latest.csv" "${SERVICE}/data/raw/holdout.csv" ;;
           esac
-          echo "✓ training rows: $(wc -l < ${SERVICE}/data/training.csv)"
-          echo "✓ holdout rows:  $(wc -l < ${SERVICE}/data/holdout.csv)"
+          echo "✓ training rows: $(wc -l < ${SERVICE}/data/raw/latest.csv)"
+          echo "✓ holdout rows:  $(wc -l < ${SERVICE}/data/raw/holdout.csv)"
 
       - name: Validate data
         run: |
@@ -159,7 +162,7 @@ jobs:
           python -m src.${{ env.SERVICE_SLUG }}.evaluation.champion_challenger \
             --champion models/champion/model.joblib \
             --challenger models/model.joblib \
-            --holdout data/holdout.csv \
+            --holdout data/raw/holdout.csv \
             --target target \
             --config configs/champion_challenger.yaml \
             --output reports/champion_challenger.json

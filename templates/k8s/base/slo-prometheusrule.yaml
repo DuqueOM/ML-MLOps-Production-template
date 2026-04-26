@@ -30,21 +30,29 @@ spec:
     - name: "{service}.slo.recording"
       interval: 30s
       rules:
-        # Availability SLI: ratio of successful requests (non-5xx)
+        # Availability SLI: ratio of successful requests (non-5xx).
+        # The exporter (app/fastapi_app.py) emits `{service}_requests_total`
+        # with label set {status} where status ∈ {"200","500","503"}. The
+        # metric name itself is already service-prefixed so no `service=`
+        # selector is needed (and would always match nothing today).
         - record: "{service}:sli:availability"
           expr: |
             1 - (
-              sum(rate(http_requests_total{service="{service}", status=~"5.."}[5m]))
+              sum(rate({service}_requests_total{status=~"5.."}[5m]))
               /
-              sum(rate(http_requests_total{service="{service}"}[5m]))
+              sum(rate({service}_requests_total[5m]))
             )
 
-        # Latency SLI: ratio of requests within 500ms
+        # Latency SLI: ratio of requests within 500ms.
+        # Histogram is `{service}_request_duration_seconds_*` with label
+        # `endpoint` (e.g. "/predict", "/predict_batch"). We collapse
+        # across endpoints for the SLO; per-endpoint dashboards keep the
+        # `endpoint` label visible.
         - record: "{service}:sli:latency_500ms"
           expr: |
-            sum(rate(http_request_duration_seconds_bucket{service="{service}", le="0.5"}[5m]))
+            sum(rate({service}_request_duration_seconds_bucket{le="0.5"}[5m]))
             /
-            sum(rate(http_request_duration_seconds_count{service="{service}"}[5m]))
+            sum(rate({service}_request_duration_seconds_count[5m]))
 
         # Error budget remaining (30-day window)
         - record: "{service}:error_budget:availability"
@@ -65,9 +73,9 @@ spec:
         - alert: "{SERVICE}_SLO_AvailabilityBurnRateCritical"
           expr: |
             (
-              sum(rate(http_requests_total{service="{service}", status=~"5.."}[1h]))
+              sum(rate({service}_requests_total{status=~"5.."}[1h]))
               /
-              sum(rate(http_requests_total{service="{service}"}[1h]))
+              sum(rate({service}_requests_total[1h]))
             ) > (14.4 * 0.005)
           for: 2m
           labels:
@@ -83,9 +91,9 @@ spec:
         - alert: "{SERVICE}_SLO_AvailabilityBurnRateHigh"
           expr: |
             (
-              sum(rate(http_requests_total{service="{service}", status=~"5.."}[6h]))
+              sum(rate({service}_requests_total{status=~"5.."}[6h]))
               /
-              sum(rate(http_requests_total{service="{service}"}[6h]))
+              sum(rate({service}_requests_total[6h]))
             ) > (6 * 0.005)
           for: 5m
           labels:

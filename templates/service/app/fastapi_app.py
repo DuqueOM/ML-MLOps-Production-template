@@ -230,14 +230,32 @@ def _predict_proba_wrapper(X_array: np.ndarray) -> np.ndarray:
 # Synchronous prediction — runs in thread pool via run_in_executor
 # ---------------------------------------------------------------------------
 async def _start_prediction_logger() -> None:
-    """Initialize and start the prediction logger. Called from main.lifespan."""
+    """Initialize and start the prediction logger. Called from main.lifespan.
+
+    Fail-fast contract (D-21, ADR-006):
+        * ``PREDICTION_LOG_ENABLED=false`` (explicit opt-out) → degrade silently;
+          the operator has acknowledged that closed-loop monitoring is off.
+        * ``PREDICTION_LOG_ENABLED=true`` (default) AND import failed →
+          RuntimeError. Previously this degraded silently, so production
+          could believe it had closed-loop monitoring while no events were
+          ever written. The Dockerfile now COPYs ``common_utils/`` into the
+          runtime image so this branch only fires on misconfiguration.
+        * Backend startup failure with logging enabled → RuntimeError too;
+          a logger that can't connect to its backend is not a logger.
+    """
     global _prediction_logger
-    if not _PREDICTION_LOGGING_AVAILABLE:
-        logger.info("common_utils.prediction_logger not importable — closed-loop monitoring disabled")
-        return
-    if os.getenv("PREDICTION_LOG_ENABLED", "true").lower() == "false":
+    enabled = os.getenv("PREDICTION_LOG_ENABLED", "true").lower() != "false"
+    if not enabled:
         logger.info("PREDICTION_LOG_ENABLED=false — closed-loop monitoring disabled")
         return
+    if not _PREDICTION_LOGGING_AVAILABLE:
+        raise RuntimeError(
+            "PREDICTION_LOG_ENABLED=true but common_utils.prediction_logger is "
+            "not importable. The runtime image is missing common_utils/. "
+            "Either add it to the Dockerfile (see templates/service/Dockerfile) "
+            "or set PREDICTION_LOG_ENABLED=false to acknowledge closed-loop "
+            "monitoring is intentionally off (D-21, ADR-006)."
+        )
     try:
         _prediction_logger = build_logger()
         await _prediction_logger.start()
@@ -245,9 +263,12 @@ async def _start_prediction_logger() -> None:
             "PredictionLogger started (backend=%s)",
             type(_prediction_logger.backend).__name__,
         )
-    except Exception as e:
-        logger.warning("PredictionLogger failed to start (serving continues): %s", e)
-        _prediction_logger = None
+    except Exception as exc:
+        raise RuntimeError(
+            "PredictionLogger failed to start with PREDICTION_LOG_ENABLED=true. "
+            "Either fix the configured backend (PREDICTION_LOG_BACKEND env) or "
+            "explicitly set PREDICTION_LOG_ENABLED=false to disable it."
+        ) from exc
 
 
 async def _stop_prediction_logger() -> None:

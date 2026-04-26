@@ -94,6 +94,12 @@ COPY --chown=appuser:appuser src/ ./src/
 COPY --chown=appuser:appuser app/ ./app/
 COPY --chown=appuser:appuser monitoring/ ./monitoring/
 
+# Closed-loop monitoring helpers (D-21, ADR-006). Without this, the service
+# starts but the PredictionLogger silently degrades — production thinks it has
+# closed-loop monitoring while no events are written. The lifespan now
+# fails fast when PREDICTION_LOG_ENABLED=true AND common_utils is missing.
+COPY --chown=appuser:appuser common_utils/ ./common_utils/
+
 # Create runtime directories (models downloaded by K8s init container)
 RUN mkdir -p logs data/raw data/processed data/reference models results && \
     chown -R appuser:appuser /app

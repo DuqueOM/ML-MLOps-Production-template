@@ -87,11 +87,30 @@ cp -r "$TEMPLATE_ROOT/docs" "$TARGET_DIR/docs"
 # --- Copy operational scripts ---
 info "Copying scripts..."
 mkdir -p "$TARGET_DIR/scripts"
+# Service-level helpers (deploy.sh, promote_model.sh, health_check.sh)
+# live under templates/scripts/. The audit_record.py CLI lives at the
+# repo root scripts/ (it's a project-wide tool, not a template
+# placeholder) and is REQUIRED at runtime: deploy-common.yml invokes
+# it on every deploy (success AND failure) to append to ops/audit.jsonl.
+# Without it the scaffolded repo's deploy fails at the audit-trail step
+# (ADR-014 §3.5; the golden-path workflow validates this end-to-end).
 for script in deploy.sh promote_model.sh health_check.sh; do
     if [[ -f "$TEMPLATE_ROOT/scripts/$script" ]]; then
         cp "$TEMPLATE_ROOT/scripts/$script" "$TARGET_DIR/scripts/"
     fi
 done
+if [[ -f "$PROJECT_ROOT/scripts/audit_record.py" ]]; then
+    cp "$PROJECT_ROOT/scripts/audit_record.py" "$TARGET_DIR/scripts/"
+else
+    warn "scripts/audit_record.py missing in template repo — scaffolded deploys will fail at the audit-trail step"
+fi
+
+# audit_record.py imports from common_utils/agent_context.py (already
+# copied below). _lib/ holds shared helpers; ship them too.
+if [[ -d "$PROJECT_ROOT/scripts/_lib" ]]; then
+    mkdir -p "$TARGET_DIR/scripts/_lib"
+    cp -r "$PROJECT_ROOT/scripts/_lib/." "$TARGET_DIR/scripts/_lib/"
+fi
 
 # --- Copy DVC templates ---
 if [[ -f "$TARGET_DIR/dvc.yaml" ]]; then
