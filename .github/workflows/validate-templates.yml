@@ -183,6 +183,51 @@ jobs:
           done
           echo "✓ All 6 overlays render cleanly"
 
+      - name: Image digest pinning (PR-R2-2, audit R2)
+        # Audit finding: init container `google/cloud-sdk:slim` and
+        # CronJob `{service}-predictor:latest` lived outside the
+        # signed/digest-pinned image chain. Now every overlay maps
+        # `cloud-cli-image` via Kustomize, so digest pinning at the
+        # overlay level reaches BOTH the deployment AND every CronJob
+        # that uses {service}-predictor.
+        #
+        # Behavior tiers:
+        #   *-dev    : warn-only (moving tags allowed)
+        #   *-staging: warn-only (operator may pin via bootstrap runbook)
+        #   *-prod   : warning today; flips to error in PR-R2-3 once the
+        #              bootstrap runbook is exercised in CI
+        run: |
+          set -euo pipefail
+          status=0
+          for overlay in gcp-dev gcp-staging gcp-prod aws-dev aws-staging aws-prod; do
+            rendered=$(kustomize build "templates/k8s/overlays/$overlay")
+            unpinned=$(echo "$rendered" \
+              | grep -E '^[[:space:]]+image:' \
+              | grep -v '@sha256:' || true)
+            if [ -n "$unpinned" ]; then
+              case "$overlay" in
+                *-prod)
+                  echo "::warning::[$overlay] image refs not pinned by digest:"
+                  echo "$unpinned" | sed "s|^|::warning::[$overlay]   |"
+                  echo "::warning::PR-R2-3 will harden this to a hard error once the bootstrap runbook is wired."
+                  ;;
+                *)
+                  echo "[$overlay] image refs not pinned by digest (allowed in $overlay tier):"
+                  echo "$unpinned" | sed "s|^|[$overlay]   |"
+                  ;;
+              esac
+            fi
+            # Hard rule (already in scope today): no `:latest` literal in
+            # any rendered overlay output. Operators who want moving tags
+            # in dev should use a versioned tag, not `:latest`, so audit
+            # trail records what was actually deployed.
+            if echo "$rendered" | grep -E '^[[:space:]]+image:.*:latest( |$)'; then
+              echo "::error file=templates/k8s/overlays/$overlay::Rendered overlay contains a ':latest' image reference. Use a versioned tag or pin by digest."
+              status=1
+            fi
+          done
+          exit $status
+
   terraform-validate:
     name: Terraform Validate
     runs-on: ubuntu-latest

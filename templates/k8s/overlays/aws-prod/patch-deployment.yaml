@@ -17,7 +17,9 @@ spec:
     spec:
       initContainers:
         - name: model-downloader
-          image: amazon/aws-cli:latest
+          # Image is set by the overlay's `images:` mapping in
+          # kustomization.yaml (PR-R2-2). Setting `image:` here would
+          # bypass digest pinning enforced by the CI lint.
           command:
             - aws
             - s3

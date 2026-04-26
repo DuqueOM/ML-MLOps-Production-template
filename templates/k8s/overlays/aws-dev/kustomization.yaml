@@ -11,6 +11,12 @@ images:
   - name: "{service}-predictor"
     newName: "{AWS_ACCOUNT_ID}.dkr.ecr.{REGION}.amazonaws.com/{service}-predictor"
     newTag: "v1.0.0"
+  # Init container CLI — dev tier may use a moving tag (PR-R2-2, ADR-016).
+  # Staging/prod overlays must add `digest: sha256:...`; see bootstrap
+  # runbook `docs/runbooks/digest-pin-init-image.md`.
+  - name: "cloud-cli-image"
+    newName: "public.ecr.aws/aws-cli/aws-cli"
+    newTag: "2"
 
 patches:
   - path: patch-deployment.yaml

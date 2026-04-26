@@ -24,6 +24,14 @@ images:
   - name: "{service}-predictor"
     newName: "{REGION}-docker.pkg.dev/{PROJECT_ID}/ml-images/{service}-predictor"
     newTag: "v1.0.0"
+  # Init container CLI — staging pins by digest (PR-R2-2, ADR-016).
+  # CI lint (validate-templates.yml) WARNS until digest is set; the
+  # bootstrap runbook (`docs/runbooks/digest-pin-init-image.md`)
+  # documents the operator-side resolve step.
+  - name: "cloud-cli-image"
+    newName: "gcr.io/google.com/cloudsdktool/google-cloud-cli"
+    newTag: "slim"
+    # digest: "sha256:<resolve via bootstrap runbook>"
 
 patches:
   - path: patch-deployment.yaml

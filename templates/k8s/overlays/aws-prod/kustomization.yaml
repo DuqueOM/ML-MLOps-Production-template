@@ -24,7 +24,16 @@ resources:
 images:
   - name: "{service}-predictor"
     newName: "{AWS_ACCOUNT_ID}.dkr.ecr.{REGION}.amazonaws.com/{service}-predictor"
+    # newTag is overwritten by deploy-common.yml's `Pin image to digest`
+    # step using the digest emitted by the build job (D-19, ADR-014 §B2).
     newTag: "v1.0.0"
+  # Init container CLI — production pins by digest (PR-R2-2, ADR-016).
+  # The bootstrap runbook `docs/runbooks/digest-pin-init-image.md`
+  # documents the operator step that resolves and writes the digest.
+  - name: "cloud-cli-image"
+    newName: "public.ecr.aws/aws-cli/aws-cli"
+    newTag: "2"
+    # digest: "sha256:<resolve via bootstrap runbook>"
 
 patches:
   - path: patch-deployment.yaml

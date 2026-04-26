@@ -17,6 +17,12 @@ images:
   - name: "{service}-predictor"
     newName: "{REGION}-docker.pkg.dev/{PROJECT_ID}/ml-images/{service}-predictor"
     newTag: "v1.0.0"
+  # Init container CLI — dev tier may use a moving tag; staging/prod must
+  # pin by digest (PR-R2-2, ADR-016). The base manifest references this
+  # name symbolically; this `newName` rewires it to the real GCP CLI.
+  - name: "cloud-cli-image"
+    newName: "gcr.io/google.com/cloudsdktool/google-cloud-cli"
+    newTag: "slim"
 
 patches:
   - path: patch-deployment.yaml

@@ -16,6 +16,12 @@ images:
   - name: "{service}-predictor"
     newName: "{AWS_ACCOUNT_ID}.dkr.ecr.{REGION}.amazonaws.com/{service}-predictor"
     newTag: "v1.0.0"
+  # Init container CLI — staging pins by digest (PR-R2-2, ADR-016).
+  # Bootstrap runbook documents the resolve step.
+  - name: "cloud-cli-image"
+    newName: "public.ecr.aws/aws-cli/aws-cli"
+    newTag: "2"
+    # digest: "sha256:<resolve via bootstrap runbook>"
 
 patches:
   - path: patch-deployment.yaml

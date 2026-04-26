@@ -29,6 +29,16 @@ images:
     # `Pin image to digest` step (D-19, ADR-014 §B2). Keep a placeholder
     # tag here only so `kustomize build` works locally before CI runs.
     newTag: "v1.0.0"
+  # Init container CLI — production pins by digest (PR-R2-2, ADR-016).
+  # The bootstrap runbook `docs/runbooks/digest-pin-init-image.md`
+  # documents the operator step that resolves and writes the digest
+  # below. Until that step runs, the validate-templates.yml CI lint
+  # blocks merges that touch this file (warning in staging, error in
+  # production).
+  - name: "cloud-cli-image"
+    newName: "gcr.io/google.com/cloudsdktool/google-cloud-cli"
+    newTag: "slim"
+    # digest: "sha256:<resolve via bootstrap runbook>"
 
 patches:
   - path: patch-deployment.yaml

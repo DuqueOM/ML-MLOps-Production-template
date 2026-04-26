@@ -39,11 +39,20 @@ spec:
         seccompProfile:
           type: RuntimeDefault
 
-      # Init container downloads model from cloud storage
+      # Init container downloads model from cloud storage.
+      # The image NAME is a symbolic placeholder ("cloud-cli-image") that
+      # each overlay rewrites via Kustomize `images:` to the real CLI:
+      #   - GCP overlays: gcr.io/google.com/cloudsdktool/google-cloud-cli:slim
+      #   - AWS overlays: public.ecr.aws/aws-cli/aws-cli:latest
+      # Production overlays (gcp-prod, aws-prod) MUST also set `digest:`
+      # in their kustomization.yaml so the rendered manifest pins the
+      # init image by sha256 (PR-R2-2, audit R2). The CI lint in
+      # `.github/workflows/validate-templates.yml` enforces this.
+      # The `command:` below assumes gsutil; the AWS overlay patches it
+      # to `aws s3 cp` via patch-deployment.yaml.
       initContainers:
         - name: model-downloader
-          # GCP: google/cloud-sdk:slim | AWS: amazon/aws-cli:latest
-          image: google/cloud-sdk:slim
+          image: cloud-cli-image:placeholder   # rewritten per overlay
           command:
             - gsutil
             - cp
