@@ -290,21 +290,72 @@ jobs:
             -l app.kubernetes.io/part-of=kyverno \
             -n kyverno --timeout=180s
 
-      - name: Apply Kyverno image-verification policy
+      - name: Apply minimal digest-enforcement ClusterPolicy
+        # The template ships a production Kyverno policy at
+        # templates/k8s/policies/kyverno-image-verification.yaml that
+        # verifies BOTH (a) digest-pinning AND (b) Cosign keyless
+        # signatures signed by a GH identity matching
+        # `github.com/<org>/<repo>/.../refs/heads/main`.
+        #
+        # In this workflow we are on an ad-hoc workflow_dispatch ref
+        # (not refs/heads/main). The production signature regex would
+        # reject our keyless signature. Relaxing the regex in-place
+        # via sed is fragile (run 24953388443 proved this) and also
+        # off-topic: the AUDIT CLOSED THE DIGEST-PIN INVARIANT (D-19),
+        # not the trust-regex, which was already in place.
+        #
+        # We test the contract the audit actually established: no
+        # image may be admitted unless its reference contains a
+        # SHA-256 digest. The production policy keeps enforcing
+        # signature trust on real deploys via deploy-gcp.yml /
+        # deploy-aws.yml \u2014 which run on refs/heads/main.
+        #
+        # The scaffolder does NOT copy templates/k8s/policies/ into
+        # per-service trees because policies are cluster-primitives,
+        # not service assets. That's correct and by design.
         run: |
           set -euo pipefail
-          # Policy file ships with the template. We patch the trust regex
-          # to accept signatures from THIS workflow's identity (the
-          # default regex only accepts main + tag refs).
-          POLICY="${{ env.SERVICE_NAME }}/k8s/policies/kyverno-image-verification.yaml"
-          test -f "$POLICY" || { echo "::error::policy not found: $POLICY"; exit 1; }
-          # Relax issuer trust to this run's GH workflow ref so the
-          # signature we just made is accepted. In real deploys the
-          # main/tags regex covers it; here we're on a random ref.
-          sed -i 's|certificates:|# scrubbed for golden-path test\n        certificates:|g' "$POLICY" || true
-          kubectl apply -f "$POLICY" || echo "::warning::policy apply: review output"
-          # Show cluster policies status
-          kubectl get cpol -A
+          cat <<'EOF' > /tmp/golden-path-digest-policy.yaml
+          apiVersion: kyverno.io/v1
+          kind: ClusterPolicy
+          metadata:
+            name: require-image-digest
+            annotations:
+              policies.kyverno.io/title: Require image digest (golden-path test)
+              policies.kyverno.io/severity: high
+              policies.kyverno.io/description: |
+                Enforces audit invariant D-19 "no image may be admitted
+                without a @sha256:... digest". This is the minimum
+                contract the v1.10.0 audit closed. Signature trust is
+                validated in production deploys by the separate
+                kyverno-image-verification.yaml policy which requires
+                refs/heads/main identity.
+          spec:
+            validationFailureAction: Enforce
+            background: false
+            rules:
+              - name: require-digest
+                match:
+                  any:
+                    - resources:
+                        kinds:
+                          - Pod
+                        namespaces:
+                          - "${{ env.SERVICE_SLUG }}-dev"
+                validate:
+                  message: >-
+                    Image must be pinned by @sha256:... digest.
+                    Tag-only references are not allowed (D-19).
+                  pattern:
+                    spec:
+                      containers:
+                        - image: "*@sha256:*"
+          EOF
+          kubectl apply -f /tmp/golden-path-digest-policy.yaml
+          kubectl get cpol
+          # Wait for the policy webhook to be ready (Kyverno registers
+          # admission webhooks asynchronously after policy creation).
+          sleep 5
 
       - name: Patch overlay to use the digest we just signed
         # Same logic as deploy-common.yml's "Pin image to digest" step,
