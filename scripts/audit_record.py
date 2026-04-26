@@ -119,7 +119,7 @@ def main() -> int:
     # set TEMPLATE_PATH or rely on PYTHONPATH=.
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "templates"))
     try:
-        from common_utils.agent_context import AuditLog, Environment
+        from common_utils.agent_context import AgentMode, AuditLog, Environment
     except ImportError as exc:
         print(f"error: cannot import common_utils.agent_context ({exc})", file=sys.stderr)
         print("hint: run from repo root or set PYTHONPATH=templates", file=sys.stderr)
@@ -139,6 +139,13 @@ def main() -> int:
         print(f"error: unknown environment {env_name!r}", file=sys.stderr)
         return 1
 
+    try:
+        base_mode = getattr(AgentMode, args.base_mode)
+        final_mode = getattr(AgentMode, args.final_mode)
+    except AttributeError as exc:
+        print(f"error: unknown mode ({exc})", file=sys.stderr)
+        return 1
+
     # Map CI status strings to AuditEntry.result vocabulary.
     result_map = {"success": "success", "failure": "failure", "cancelled": "halted", "skipped": "skipped"}
     result = result_map.get(args.result.lower(), args.result)
@@ -151,8 +158,8 @@ def main() -> int:
             agent=args.agent,
             operation=args.operation,
             environment=environment,
-            base_mode=args.base_mode,
-            final_mode=args.final_mode,
+            base_mode=base_mode,
+            final_mode=final_mode,
             inputs=inputs,
             outputs=outputs,
             approver=args.approver,
@@ -170,9 +177,9 @@ def main() -> int:
             fh.write(f"- **agent**: `{entry.agent}`\n")
             fh.write(f"- **operation**: `{entry.operation}`\n")
             fh.write(f"- **environment**: `{entry.environment.name}`\n")
-            fh.write(f"- **mode**: `{entry.mode}`")
+            fh.write(f"- **mode**: `{entry.mode.value}`")
             if entry.base_mode and entry.base_mode != entry.mode:
-                fh.write(f" (escalated from `{entry.base_mode}`)")
+                fh.write(f" (escalated from `{entry.base_mode.value}`)")
             fh.write("\n")
             fh.write(f"- **result**: `{entry.result}`\n")
             if entry.approver:
