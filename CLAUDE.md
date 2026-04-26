@@ -52,22 +52,24 @@ When starting a new session:
 - **ALWAYS** compatible release pinning (`~=`) — `numpy 2.x` corrupts joblib models
 - **ALWAYS** ADR for non-trivial decisions
 
-## Anti-Patterns (D-01 to D-12)
+## Anti-Patterns (D-01 to D-30)
 
-| ID | Anti-Pattern | Fix |
-|----|-------------|-----|
-| D-01 | `uvicorn --workers N` | Single worker + ThreadPoolExecutor |
-| D-02 | Memory HPA | CPU-only HPA |
-| D-03 | `model.predict()` in async | `run_in_executor` |
-| D-04 | TreeExplainer on ensemble | KernelExplainer + predict_proba_wrapper |
-| D-05 | `==` pinning for ML packages | `~=` compatible release |
-| D-06 | Unrealistically high metric | Investigate data leakage |
-| D-07 | SHAP background with one class | Replace with representative sample |
-| D-08 | PSI with uniform bins | Quantile-based bins |
-| D-09 | No heartbeat alert | Add AlertManager rule for CronJob |
-| D-10 | tfstate in git | Remote state + rotate secrets |
-| D-11 | Model in Docker image | Init Container pattern |
-| D-12 | No quality gates | Add all gates before deploy |
+Compact summary; full table with corrective actions in `AGENTS.md`.
+
+| Range | Domain |
+|-------|--------|
+| D-01..D-08 | Serving + ML quality (workers, HPA, async, SHAP, drift, leakage) |
+| D-09..D-12 | Operations (heartbeat, tfstate, model-in-image, quality gates) |
+| D-13..D-16 | EDA + data validation (sandbox, Pandera, baseline, schema-evolution) |
+| D-17..D-19 | Supply chain (no static creds, IRSA/WI, signed+SBOM-attested images) |
+| D-20..D-22 | Closed-loop monitoring (prediction logger, ground truth, sliced perf) |
+| D-23..D-25 | Probes + warmup + graceful shutdown |
+| D-26..D-27 | Promotion gates + PodDisruptionBudget |
+| D-28..D-30 | API contract semver + Pod Security Standards + SBOM attestation |
+
+The full anti-pattern table with corrective actions and file references
+lives in `AGENTS.md`. The `rule-audit` skill scans a service against
+all 30 invariants and reports file:line evidence for any failure.
 
 ## Key Commands
 
@@ -89,28 +91,59 @@ kustomize build templates/k8s/base/ > /dev/null
 ## File Structure
 
 ```
-AGENTS.md              → Full architecture, invariants, anti-patterns (canonical source)
-CLAUDE.md              → This file (Claude Code context)
+AGENTS.md              → Full architecture, invariants D-01..D-30, anti-patterns (canonical source)
+CLAUDE.md              → This file (Claude Code context, condensed)
 QUICK_START.md         → 10-minute setup guide (standalone)
 RUNBOOK.md             → Template operations reference
-LICENSE                → MIT License
-docker-compose.yml     → Local dev: example API + MLflow
+CHANGELOG.md           → Release notes, version-by-version
+docs/runbooks/         → Operational runbooks:
+  ├─ gcp-wif-setup.md            — GCP Workload Identity Federation
+  ├─ aws-irsa-setup.md           — AWS IAM Identity Provider + IRSA
+  ├─ terraform-state-bootstrap.md — per-env state buckets/tables
+  ├─ mcp-config-hygiene.md       — MCP secret loading
+  └─ secret-rotation.md          — quarterly rotation
 templates/
 ├── service/           → FastAPI + training + tests + Dockerfile + DVC pipeline
-├── tests/integration/ → Integration test templates (health, predict, latency SLA)
-├── k8s/base/          → Deployment, HPA, Service, SLO PrometheusRule, Kustomize
-├── infra/             → Terraform GCP + AWS, docker-compose.mlflow.yml
-├── cicd/              → GitHub Actions workflows
+├── tests/integration/ → Integration tests (health, predict, latency SLA)
+├── k8s/
+│   ├── base/          → Deployment, HPA, Service, SLO PrometheusRule, Kustomize
+│   └── overlays/      → 6 env×cloud overlays (gcp/aws × dev/staging/prod)
+│                          each with namespace.yaml carrying PSS labels (D-29)
+├── infra/terraform/   → GCP + AWS modules; partial backend config + per-env
+│                          backend-configs/{dev,staging,prod}.hcl (D-10, audit High-6)
+├── cicd/              → GitHub Actions workflows (deploy chain pins images by
+│                          digest → Cosign sign+attest → Kyverno verify)
 ├── scripts/           → new-service.sh, deploy.sh, promote_model.sh
-├── docs/              → ADR, runbook, model card, mkdocs.yml, CHECKLIST_RELEASE.md
+├── docs/              → ADR, runbook, model card, CHECKLIST_RELEASE.md
 ├── monitoring/        → AlertManager rules, Grafana dashboards, Prometheus
-└── common_utils/      → seed, logging, model_persistence, telemetry
+└── common_utils/      → seed, logging, model_persistence, agent_context, risk_context
 examples/minimal/      → Working fraud detection demo (5 min)
-releases/              → GitHub Release notes (v1.0.0, v1.1.0, v1.2.0)
-.claude/rules/         → Context-aware rules (this IDE, paths: globs)
-.windsurf/             → Rules, skills, workflows (Windsurf Cascade)
-.cursor/rules/         → Cursor IDE rules
+scripts/audit_record.py → CLI for ops/audit.jsonl entries (CI + local skills)
+scripts/validate_agentic.py → Strict-mode validator (rules + skills + workflows + AGENTS.md refs)
+releases/              → GitHub Release notes (v1.0.0..v1.9.0)
+.claude/rules/         → 14 path-scoped rules (this IDE)
+.windsurf/             → Canonical: 15 rules + 16 skills + 12 workflows
+.cursor/rules/         → 12 glob-scoped .mdc rules
 ```
+
+## Recent template audit (closed)
+
+The template went through a 15-finding audit covering CI/CD, supply chain,
+testing, security, and infra hygiene. All Critical + High + Medium gaps
+were closed in commits `9d8894e` through `b8708b6`:
+
+- 6 environment overlays + PSS namespaces (was 2 misnamed overlays)
+- Image digest pinning end-to-end (push → sign → attest → verify by digest)
+- Cosign installer in deploy workflows (was missing)
+- AWS_ROLE_ARN declared in workflow_call.secrets contract (was lying)
+- Smoke test FQDN + correct namespace (was hitting `default`)
+- Prometheus metric prefix env-resolved (root pytest no longer crashes)
+- common_utils.__init__.py lazy imports (audit_record runs without joblib)
+- SecurityAuditResult HIGH gate (was passing HIGH findings silently)
+- Per-env Terraform state segregation
+- Drift + retrain workflows operationalized with cloud-aware adapters
+
+See `CHANGELOG.md` for the full list with verification commands.
 
 ## Engineering Calibration
 

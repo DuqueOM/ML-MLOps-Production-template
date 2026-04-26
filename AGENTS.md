@@ -468,6 +468,25 @@ docs/                   # Template-level architectural decisions
     └── ADR-001-template-scope-boundaries.md  # Scope: LLM, multi-tenancy, Vault, compliance
 ```
 
+## Operational Runbooks
+
+`docs/runbooks/` carries one-time-setup and incident-response procedures
+that are too long to live inline in a skill or workflow. Agents should
+LINK to these (not paraphrase) when a task touches the corresponding
+domain:
+
+| Runbook | When agents reference it |
+|---------|--------------------------|
+| `gcp-wif-setup.md` | First GCP deploy from a new fork; rotating WIF provider; debugging `iam.workloadIdentityUser` failures |
+| `aws-irsa-setup.md` | First AWS deploy from a new fork; debugging `AssumeRoleWithWebIdentity` failures; per-env IAM role creation |
+| `terraform-state-bootstrap.md` | Setting up a new env's tf state bucket + DynamoDB lock; debugging `init -reconfigure` errors |
+| `mcp-config-hygiene.md` | Adding a new MCP server; rotating MCP secrets; debugging `${VAR}` interpolation in mcp_config.json |
+| `secret-rotation.md` | Quarterly rotation calendar; STOP-class operation; per-credential cadence |
+
+These runbooks pair with the corresponding skills (`security-audit`,
+`secret-breach-response`, `deploy-gke`, `deploy-aws`) — the SKILL is
+the procedure, the runbook is the cloud-specific configuration detail.
+
 ## MCP Integrations
 
 MCPs (Model Context Protocol servers) extend what agents can **do**, not just what they can read.

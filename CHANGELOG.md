@@ -6,6 +6,148 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
 
 ---
 
+## [1.10.0] - 2026-04-26
+
+Closes a 15-finding template audit. The audit caught a class of bugs
+where the template LOOKED finished — green CI, scaffolder passes —
+but the deploy chain, supply-chain trust chain, and governance gates
+had silent gaps a real production user would discover only at the
+worst time. This release is mostly fixes; there is little new
+surface area but the existing surface now does what the docs say.
+
+### Critical fixes
+
+- **Six environment overlays** (`templates/k8s/overlays/`):
+  `gcp-{dev,staging,prod}` and `aws-{dev,staging,prod}`. The
+  deploy workflows referenced these names; the repo only shipped
+  two misnamed dirs (`gcp-production`, `aws-production`). Every
+  dev/staging deploy was broken. Each overlay carries its own
+  `namespace.yaml` with PSS labels (D-29: `enforce=baseline` for
+  dev/staging with `warn/audit=restricted`; `enforce=restricted`
+  for prod) and env-tier resources (1×100m for dev, 1×250m for
+  staging, 2×500m for prod).
+- **Image digest pinning end-to-end**:
+  `deploy-{gcp,aws}.yml` build job captures `sha256:...` via
+  `docker buildx imagetools inspect` and emits a JSON map.
+  `deploy-common.yml` consumes it and runs `kustomize edit set
+  image <name>=<repo>@<digest>` BEFORE `kubectl apply`. Cosign
+  signs and attests by digest. The Kyverno digest gate that was
+  installed in v1.6.0 finally has compliant manifests to admit.
+- **Root pytest stops crashing on Prometheus metric placeholders**:
+  `templates/service/app/fastapi_app.py` previously declared
+  `Counter("{service}_predictions_total", ...)`. `prometheus_client`
+  rejects metric names containing `{` / `}`, so root-level coverage
+  collection produced 11 errors before any test ran. Metrics now
+  use `f"{os.getenv('SERVICE_METRIC_PREFIX', 'ml_service')}_..."`;
+  `deployment.yaml` sets the env var to the scaffolded service name
+  so production metrics are unchanged.
+
+### High fixes
+
+- **`common_utils/__init__.py` lazy re-exports** so
+  `from common_utils.agent_context import AuditLog` works on a
+  CI runner without joblib installed. The audit step in
+  `deploy-common.yml` (introduced v1.8.0) was failing to write
+  evidence on lightweight runners — the "obligatory" audit trail
+  was actually fragile.
+- **`AWS_ROLE_ARN` declared in `deploy-common.yml`'s
+  `workflow_call.secrets`**. The reusable workflow read
+  `secrets.AWS_ROLE_ARN` while declaring `secrets: {}` — invalid
+  contract that blocked AWS callers at validation time.
+- **Cosign installed in `deploy-{gcp,aws}.yml`**. The build job
+  ran `cosign sign` and `cosign attest` without ever installing
+  cosign on `ubuntu-latest`. Signing and attestation never worked
+  before this release.
+- **Pod Security Standards namespace labels** included in every
+  overlay (was a separate file in `templates/k8s/policies/` that
+  no overlay consumed). D-29 is now actually enforced.
+- **`SecurityAuditResult` blocks HIGH findings**, not just
+  CRITICAL. The dataclass derived `passed` from `trivy_critical
+  == 0` only — a service with 5 HIGH and 0 CRITICAL passed the
+  gate even though the `security-audit` skill said both block.
+  The dataclass and the policy doc are now consistent.
+- **Per-env Terraform state**. Backends are partial config:
+  `backend "gcs" {}` / `backend "s3" {}` with `backend-configs/
+  {env}.hcl` files passed at init time. Three envs × two clouds
+  = six bucket/lock-table pairs, fully isolated. New runbook
+  `docs/runbooks/terraform-state-bootstrap.md` documents the
+  bootstrap.
+- **Drift detection + retraining pipelines operationalized**.
+  Workflows previously had `# TODO: Configure data download`
+  + `echo "TODO: Upload model"` placeholders. Now use
+  parametrized `{DATA,MODEL}_BUCKET_KIND` env vars to pick
+  `gcs` vs `s3` and FAIL loudly on missing config instead of
+  succeeding with a no-op. Champion/Challenger has a real
+  champion to compare against; promotion uploads two copies
+  (current + timestamped archive) per cloud.
+
+### Medium fixes
+
+- **`Makefile validate-tf` paths corrected** from
+  `templates/infra/{gcp,aws}` to
+  `templates/infra/terraform/{gcp,aws}`. `terraform init` now
+  uses `-backend=false` so validate works without backend buckets.
+- **`ci-examples.yml` installs `pyarrow` and `pytest-asyncio`**.
+  Tests that exercised Parquet (prediction logger) or async
+  client paths errored at import time and pytest counted them
+  as "errors" not "failures" — green-yellow signal that hid
+  missing coverage.
+- **`docs/environment-promotion.md` purged of `GCP_SA_KEY`**
+  references. The deploy chain has been WIF-only since v1.6.0;
+  the doc was telling new contributors to provision a static
+  service account key in defiance of D-18.
+- **Demo fairness threshold documented as exception**, not a
+  contradiction. `examples/minimal/train.py` keeps
+  `FAIRNESS_THRESHOLD = 0.70` (synthetic data is too small to
+  reliably hit 0.80 on a 1600-sample fold) but now has an 8-line
+  comment explaining the policy baseline is 0.80 and only this
+  demo runs laxer.
+- **Smoke test runs in the right namespace**. `kubectl run smoke...`
+  no longer lands in `default` and call services via FQDN
+  (`<svc>-service.<ns>.svc.cluster.local`). With the new
+  `{service}-{env}` overlay namespaces, the previous short-DNS
+  form would always have failed.
+
+### New runbooks
+
+- `docs/runbooks/aws-irsa-setup.md` — AWS counterpart to
+  the existing GCP WIF runbook. Covers GitHub OIDC trust + IRSA
+  pod identity. Symmetric setup steps; cross-linked from
+  AGENTS.md and environment-promotion.md.
+- `docs/runbooks/terraform-state-bootstrap.md` — per-env state
+  bucket bootstrap for GCP and AWS. Required reading before the
+  first `terraform init` of any env.
+
+### Verification
+
+```bash
+# All 6 overlays render
+for o in gcp-dev gcp-staging gcp-prod aws-dev aws-staging aws-prod; do
+  kustomize build templates/k8s/overlays/$o > /dev/null && echo "✓ $o"
+done
+
+# Cosign installed in BOTH deploy workflows
+grep -c sigstore/cosign-installer templates/cicd/deploy-{gcp,aws}.yml
+
+# Digest pinning step present
+grep -c 'kustomize edit set image' templates/cicd/deploy-common.yml
+
+# Test that previously crashed now passes
+PYTHONPATH=templates/service python -c "from app import fastapi_app; print('ok')"
+
+# Audit record runs without ML deps
+PYTHONPATH=templates python -c "from common_utils.agent_context import AuditLog; print('ok')"
+
+# Validator stays green strict
+python scripts/validate_agentic.py --strict
+```
+
+### Total commits
+
+9d8894e → b8708b6 (5 fix commits + this changelog entry)
+
+---
+
 ## [1.9.0] - 2026-04-24
 
 ### Added
