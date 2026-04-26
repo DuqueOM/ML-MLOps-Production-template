@@ -180,12 +180,23 @@ agentic semantic regression; release history is consistent.
 | Phase 4 — Dynamic behavior + validator | **Done** | `8b20555` → this commit + 9 retroactive tags (v1.3.0..v1.9.0) | All 5 sub-sections closed: §4.1 `_load_prometheus_signals` real HTTP + 7 mock-based tests + `recent_rollback` cross-source fold; §4.2 dynamic risk pre-check + STOP enforcement step in deploy-common.yml + audit step records base/final mode and signal source; §4.3 validator rewritten with PyYAML (handles YAML lists), `info` severity introduced for downstream-only globs, AGENTS.md cross-refs added (3 skills + 2 workflows); §4.4 `validate_agentic --strict` blocking in CI (`agentic-system` job in validate-templates.yml); §4.5 9 retroactive annotated tags v1.3.0 through v1.9.0 created from the commits that first added each release notes file (use `git tag -l \| sort -V` to verify). Result: `--strict` green with 12 informational notes, 0 warnings. |
 | Phase 5 — Post-launch hardening | **In progress** (5 / 8 sub-sections) | Spans across Phase 5 commits | Closed: §5.2 markdown-link-check + markdown-lint workflow + ignore-rules; §5.3 PEP-668 safe bootstrap (uv → .venv fallback) + mcp-config-hygiene runbook update; §5.4 Template Maturity Levels table in README (13 rows, 🟢/🟡/🔴/⚫ legend); §5.6 README persona-driven Quick Navigation (7 personas → entry points); §5.7 multi-service SBOM loop in deploy-{gcp,aws}.yml. Pending (each is a dedicated-session size): §5.1 doc generators (endpoints/overlays/parity from code); §5.5 13 skills to premium standard (editorial pass to bring batch-inference, concept-drift-analysis, deploy-aws, deploy-gke, performance-degradation-rca, rule-audit, secret-breach-response up to rollback/model-retrain/security-audit's bar); §5.8 Claude/Cursor metadata derivation from Windsurf canonical (parity refactor reducing duplication). |
 
+## Successor
+
+- **v1.10.0 audit closure** (commits `9d8894e..adf4eb6`) — fixed 15
+  Critical/High/Medium findings the original 47-gap plan didn't cover.
+  See `CHANGELOG.md` v1.10.0 entry.
+- **ADR-015 — Productization Roadmap** — picks up where this ADR
+  ends. Phase 5 §5.1, §5.5, §5.8 of THIS plan stay deferred; ADR-015
+  reframes them under its A/B/C phases when their downstream value
+  becomes the gating concern.
+
 ## Related
 
 - ADR-005 — Agent Behavior and Security (the static modes Phase 4 makes dynamic)
 - ADR-010 — Dynamic Behavior Protocol (the contract Phase 4 implements)
 - ADR-011 — Environment Promotion Gates (the wait_timer authority for §1.2)
 - ADR-013 — GitOps Strategy (compatibility constraint for Phase 3)
+- ADR-015 — Productization Roadmap (successor — A/B/C phases)
 - AGENTS.md — Audit Trail Protocol (authority for §48 decision)
 - `docs/runbooks/mcp-config-hygiene.md` — referenced by §51, updated in §5.3
 - Internal audit document (April 2026) — source of the 47 gaps; not in repo
