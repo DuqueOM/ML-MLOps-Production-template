@@ -63,25 +63,22 @@ jobs:
 
       - name: Run new-service.sh
         id: run
+        # IMPORTANT: new-service.sh ignores CWD; it always writes to
+        # $PROJECT_ROOT/$SERVICE_NAME (relative to the script's parent
+        # directory — i.e. $GITHUB_WORKSPACE in CI). Don't `cd` first;
+        # don't pass an output dir (the script doesn't accept one).
         run: |
           set -euo pipefail
-          # Use a workspace-relative dir so the upload-artifact step
-          # can carry the tree to the next job.
-          OUT_DIR="$GITHUB_WORKSPACE/_golden_path"
-          mkdir -p "$OUT_DIR"
-          cd "$OUT_DIR"
-          # Scaffold using the canonical script. Template substitution:
-          #   {ServiceName} → GoldenPath ; {service} → golden_path
           bash "$GITHUB_WORKSPACE/templates/scripts/new-service.sh" \
             "${{ env.SERVICE_NAME }}" "${{ env.SERVICE_SLUG }}"
-          ls -la "${{ env.SERVICE_NAME }}/"
-          echo "service_dir=_golden_path/${{ env.SERVICE_NAME }}" >> "$GITHUB_OUTPUT"
+          ls -la "$GITHUB_WORKSPACE/${{ env.SERVICE_NAME }}/" | head -20
+          echo "service_dir=${{ env.SERVICE_NAME }}" >> "$GITHUB_OUTPUT"
 
       - name: Validate scaffolder produced the 6 overlays
         # If this step ever fails, audit Critical-1 has regressed.
         run: |
           set -euo pipefail
-          cd "$GITHUB_WORKSPACE/_golden_path/${{ env.SERVICE_NAME }}"
+          cd "$GITHUB_WORKSPACE/${{ env.SERVICE_NAME }}"
           for o in gcp-dev gcp-staging gcp-prod aws-dev aws-staging aws-prod; do
             test -d "k8s/overlays/$o" || { echo "::error::missing overlay $o"; exit 1; }
             test -f "k8s/overlays/$o/namespace.yaml" || { echo "::error::missing namespace.yaml in $o"; exit 1; }
@@ -92,7 +89,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: scaffolded-service
-          path: _golden_path/${{ env.SERVICE_NAME }}/
+          path: ${{ env.SERVICE_NAME }}/
           include-hidden-files: true
           retention-days: 1
 
@@ -116,7 +113,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: scaffolded-service
-          path: _golden_path/${{ env.SERVICE_NAME }}/
+          path: ${{ env.SERVICE_NAME }}/
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -136,7 +133,7 @@ jobs:
       - name: Build image
         run: |
           set -euo pipefail
-          cd "_golden_path/${{ env.SERVICE_NAME }}"
+          cd "${{ env.SERVICE_NAME }}"
           docker build -t localhost:5001/${{ env.SERVICE_SLUG }}-predictor:test .
           docker push   localhost:5001/${{ env.SERVICE_SLUG }}-predictor:test
 
@@ -220,7 +217,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: scaffolded-service
-          path: _golden_path/${{ env.SERVICE_NAME }}/
+          path: ${{ env.SERVICE_NAME }}/
 
       - name: Download built image
         uses: actions/download-artifact@v4
@@ -270,7 +267,7 @@ jobs:
           # Policy file ships with the template. We patch the trust regex
           # to accept signatures from THIS workflow's identity (the
           # default regex only accepts main + tag refs).
-          POLICY="_golden_path/${{ env.SERVICE_NAME }}/k8s/policies/kyverno-image-verification.yaml"
+          POLICY="${{ env.SERVICE_NAME }}/k8s/policies/kyverno-image-verification.yaml"
           test -f "$POLICY" || { echo "::error::policy not found: $POLICY"; exit 1; }
           # Relax issuer trust to this run's GH workflow ref so the
           # signature we just made is accepted. In real deploys the
@@ -285,7 +282,7 @@ jobs:
         # condensed for the golden-path test.
         run: |
           set -euo pipefail
-          OVERLAY="_golden_path/${{ env.SERVICE_NAME }}/k8s/overlays/gcp-dev"
+          OVERLAY="${{ env.SERVICE_NAME }}/k8s/overlays/gcp-dev"
           DIGEST="${{ needs.build-and-sign.outputs.digest }}"
           IMG_NAME="${{ env.SERVICE_SLUG }}-predictor"
           NEW_NAME="localhost:5001/${{ env.SERVICE_SLUG }}-predictor"
@@ -298,7 +295,7 @@ jobs:
 
       - name: Apply overlay (gcp-dev)
         run: |
-          OVERLAY="_golden_path/${{ env.SERVICE_NAME }}/k8s/overlays/gcp-dev"
+          OVERLAY="${{ env.SERVICE_NAME }}/k8s/overlays/gcp-dev"
           kubectl apply -k "$OVERLAY"
           # Show what landed
           kubectl get ns
