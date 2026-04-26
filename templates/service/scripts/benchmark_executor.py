@@ -26,7 +26,6 @@ import argparse
 import asyncio
 import json
 import os
-import statistics
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -35,7 +34,7 @@ from pathlib import Path
 
 
 def _load_model(model_path: str):
-    import joblib
+    import joblib  # noqa: F811 — startup probe at __main__ runs first
 
     return joblib.load(model_path)
 

@@ -206,7 +206,7 @@ jobs:
       - name: Trivy vulnerability scan (blocker: HIGH/CRITICAL)
         # Pinned to immutable tag (D-19, ADR-014 §1.1). Dependabot updates
         # via .github/dependabot.yml. Phase 5 will harden to commit-SHA.
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ steps.build.outputs.image }}
           format: "table"
