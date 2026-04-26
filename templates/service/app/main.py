@@ -23,7 +23,7 @@ import logging
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.fastapi_app import (
@@ -33,6 +33,18 @@ from app.fastapi_app import (
     router,
     warm_up_model,
 )
+
+try:
+    from common_utils.auth import require_admin
+except ImportError:
+    # See parallel guard in app/fastapi_app.py for rationale; the
+    # /model/reload route still mounts but its dependency hides it
+    # behind a 404 unless ADMIN_API_ENABLED=true.
+    def require_admin() -> str:  # type: ignore[misc]
+        from fastapi import HTTPException, status
+
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
+
 
 # Warm-up completion flag — /health returns "degraded" until warm-up completes
 # so the K8s readiness probe gates traffic correctly (D-23).
@@ -91,15 +103,26 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# --- CORS ---
-# TODO: Restrict origins in production (e.g., ["https://your-dashboard.example.com"])
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=os.getenv("CORS_ORIGINS", "*").split(","),
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# --- CORS (default-deny) ---
+# Default is the empty allowlist (NO origins). Set CORS_ORIGINS to a
+# comma-separated list of explicit origins for browsers that need it,
+# e.g. CORS_ORIGINS="https://dashboard.example.com,https://ops.example.com".
+# The wildcard "*" is intentionally REJECTED by this loader; if a deploy
+# truly needs unrestricted CORS, set CORS_ORIGINS="*" explicitly so the
+# choice is auditable in the manifest, not implicit in the default
+# (PR-R2-1, audit R2 finding 'CORS por defecto es *').
+_cors_raw = os.getenv("CORS_ORIGINS", "").strip()
+_cors_origins: list[str] = [o.strip() for o in _cors_raw.split(",") if o.strip()] if _cors_raw else []
+if _cors_origins:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=_cors_origins,
+        allow_credentials=True,
+        allow_methods=["GET", "POST"],
+        allow_headers=["Authorization", "Content-Type", "X-API-Key"],
+    )
+else:
+    logger.info("CORS disabled (CORS_ORIGINS unset — same-origin only)")
 
 app.include_router(router)
 
@@ -166,9 +189,14 @@ async def model_info() -> dict:
     }
 
 
-@app.post("/model/reload")
+@app.post("/model/reload", dependencies=[Depends(require_admin)])
 async def model_reload() -> dict:
     """Hot-reload model artifacts without pod restart.
+
+    Hidden behind :func:`common_utils.auth.require_admin`: returns 404
+    unless ``ADMIN_API_ENABLED=true`` AND a valid ``ADMIN_API_KEY``
+    credential is presented. In staging/production, refuses to operate
+    if the admin secret is unset.
 
     Toggles /ready to not_ready during the reload + warm-up window so K8s
     stops routing new traffic. Consumers with a canary strategy (Argo
@@ -187,10 +215,12 @@ async def model_reload() -> dict:
             "version": os.getenv("MODEL_VERSION", "0.1.0"),
             "warmup": report,
         }
-    except Exception as e:
-        logger.error("Model reload failed: %s", e)
-        # Leave _warmed_up False — /ready keeps returning 503 until operator fixes
-        return {"status": "error", "detail": str(e)}
+    except Exception as exc:
+        # Leave _warmed_up False — /ready keeps returning 503 until operator fixes.
+        # Detail intentionally redacted (D-32, audit R2): operators read
+        # the pod log, not the response body.
+        logger.exception("Model reload failed")
+        return {"status": "error", "detail": "reload failed; see pod logs"}
 
 
 # ---------------------------------------------------------------------------

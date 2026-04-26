@@ -30,9 +30,20 @@ from uuid import uuid4
 import joblib
 import numpy as np
 import pandas as pd
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from prometheus_client import Counter, Gauge, Histogram, generate_latest
 from starlette.responses import Response
+
+try:
+    from common_utils.auth import verify_api_key
+except ImportError:
+    # common_utils not yet on path during scaffolder unit tests; degrade
+    # to a no-op so the router still imports. The Dockerfile and the
+    # `Verify common_utils importable` startup check ensure prod always
+    # has it (PR-R2-1, ADR-016).
+    def verify_api_key() -> str:  # type: ignore[misc]
+        return "anonymous"
+
 
 from app.schemas import (
     BatchPredictionRequest,
@@ -418,7 +429,11 @@ def _sync_predict_batch(inputs: List[dict]) -> List[dict]:
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
-@router.post("/predict", response_model=PredictionResponse)
+@router.post(
+    "/predict",
+    response_model=PredictionResponse,
+    dependencies=[Depends(verify_api_key)],
+)
 async def predict(input_data: PredictionRequest, explain: bool = False) -> PredictionResponse:
     """Single prediction endpoint.
 
@@ -463,13 +478,17 @@ async def predict(input_data: PredictionRequest, explain: bool = False) -> Predi
         )
 
         return PredictionResponse(**result)
-    except Exception as e:
+    except Exception as exc:
         requests_total.labels(status="500").inc()
         logger.exception("Prediction failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        raise HTTPException(status_code=500, detail="Internal prediction error") from exc
 
 
-@router.post("/predict_batch", response_model=BatchPredictionResponse)
+@router.post(
+    "/predict_batch",
+    response_model=BatchPredictionResponse,
+    dependencies=[Depends(verify_api_key)],
+)
 async def predict_batch(request: BatchPredictionRequest) -> BatchPredictionResponse:
     """Batch prediction endpoint for multiple inputs.
 
@@ -521,10 +540,10 @@ async def predict_batch(request: BatchPredictionRequest) -> BatchPredictionRespo
             predictions=predictions,
             total_customers=len(predictions),
         )
-    except Exception as e:
+    except Exception as exc:
         requests_total.labels(status="500").inc()
         logger.exception("Batch prediction failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        raise HTTPException(status_code=500, detail="Internal prediction error") from exc
 
 
 @router.get("/metrics")
