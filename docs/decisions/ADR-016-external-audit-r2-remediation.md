@@ -109,24 +109,51 @@ Severity: **High**. Affected: `deployment.yaml:8,11`, `rbac.yaml:16`,
 Exit: each overlay's effective output is unchanged after the rebase;
 the lint check is wired into `validate-templates.yml`.
 
-### PR-R2-4 — Tabular schema validation in serving + drift
+### PR-R2-4 — Tabular schema validation in serving + drift ✅
 
 Severity: **High**. Affected: `templates/service/app/schemas.py:1`,
 `train.py:138` and missing in `fastapi_app.py`, drift CronJob.
 
-- Add `templates/common_utils/input_validation.py` with two thin
-  adapters:
-  - `validate_predict_payload(payload: dict, schema: pa.DataFrameSchema)`
-    — wraps Pandera DataFrameSchema for single-row dicts.
-  - `validate_drift_dataframe(df, schema)` — same schema, batched.
-- Wire into `/predict`, `/predict_batch` BEFORE the model call.
-- Wire into the drift CronJob BEFORE PSI computation (catches data
-  pipeline bugs before they look like real drift).
-- Document precisely what's enforced (column presence, types,
-  ranges) vs what isn't (PII, business invariants).
+**Status:** Closed by commit `96d366e` (2026-04-26).
 
-Exit: `tests/test_input_validation.py` green; a PR that breaks
-`schemas.py` and forgets to update validators fails CI.
+- ✅ Added `templates/common_utils/input_validation.py` with three
+  adapters (split single-row vs batch for clearer 422 redaction):
+  - `validate_predict_payload(payload, schema)` — single-row Pandera
+    pass; raises `HTTPException(422)` with a D-32 redacted body
+    (column + check, never the value).
+  - `validate_predict_batch(rows, schema)` — atomic semantics so one
+    bad row rejects N.
+  - `validate_drift_dataframe(df, schema, *, label)` — batch validator
+    that raises a custom `DriftSchemaError` (not `HTTPException`,
+    since drift runs outside FastAPI).
+- ✅ Lazy resolver `templates/service/app/_pandera_schema.py` resolves
+  the service-specific Pandera schema at runtime via
+  `importlib.import_module(SERVICE_PACKAGE)` — needed because
+  `fastapi_app.py` cannot ``from {service}.schemas import …`` at parse
+  time before `new-service.sh` has rewritten the placeholder.
+- ✅ Wired into `/predict`, `/predict_batch` BEFORE the model call,
+  and the broad ``except Exception`` block now re-raises
+  ``HTTPException`` so 422s never get masked as 500s. A new
+  ``requests_total{status="422"}`` counter separates schema rejections
+  from platform errors in the SLO panel.
+- ✅ Wired into the drift CronJob BEFORE PSI computation. New CLI flag
+  ``--skip-schema`` is the documented forensics escape hatch (warns
+  loudly when used). On schema mismatch the CronJob now exits with
+  code **3**, distinct from real-drift codes 1/2, so on-call rotates
+  operators to the data pipeline instead of retraining a healthy
+  model.
+- ✅ Tests added in `templates/service/tests/test_input_validation.py`
+  cover schema=None no-op, redacted 422 bodies (D-32), batch
+  atomicity, drift `DriftSchemaError`, and end-to-end through
+  `TestClient`.
+- ✅ CI lint added in `validate-templates.yml`
+  ("Schema-validation wiring") greps for the import + call site of
+  every validator + the existence of `_pandera_schema.py`. A future
+  PR that touches the schema contract without updating the validators
+  fails the lint job.
+
+Exit criteria all met: `tests/test_input_validation.py` green; a PR
+that breaks `schemas.py` and forgets to update validators fails CI.
 
 ### PR-R2-5 — Replace `curl | bash` toolchain installs with versioned actions
 
