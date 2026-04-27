@@ -307,12 +307,19 @@ if [[ "${SCAFFOLD_SMOKE:-0}" == "1" ]]; then
   # `test_error_envelope.py` (Phase 1.2) gates the canonical error
   # contract; it runs against the real router so a regression on
   # `install_error_envelope` is caught here.
+  # `test_metrics_contract.py` (Phase 1.3) gates the alignment between
+  # Counter/Gauge/Histogram declarations in app/fastapi_app.py and
+  # src/<svc>/monitoring/* AND the metrics referenced in alert exprs
+  # in k8s/base/slo-prometheusrule.yaml + monitoring/alertmanager-rules.yaml.
+  # Catches the silent-failure case where a metric is renamed in code
+  # but the alert still references the old name and never fires.
   if (cd "$SERVICE_DIR" && PYTHONPATH=. timeout 180 pytest \
         tests/test_api.py tests/test_training.py \
         tests/test_quality_gates_config.py \
         tests/test_prediction_logger_lifecycle.py \
         tests/test_error_envelope.py \
         tests/test_input_validation.py \
+        tests/test_metrics_contract.py \
         tests/contract/ \
         -q --tb=short --no-cov) > "$TEMP_ROOT/pytest.log" 2>&1; then
     pass "pytest passed on freshly-scaffolded service"

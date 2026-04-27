@@ -103,6 +103,7 @@ spec:
           annotations:
             summary: "{ServiceName} SLO: availability burn rate high (>6x)"
             description: "Error rate is consuming availability budget at >6x over 6h window."
+            runbook_url: "https://your-org.github.io/{service}/operations/runbook/#p2-burn-rate-high"
 
         # P2 — Latency SLO violation
         - alert: "{SERVICE}_SLO_LatencyBudgetBurning"
@@ -116,6 +117,7 @@ spec:
           annotations:
             summary: "{ServiceName} SLO: <95% of requests within 500ms latency target"
             description: "P95 latency SLO is being violated — fewer than 95% of requests complete within 500ms."
+            runbook_url: "https://your-org.github.io/{service}/operations/runbook/#p2-latency-slo"
 
         # P3 — Error budget low (< 25% remaining)
         - alert: "{SERVICE}_SLO_ErrorBudgetLow"
@@ -129,3 +131,4 @@ spec:
           annotations:
             summary: "{ServiceName} SLO: error budget below 25%"
             description: "Less than 25% of the monthly availability error budget remains."
+            runbook_url: "https://your-org.github.io/{service}/operations/runbook/#p3-error-budget-low"

@@ -24,7 +24,7 @@ groups:
         annotations:
           summary: "{service} is down"
           description: "No healthy pods for {service} in the last 2 minutes."
-          runbook: "docs/runbooks/runbook-template.md#p1-service-down"
+          runbook_url: "docs/runbooks/runbook-template.md#p1-service-down"
 
       # --- P1: Error Rate Spike ---
       - alert: "{service}HighErrorRate"
@@ -38,7 +38,7 @@ groups:
         annotations:
           summary: "Error rate > 5% for {service}"
           description: "{{ $value | humanizePercentage }} of requests are failing."
-          runbook: "docs/runbooks/runbook-template.md#p1-error-rate"
+          runbook_url: "docs/runbooks/runbook-template.md#p1-error-rate"
 
       # --- P2: High Latency ---
       - alert: "{service}HighLatency"
@@ -53,7 +53,7 @@ groups:
         annotations:
           summary: "P95 latency > 1s for {service}"
           description: "P95 inference latency is {{ $value | humanizeDuration }}."
-          runbook: "docs/runbooks/runbook-template.md#p2-latency"
+          runbook_url: "docs/runbooks/runbook-template.md#p2-latency"
 
   - name: "{service}-drift-detection"
     rules:
@@ -75,7 +75,7 @@ groups:
             in {{ $value | humanizeDuration }}. Check CronJob status:
               kubectl get cronjobs -n ml-services
               kubectl describe cronjob {service}-drift-detection -n ml-services
-          runbook: "docs/runbooks/runbook-template.md#p2-drift-heartbeat"
+          runbook_url: "docs/runbooks/runbook-template.md#p2-drift-heartbeat"
 
       # --- P3: PSI Drift Alert ---
       - alert: "{service}DriftAlert"
@@ -89,6 +89,7 @@ groups:
           description: |
             Feature {{ $labels.feature }} has PSI={{ $value }}, above alert threshold 0.20.
             Action: Investigate root cause, then trigger /retrain if confirmed.
+          runbook_url: "docs/runbooks/runbook-template.md#p3-drift-alert"
 
       # --- P3: PSI Drift Warning ---
       - alert: "{service}DriftWarning"
@@ -100,6 +101,7 @@ groups:
         annotations:
           summary: "Elevated PSI for {{ $labels.feature }}"
           description: "Feature {{ $labels.feature }} PSI={{ $value }}. Monitor closely."
+          runbook_url: "docs/runbooks/runbook-template.md#p3-drift-warning"
 
   - name: "{service}-resources"
     rules:
@@ -116,6 +118,7 @@ groups:
         annotations:
           summary: "CPU usage > 85% for {service}"
           description: "Consider scaling up maxReplicas or increasing CPU limit."
+          runbook_url: "docs/runbooks/runbook-template.md#p4-high-cpu"
 
       # --- P4: Pod Restarts ---
       - alert: "{service}PodRestarting"
@@ -127,3 +130,4 @@ groups:
         annotations:
           summary: "{service} pod restarting"
           description: "Container has restarted {{ $value }} times in the last 15 minutes."
+          runbook_url: "docs/runbooks/runbook-template.md#p4-pod-restart"
