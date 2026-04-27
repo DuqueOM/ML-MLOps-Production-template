@@ -8,6 +8,8 @@ Used at three validation points:
 TODO: Replace example fields with your actual features.
 """
 
+from typing import Optional
+
 import pandera as pa
 
 
@@ -15,6 +17,12 @@ class ServiceInputSchema(pa.DataFrameModel):
     """Input data schema for {ServiceName}.
 
     Each field documents type, constraints, and business meaning.
+
+    ``target`` is typed as ``Optional`` so the same schema can validate
+    both training frames (target present) and serving / drift frames
+    (target absent). Training validates target presence separately —
+    see ``training/train.py`` — so making this column optional at the
+    schema level does NOT weaken the training-time contract (PR-R2-4).
     """
 
     # TODO: Define your actual features
@@ -31,10 +39,13 @@ class ServiceInputSchema(pa.DataFrameModel):
         isin=["category_A", "category_B", "category_C"],
         description="Example categorical feature",
     )
-    target: int = pa.Field(
+    # Optional column — present at training, absent at /predict and in drift
+    # reference/current frames. ``nullable=True`` additionally allows NaN
+    # rows (e.g., rows awaiting ground-truth).
+    target: Optional[int] = pa.Field(
         isin=[0, 1],
         description="Binary target (0=negative, 1=positive)",
-        nullable=True,  # Nullable for inference (no target at predict time)
+        nullable=True,
     )
 
     class Config:

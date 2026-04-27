@@ -14,7 +14,7 @@ from __future__ import annotations
 import os
 from collections.abc import Iterator
 from typing import Any
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock  # noqa: F401 — MagicMock kept for downstream tests
 
 import numpy as np
 import pytest
@@ -72,9 +72,15 @@ def _patch_model_loading() -> Iterator[None]:
     # Set MODEL_VERSION so the API exposes a deterministic value.
     os.environ.setdefault("MODEL_VERSION", "test-0.0.1")
 
-    with patch.object(fastapi_app_mod, "load_model_artifacts", _fake_load), patch.object(
-        fastapi_app_mod, "_start_prediction_logger", MagicMock()
-    ), patch.object(fastapi_app_mod, "_stop_prediction_logger", MagicMock()):
+    # ``_start_prediction_logger`` / ``_stop_prediction_logger`` are
+    # awaited by the FastAPI lifespan (``app/main.py``); MagicMock would
+    # return a non-awaitable and crash before any test runs. AsyncMock
+    # preserves the awaitable contract while staying side-effect free.
+    with (
+        patch.object(fastapi_app_mod, "load_model_artifacts", _fake_load),
+        patch.object(fastapi_app_mod, "_start_prediction_logger", AsyncMock()),
+        patch.object(fastapi_app_mod, "_stop_prediction_logger", AsyncMock()),
+    ):
         # Pre-populate the global so endpoints that read it directly succeed.
         fastapi_app_mod._model_pipeline = mock_pipeline
         yield
