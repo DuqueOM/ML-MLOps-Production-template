@@ -61,7 +61,7 @@ add operational quality. If A5 fails on day one, A1–A4 are premature.
 | **B1** | `quality_gates.yaml` per service + Pandera-equivalent JSON schema + CI validation step (✅ shipped — `templates/service/configs/quality_gates.schema.json` + `scripts/validate_quality_gates.py` + drift-gate `test_quality_gates_schema_sync.py` + CI lint step) |
 | **B2** | EDA produces 5 versioned artifacts (`eda_summary.json`, `schema_ranges.json`, `baseline_distributions.parquet`, `feature_catalog.yaml`, `leakage_report.json`); training/drift/retrain consume them by reference (✅ shipped — `templates/common_utils/eda_artifacts.py` contract + loaders; `eda_pipeline.py` emits all 5; `drift_detection.py --eda-baseline` consumer; `train.py` `_enforce_eda_gate` consumer; full test coverage) |
 | **B3** | Leakage hardening (temporal split when timestamp present; grouped split when entity_id present; random split requires explicit config) + reproducibility manifest per run (✅ shipped — `SplitConfig` Pydantic model in `{service}.config` + JSON Schema; `Trainer._split_data` dispatch with future-leak / group-disjoint invariants; `common_utils.training_manifest` versioned manifest with SHAs, deps, EDA cross-ref; full test coverage incl. determinism check) |
-| **B4** | Promotion gate enforcement — verify `promote_to_mlflow` blocks without an evidence bundle from B2/B3 |
+| **B4** | Promotion gate enforcement — verify `promote_to_mlflow` blocks without an evidence bundle from B2/B3 (✅ shipped — `templates/common_utils/evidence_bundle.py` pure-stdlib gate verdict; `promote_to_mlflow.py` runs the gate BEFORE MLflow connection (exit 4 on refuse); `--skip-evidence-gate` requires a non-empty `--skip-reason` recorded as an MLflow tag; gate verdict + warnings persisted as run tags for audit; full test coverage of every failure mode + the skip-with-reason escape hatch) |
 
 ### Phase C — Operational observability (3 PRs)
 
@@ -105,7 +105,7 @@ The template is "productized" when ALL of:
 5. Each scaffolded service ships `quality_gates.yaml` validated by CI (✅ achieved — PR-B1)
 6. EDA emits 5 artifacts consumed by schema/drift/retrain (✅ achieved — PR-B2)
 7. Retrain produces `promotion_packet.json` with statistical evidence
-   (✅ partially: `b8708b6` for adapters; PR-B4 enforces gate)
+   (✅ achieved — adapter `b8708b6` produces evidence; PR-B3 manifest carries it; PR-B4 `evidence_bundle.evaluate_evidence` enforces it as a hard gate in `promote_to_mlflow.py`)
 8. Every alert has a `runbook_url` (PR-C2)
 9. Logs/events correlate by standard IDs (✅ achieved — PR-C1)
 10. ≥1 drift drill + ≥1 deploy-degraded drill repeat cleanly (PR-C3)

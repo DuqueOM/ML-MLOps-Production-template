@@ -345,6 +345,8 @@ if [[ "${SCAFFOLD_SMOKE:-0}" == "1" ]]; then
         tests/test_drift_eda_baseline.py \
         tests/test_split_strategies.py \
         tests/test_training_manifest.py \
+        tests/test_evidence_bundle.py \
+        tests/test_promote_evidence_gate.py \
         tests/test_prediction_logger_lifecycle.py \
         tests/test_error_envelope.py \
         tests/test_input_validation.py \
