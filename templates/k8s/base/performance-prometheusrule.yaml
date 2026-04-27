@@ -27,13 +27,14 @@ spec:
             severity: critical
             service: "{service}"
             category: concept_drift
+            action: page
           annotations:
             summary: "Global AUC below alert threshold"
             description: |
               Global AUC is {{ $value | printf "%.3f" }} (< 0.65).
               This indicates concept drift across the whole population.
               Action: investigate recent data/label quality, consider retraining.
-              Runbook: https://github.com/{owner}/{repo}/blob/main/RUNBOOK.md#concept-drift
+            runbook_url: "https://github.com/{owner}/{repo}/blob/main/RUNBOOK.md#concept-drift"
 
         # ---------------------------------------------------------------
         # Sliced concept drift: a single slice degraded severely
@@ -48,6 +49,7 @@ spec:
             severity: critical
             service: "{service}"
             category: sliced_concept_drift
+            action: page
           annotations:
             summary: "AUC below alert threshold for slice {{ $labels.slice_name }}={{ $labels.slice_value }}"
             description: |
@@ -55,7 +57,7 @@ spec:
               {{ $labels.slice_name }}={{ $labels.slice_value }} (< 0.65).
               Sliced degradation often points to a subpopulation-specific issue:
               data pipeline, feature engineering, or label quality for that group.
-              Runbook: https://github.com/{owner}/{repo}/blob/main/RUNBOOK.md#sliced-drift
+            runbook_url: "https://github.com/{owner}/{repo}/blob/main/RUNBOOK.md#sliced-drift"
 
         # ---------------------------------------------------------------
         # F1 collapse — even if AUC is okay
@@ -70,11 +72,13 @@ spec:
             severity: warning
             service: "{service}"
             category: performance_regression
+            action: ticket
           annotations:
             summary: "F1 below alert for {{ $labels.slice_name }}={{ $labels.slice_value }}"
             description: |
               F1={{ $value | printf "%.3f" }}. Check threshold calibration
               and class balance in window.
+            runbook_url: "https://github.com/{owner}/{repo}/blob/main/RUNBOOK.md#f1-regression"
 
         # ---------------------------------------------------------------
         # Heartbeat: performance monitor stopped reporting
@@ -87,12 +91,14 @@ spec:
             severity: warning
             service: "{service}"
             category: monitoring_health
+            action: ticket
           annotations:
             summary: "Performance monitor has not reported in 48h"
             description: |
               The {service}-performance-monitor CronJob has not pushed metrics
               in > 48h. Verify the CronJob is running and ground-truth
               ingestion is producing labels.
+            runbook_url: "https://github.com/{owner}/{repo}/blob/main/RUNBOOK.md#performance-monitor-stale"
 
         # ---------------------------------------------------------------
         # Prediction log failure rate high
@@ -108,6 +114,7 @@ spec:
             severity: warning
             service: "{service}"
             category: observability_degraded
+            action: ticket
           annotations:
             summary: "Prediction-log error rate > 5% (closed-loop visibility at risk)"
             description: |
@@ -115,3 +122,4 @@ spec:
               D-22 contract swallows these failures — inference is NOT impacted,
               but performance monitoring will have gaps. Check backend health
               (gs://, s3://, or BigQuery).
+            runbook_url: "https://github.com/{owner}/{repo}/blob/main/RUNBOOK.md#prediction-log-errors"

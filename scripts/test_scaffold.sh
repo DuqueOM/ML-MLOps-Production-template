@@ -351,6 +351,7 @@ if [[ "${SCAFFOLD_SMOKE:-0}" == "1" ]]; then
         tests/test_error_envelope.py \
         tests/test_input_validation.py \
         tests/test_metrics_contract.py \
+        tests/test_alert_routing_contract.py \
         tests/test_data_paths.py \
         tests/contract/ \
         -q --tb=short --no-cov) > "$TEMP_ROOT/pytest.log" 2>&1; then

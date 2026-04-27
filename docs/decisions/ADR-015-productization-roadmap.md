@@ -68,7 +68,7 @@ add operational quality. If A5 fails on day one, A1–A4 are premature.
 | PR | Scope |
 |----|-------|
 | **C1** | Correlation IDs standard (`request_id`, `prediction_id`, `model_version`, `deployment_id`, `audit_id`, `drift_run_id`, `retrain_run_id`) carried through serving logs, events, audit (✅ shipped — `audit_id` in `agent_context` + `audit_record.py`; `deployment_id` via Downward API + `deploy-common.yml` patch; `drift_run_id` in report/Pushgateway/issue; contract codified in `templates/service/docs/correlation-ids.md`) |
-| **C2** | Alert routing: `runbook_url` field MANDATORY on every PrometheusRule; multi-window burn-rate SLO alerts with action mapping |
+| **C2** | Alert routing: `runbook_url` field MANDATORY on every PrometheusRule; multi-window burn-rate SLO alerts with action mapping (✅ shipped — `templates/service/tests/test_alert_routing_contract.py` auto-discovers every PrometheusRule + bare alert-groups doc and asserts: every alert has a non-empty `runbook_url` annotation, every alert has an `action` label in `{page, ticket, notify}`, the SLO file contains at least one multi-window/multi-burn-rate alert (long+short joined by `and`), and severity↔action pairs are not nonsense; `slo-prometheusrule.yaml` rewritten to the canonical 4-level SRE Workbook ladder (P1 14.4x/1h+5m page, P2 6x/6h+30m page, P3 3x/1d+2h ticket, P4 1x/3d+6h notify); `performance-prometheusrule.yaml`, `alertmanager-rules.yaml`, and `alerts-template.yaml` audited and patched for both invariants; `alerts-template.yaml` placeholders quoted to make the file valid YAML pre-render) |
 | **C3** | 2 reproducible drills: drift simulated + deploy degraded; per-drill evidence in `docs/runbooks/drills/` |
 
 ## What this ADR explicitly REJECTS
@@ -106,7 +106,7 @@ The template is "productized" when ALL of:
 6. EDA emits 5 artifacts consumed by schema/drift/retrain (✅ achieved — PR-B2)
 7. Retrain produces `promotion_packet.json` with statistical evidence
    (✅ achieved — adapter `b8708b6` produces evidence; PR-B3 manifest carries it; PR-B4 `evidence_bundle.evaluate_evidence` enforces it as a hard gate in `promote_to_mlflow.py`)
-8. Every alert has a `runbook_url` (PR-C2)
+8. Every alert has a `runbook_url` (✅ achieved — PR-C2 contract test enforces it across all auto-discovered PrometheusRule manifests)
 9. Logs/events correlate by standard IDs (✅ achieved — PR-C1)
 10. ≥1 drift drill + ≥1 deploy-degraded drill repeat cleanly (PR-C3)
 
