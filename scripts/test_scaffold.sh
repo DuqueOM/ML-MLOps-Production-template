@@ -313,9 +313,17 @@ if [[ "${SCAFFOLD_SMOKE:-0}" == "1" ]]; then
   # in k8s/base/slo-prometheusrule.yaml + monitoring/alertmanager-rules.yaml.
   # Catches the silent-failure case where a metric is renamed in code
   # but the alert still references the old name and never fires.
+  # `test_quality_gates_schema_sync.py` (Phase 2 / PR-B1) gates the
+  # behavioural equivalence between the Pydantic QualityGatesConfig
+  # model and the committed JSON Schema file used by
+  # `scripts/validate_quality_gates.py` and editor tooling. Drift
+  # there means a config that passed CI Pydantic validation could
+  # still fail JSON-Schema validation in a downstream tool — the
+  # exact silent-divergence ADR-015 PR-B1 closes.
   if (cd "$SERVICE_DIR" && PYTHONPATH=. timeout 180 pytest \
         tests/test_api.py tests/test_training.py \
         tests/test_quality_gates_config.py \
+        tests/test_quality_gates_schema_sync.py \
         tests/test_prediction_logger_lifecycle.py \
         tests/test_error_envelope.py \
         tests/test_input_validation.py \

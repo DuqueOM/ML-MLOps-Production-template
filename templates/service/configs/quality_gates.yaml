@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=./quality_gates.schema.json
 # =============================================================================
 # {ServiceName} — Quality Gates Configuration
 # =============================================================================

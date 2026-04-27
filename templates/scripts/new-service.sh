@@ -105,6 +105,17 @@ else
     warn "scripts/audit_record.py missing in template repo — scaffolded deploys will fail at the audit-trail step"
 fi
 
+# PR-B1 (ADR-015) — quality_gates.yaml validator. Required at runtime
+# by the scaffolded `.github/workflows/ci.yml` lint job
+# (`python scripts/validate_quality_gates.py --require-at-least-one`).
+# Without it CI fails on the very first push with a confusing
+# `python: can't open file scripts/validate_quality_gates.py` error.
+if [[ -f "$PROJECT_ROOT/scripts/validate_quality_gates.py" ]]; then
+    cp "$PROJECT_ROOT/scripts/validate_quality_gates.py" "$TARGET_DIR/scripts/"
+else
+    warn "scripts/validate_quality_gates.py missing — scaffolded CI will fail at the quality-gate validation step (PR-B1)"
+fi
+
 # audit_record.py imports from common_utils/agent_context.py (already
 # copied below). _lib/ holds shared helpers; ship them too.
 if [[ -d "$PROJECT_ROOT/scripts/_lib" ]]; then

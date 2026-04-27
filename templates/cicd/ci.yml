@@ -33,6 +33,18 @@ jobs:
       - name: mypy
         run: mypy src/ app/ --ignore-missing-imports
 
+      # ADR-015 PR-B1 — quality_gates.yaml as an executable contract.
+      # Runs before pytest so a malformed quality_gates.yaml fails in
+      # ~2s with a clear pointer instead of after the 4-minute test
+      # job in a confusing "config dataclass missing required field"
+      # traceback. Pure stdlib + pyyaml + jsonschema, so we install
+      # only the lightweight deps here (the full requirements.txt
+      # install happens in the `test` job).
+      - name: Validate quality_gates.yaml (PR-B1)
+        run: |
+          pip install --quiet pyyaml jsonschema
+          python scripts/validate_quality_gates.py --require-at-least-one
+
   test:
     name: Test — ${{ matrix.service }} / Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
