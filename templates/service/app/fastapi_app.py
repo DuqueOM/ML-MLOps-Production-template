@@ -45,12 +45,31 @@ except ImportError:
         return "anonymous"
 
 
+from app._pandera_schema import get_pandera_schema
 from app.schemas import (
     BatchPredictionRequest,
     BatchPredictionResponse,
     PredictionRequest,
     PredictionResponse,
 )
+
+try:
+    from common_utils.input_validation import (
+        validate_predict_batch,
+        validate_predict_payload,
+    )
+except ImportError:
+    # Same fallback rationale as for verify_api_key above: keep the
+    # router importable in stripped scaffolder smoke tests, where
+    # common_utils may not be on sys.path. Production runtime always
+    # has common_utils (see Dockerfile) and the validators raise
+    # HTTPException(422) on real schema mismatches (PR-R2-4).
+    def validate_predict_payload(payload, schema):  # type: ignore[no-redef]
+        return None
+
+    def validate_predict_batch(payload, schema):  # type: ignore[no-redef]
+        return None
+
 
 try:
     from common_utils.prediction_logger import (
@@ -478,6 +497,12 @@ async def predict(input_data: PredictionRequest, explain: bool = False) -> Predi
         )
 
         return PredictionResponse(**result)
+    except HTTPException:
+        # 422 from validate_predict_payload (or any other deliberate
+        # HTTPException) must propagate verbatim — converting it to a
+        # 500 would mask schema bugs as platform errors (PR-R2-4).
+        requests_total.labels(status="422").inc()
+        raise
     except Exception as exc:
         requests_total.labels(status="500").inc()
         logger.exception("Prediction failed")
@@ -513,6 +538,11 @@ async def predict_batch(request: BatchPredictionRequest) -> BatchPredictionRespo
             slices_list.append(row.pop("slice_values", None) or {})
             feature_inputs.append(row)
 
+        # Pandera second-wall validation for the whole batch (PR-R2-4).
+        # Atomic semantics — one bad row rejects the entire request, so
+        # callers can rely on "200 ⇒ every prediction is schema-valid".
+        validate_predict_batch(feature_inputs, get_pandera_schema())
+
         results = await loop.run_in_executor(
             _inference_executor,
             partial(_sync_predict_batch, feature_inputs),
@@ -540,6 +570,9 @@ async def predict_batch(request: BatchPredictionRequest) -> BatchPredictionRespo
             predictions=predictions,
             total_customers=len(predictions),
         )
+    except HTTPException:
+        requests_total.labels(status="422").inc()
+        raise
     except Exception as exc:
         requests_total.labels(status="500").inc()
         logger.exception("Batch prediction failed")

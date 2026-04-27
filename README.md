@@ -163,7 +163,7 @@ See [`examples/minimal/`](examples/minimal/) for the full working example.
 ┌──────────────────────────────────────────────────────────────────────────┐
 │                     AGENTIC SYSTEM                                       │
 │                                                                          │
-│  AGENTS.md           → Canonical invariants (D-01 → D-30) + protocols   │
+│  AGENTS.md           → Canonical invariants (D-01 → D-30) + protocols    │
 │  CLAUDE.md           → Claude Code project context                       │
 │  .claude/rules/      → 14 context-aware rules (paths: globs)             │
 │  .claude/commands/   → 12 slash commands (pointers to workflows)         │
@@ -200,7 +200,7 @@ See [`examples/minimal/`](examples/minimal/) for the full working example.
 │  │   └── schemas.py → Pandera DataFrameModel                             │
 │  ├── tests/         → unit, integration, explainer, load                 │
 │  ├── k8s/base/      → manifests + kustomize base                         │
-│  ├── k8s/overlays/  → gcp-{dev,staging,prod}/ + aws-{dev,staging,prod}/      │
+│  ├── k8s/overlays/  → gcp-{dev,staging,prod}/ + aws-{dev,staging,prod}/  │
 │  ├── infra/         → terraform/gcp/ + terraform/aws/                    │
 │  ├── docs/decisions/→ ADRs with measured trade-offs                      │
 │  └── monitoring/    → Grafana + Prometheus per service                   │

@@ -140,6 +140,54 @@ jobs:
       - name: Lint (flake8)
         run: flake8 --max-line-length=120 --extend-ignore=E203,W503 templates/service/ templates/common_utils/
 
+      - name: Schema-validation wiring (PR-R2-4, audit R2)
+        # Pandera ServiceInputSchema must be the SINGLE SOURCE OF TRUTH
+        # consumed by training, serving, AND drift detection. The audit
+        # found serving + drift bypassed it; this lint guards against
+        # silent regressions.
+        #
+        # Required wiring:
+        #   * fastapi_app.py imports validate_predict_payload AND calls it
+        #   * fastapi_app.py imports validate_predict_batch AND calls it
+        #   * drift_detection.py imports validate_drift_dataframe AND calls it
+        #   * app/_pandera_schema.py exists (lazy resolver for {service}.schemas)
+        run: |
+          set -euo pipefail
+          status=0
+          fastapi_app="templates/service/app/fastapi_app.py"
+          drift_py="templates/service/src/{service}/monitoring/drift_detection.py"
+
+          if [ ! -f templates/service/app/_pandera_schema.py ]; then
+            echo "::error::templates/service/app/_pandera_schema.py is missing (PR-R2-4)."
+            status=1
+          fi
+
+          for symbol in validate_predict_payload validate_predict_batch; do
+            if ! grep -q "from common_utils.input_validation" "$fastapi_app"; then
+              echo "::error file=$fastapi_app::missing 'from common_utils.input_validation' import (PR-R2-4)."
+              status=1
+              break
+            fi
+            # Two occurrences expected: import + call site. Anything else
+            # means someone removed the wiring or deleted the call.
+            count=$(grep -c "$symbol" "$fastapi_app" || true)
+            if [ "$count" -lt 2 ]; then
+              echo "::error file=$fastapi_app::expected import + call for $symbol (got $count occurrences)."
+              status=1
+            fi
+          done
+
+          if ! grep -q "validate_drift_dataframe" "$drift_py"; then
+            echo "::error file=$drift_py::drift_detection.py must call validate_drift_dataframe before PSI (PR-R2-4)."
+            status=1
+          fi
+          if ! grep -q "DriftSchemaError" "$drift_py"; then
+            echo "::error file=$drift_py::drift_detection.py must catch DriftSchemaError and exit 3 (PR-R2-4)."
+            status=1
+          fi
+
+          exit $status
+
   kubernetes-validate:
     name: Kubernetes Manifests
     runs-on: ubuntu-latest

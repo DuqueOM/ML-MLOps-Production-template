@@ -28,6 +28,29 @@ import numpy as np
 import pandas as pd
 from prometheus_client import CollectorRegistry, Gauge, push_to_gateway
 
+# Pandera schema and validator wired in PR-R2-4 (ADR-016): the drift
+# CronJob MUST refuse to compute PSI on a malformed frame, otherwise a
+# missing or renamed column produces a phantom drift alert (or worse,
+# a phantom all-clear). Both imports are fail-soft so this module stays
+# importable in stripped environments; the CLI flag --skip-schema is
+# the documented escape hatch and emits a loud warning when used.
+try:
+    from common_utils.input_validation import (
+        DriftSchemaError,
+        validate_drift_dataframe,
+    )
+except ImportError:  # pragma: no cover - exercised only without common_utils
+    DriftSchemaError = RuntimeError  # type: ignore[assignment,misc]
+
+    def validate_drift_dataframe(df, schema, *, label="drift"):  # type: ignore[no-redef]
+        return df
+
+
+try:
+    from ..schemas import ServiceInputSchema
+except ImportError:  # pragma: no cover - template-level only
+    ServiceInputSchema = None  # type: ignore[assignment]
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -88,6 +111,8 @@ def detect_drift(
     reference_path: str,
     current_path: str,
     output_path: Optional[str] = None,
+    *,
+    skip_schema: bool = False,
 ) -> dict:
     """Run drift detection on all numeric features.
 
@@ -95,12 +120,35 @@ def detect_drift(
         reference_path: Path to reference CSV.
         current_path: Path to current production CSV.
         output_path: Optional path to save JSON report.
+        skip_schema: Bypass the Pandera validation pass. Off by default;
+            set ``True`` only as a temporary forensics tool when the
+            reference frame itself is known to be malformed and the
+            operator wants to inspect raw PSI anyway. The ``main()``
+            CLI exposes this via ``--skip-schema``.
 
     Returns:
         Dict with per-feature PSI scores and status.
+
+    Raises:
+        common_utils.input_validation.DriftSchemaError: when either
+            frame fails the schema check and ``skip_schema`` is False.
     """
     ref_df = pd.read_csv(reference_path)
     cur_df = pd.read_csv(current_path)
+
+    # Schema validation BEFORE PSI (PR-R2-4): a column rename or a type
+    # mismatch in the production pipeline would otherwise look like
+    # massive drift. Validate both frames so the earliest failure mode
+    # surfaces first; the CronJob entrypoint catches DriftSchemaError
+    # and exits with code 3 (distinct from real-drift codes 1/2).
+    if skip_schema:
+        logger.warning(
+            "drift_detection: --skip-schema enabled; PSI will be computed on "
+            "an unvalidated frame. Use only for forensics (PR-R2-4)."
+        )
+    else:
+        ref_df = validate_drift_dataframe(ref_df, ServiceInputSchema, label="reference")
+        cur_df = validate_drift_dataframe(cur_df, ServiceInputSchema, label="current")
 
     # Only check numeric features
     numeric_cols = ref_df.select_dtypes(include=[np.number]).columns
@@ -254,6 +302,8 @@ def main() -> int:
         0 — No drift detected (all features OK)
         1 — Warning-level drift (some features elevated)
         2 — Alert-level drift (action required, triggers issue creation)
+        3 — Schema mismatch detected before PSI (PR-R2-4); operator
+            must fix the data pipeline before treating it as drift.
     """
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s — %(message)s")
 
@@ -264,9 +314,21 @@ def main() -> int:
     parser.add_argument("--push-metrics", action="store_true", help="Push to Pushgateway")
     parser.add_argument("--create-issue", action="store_true", help="Create GitHub Issue on alert")
     parser.add_argument("--update-reference", action="store_true", help="Replace reference with current")
+    parser.add_argument(
+        "--skip-schema",
+        action="store_true",
+        help="Bypass Pandera schema validation (forensics only; emits a warning).",
+    )
     args = parser.parse_args()
 
-    results = detect_drift(args.reference, args.current, args.output)
+    try:
+        results = detect_drift(args.reference, args.current, args.output, skip_schema=args.skip_schema)
+    except DriftSchemaError as exc:
+        # Distinct exit code so retry/alert logic can tell schema breakage
+        # apart from real PSI drift (codes 1/2). Operators should fix the
+        # data pipeline, not retrain the model (PR-R2-4).
+        logger.error("Drift detection aborted before PSI: %s", exc)
+        return 3
     print(json.dumps(results["summary"], indent=2))
 
     if args.push_metrics:
