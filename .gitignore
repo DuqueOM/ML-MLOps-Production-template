@@ -111,6 +111,15 @@ reports/
 # ─── DVC ─────────────────────────────────────────────
 /tmp/
 
+# ─── Scaffolder scratch output ───────────────────────
+# new-service.sh writes to <PROJECT_ROOT>/<ServiceName>. When the
+# scaffolder is invoked from inside THIS repo (e.g., during local
+# smoke testing), the scaffolded service ends up here. These are
+# throwaway artefacts — never commit.
+TestSvc/
+ScaffoldSmoke*/
+_scaffold_scratch/
+
 # ─── PRIVATE ─────────────────────────────────────────
 
 AUDIOVISUAL_CONTENT.md
