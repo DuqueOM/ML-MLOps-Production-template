@@ -177,7 +177,14 @@ def test_predict_returns_422_on_bad_categorical(schema_client: TestClient) -> No
     # answer; 500 would mean the outer except-Exception swallowed it.
     assert resp.status_code == 422
     body = resp.json()
-    assert "errors" in body.get("detail", {})
+    # Phase 1.2: stable error envelope. Pandera failure cases live under
+    # ``error.details.errors``; the legacy ``detail`` shape is gone (and
+    # the back-compat opt-out via ``ERROR_ENVELOPE_ENABLED=false`` is the
+    # only escape hatch — never enabled in CI).
+    assert "error" in body, body
+    assert body["error"]["code"] in {"UNPROCESSABLE_ENTITY", "SCHEMA_VALIDATION_FAILED"}
+    assert body["error"]["request_id"], "request_id must be set by RequestIDMiddleware"
+    assert "errors" in body["error"]["details"]
 
 
 def test_predict_batch_returns_422_on_bad_row(schema_client: TestClient) -> None:

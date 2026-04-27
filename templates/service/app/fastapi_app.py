@@ -45,6 +45,32 @@ except ImportError:
         return "anonymous"
 
 
+# Phase 1.2: stable error envelope. ``ServiceError`` is preferred over
+# ``HTTPException`` in new code — the global handler converts it to the
+# canonical ``{"error": {"code", "message", "request_id", ...}}`` shape.
+# We keep an HTTPException fallback in case ``common_utils.errors`` is
+# missing (parallel rationale to verify_api_key above).
+try:
+    from common_utils.errors import ErrorCode, ServiceError
+except ImportError:
+    ErrorCode = None  # type: ignore[assignment]
+
+    class ServiceError(Exception):  # type: ignore[no-redef]
+        """Fallback shim — preserves the call sites' contract.
+
+        When ``common_utils`` is on the runtime path (Dockerfile guarantee),
+        the real implementation raises through the envelope handler. When
+        it is not, we re-raise as ``HTTPException`` so the response is
+        still well-formed JSON.
+        """
+
+        def __init__(self, *, code: str, message: str, status_code: int = 500, **_: object) -> None:
+            super().__init__(message)
+            self.code = code
+            self.status_code = status_code
+            self.detail = message
+
+
 from app._pandera_schema import get_pandera_schema
 from app.schemas import (
     BatchPredictionRequest,
@@ -480,7 +506,11 @@ async def predict(input_data: PredictionRequest, explain: bool = False) -> Predi
     """
     if _model_pipeline is None:
         requests_total.labels(status="503").inc()
-        raise HTTPException(status_code=503, detail="Model not loaded")
+        raise ServiceError(
+            code=ErrorCode.MODEL_NOT_LOADED if ErrorCode else "MODEL_NOT_LOADED",
+            message="Model not loaded; readiness probe should have caught this.",
+            status_code=503,
+        )
 
     loop = asyncio.get_running_loop()
     request_start = time.perf_counter()
@@ -489,6 +519,12 @@ async def predict(input_data: PredictionRequest, explain: bool = False) -> Predi
         input_dict = input_data.model_dump()
         entity_id = input_dict.pop("entity_id")
         slices = input_dict.pop("slice_values", None) or {}
+
+        # Pandera second-wall validation for the single payload (PR-R2-4
+        # parity — /predict_batch already validates; /predict was missing
+        # the call so a value that satisfies Pydantic but violates the
+        # schema would reach the model. Phase 1.2 closes the gap.)
+        validate_predict_payload(input_dict, get_pandera_schema())
 
         result = await loop.run_in_executor(
             _inference_executor,
@@ -521,7 +557,11 @@ async def predict(input_data: PredictionRequest, explain: bool = False) -> Predi
     except Exception as exc:
         requests_total.labels(status="500").inc()
         logger.exception("Prediction failed")
-        raise HTTPException(status_code=500, detail="Internal prediction error") from exc
+        raise ServiceError(
+            code=ErrorCode.INTERNAL_PREDICTION_ERROR if ErrorCode else "INTERNAL_PREDICTION_ERROR",
+            message="Internal prediction error.",
+            status_code=500,
+        ) from exc
 
 
 @router.post(
@@ -538,7 +578,11 @@ async def predict_batch(request: BatchPredictionRequest) -> BatchPredictionRespo
     """
     if _model_pipeline is None:
         requests_total.labels(status="503").inc()
-        raise HTTPException(status_code=503, detail="Model not loaded")
+        raise ServiceError(
+            code=ErrorCode.MODEL_NOT_LOADED if ErrorCode else "MODEL_NOT_LOADED",
+            message="Model not loaded; readiness probe should have caught this.",
+            status_code=503,
+        )
 
     loop = asyncio.get_running_loop()
     request_start = time.perf_counter()
@@ -591,7 +635,11 @@ async def predict_batch(request: BatchPredictionRequest) -> BatchPredictionRespo
     except Exception as exc:
         requests_total.labels(status="500").inc()
         logger.exception("Batch prediction failed")
-        raise HTTPException(status_code=500, detail="Internal prediction error") from exc
+        raise ServiceError(
+            code=ErrorCode.INTERNAL_PREDICTION_ERROR if ErrorCode else "INTERNAL_PREDICTION_ERROR",
+            message="Internal prediction error.",
+            status_code=500,
+        ) from exc
 
 
 @router.get("/metrics")

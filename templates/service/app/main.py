@@ -124,6 +124,19 @@ if _cors_origins:
 else:
     logger.info("CORS disabled (CORS_ORIGINS unset — same-origin only)")
 
+# --- Stable error envelope + request-id middleware (Phase 1.2) ---
+# Every non-2xx response uses the same shape:
+#   {"error": {"code": "...", "message": "...", "request_id": "...", ...}}
+# Disable via ERROR_ENVELOPE_ENABLED=false during gradual migration only.
+try:
+    from common_utils.errors import install_error_envelope
+
+    install_error_envelope(app)
+except ImportError:
+    # common_utils unavailable in stripped scaffolder smoke; the
+    # Dockerfile and Phase 1.1 import smoke ensure prod always has it.
+    logger.warning("common_utils.errors unavailable — falling back to FastAPI default error shape")
+
 app.include_router(router)
 
 

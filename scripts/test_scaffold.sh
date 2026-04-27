@@ -304,10 +304,15 @@ if [[ "${SCAFFOLD_SMOKE:-0}" == "1" ]]; then
   # fail-fast contract for closed-loop monitoring. It runs in milliseconds
   # because each test only exercises `_start_prediction_logger` directly,
   # never the full FastAPI lifespan.
+  # `test_error_envelope.py` (Phase 1.2) gates the canonical error
+  # contract; it runs against the real router so a regression on
+  # `install_error_envelope` is caught here.
   if (cd "$SERVICE_DIR" && PYTHONPATH=. timeout 180 pytest \
         tests/test_api.py tests/test_training.py \
         tests/test_quality_gates_config.py \
         tests/test_prediction_logger_lifecycle.py \
+        tests/test_error_envelope.py \
+        tests/test_input_validation.py \
         tests/contract/ \
         -q --tb=short --no-cov) > "$TEMP_ROOT/pytest.log" 2>&1; then
     pass "pytest passed on freshly-scaffolded service"
