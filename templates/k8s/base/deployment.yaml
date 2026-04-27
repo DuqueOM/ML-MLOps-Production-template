@@ -32,6 +32,14 @@ spec:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8000"
         prometheus.io/path: "/metrics"
+        # PR-C1 (ADR-015): correlation id for the deploy that produced
+        # this Pod. Patched in by `deploy-common.yml` at apply time
+        # (e.g. via `kubectl patch deployment ... -p '{"spec":{"template":
+        # {"metadata":{"annotations":{"windsurf.io/deployment-id":"..."}}}}}'`).
+        # The literal "local" default keeps `kubectl apply -f` smoke-tests
+        # working without the deploy chain — pods running locally then
+        # report `deployment_id=local`, which is honest and queryable.
+        windsurf.io/deployment-id: "local"
     spec:
       serviceAccountName: "{service}-sa"
 
@@ -109,6 +117,18 @@ spec:
             # to build Counter/Histogram names. Audit Critical-3.
             - name: SERVICE_METRIC_PREFIX
               value: "{service}"
+            # PR-C1 (ADR-015) — DEPLOYMENT_ID is the canonical correlation
+            # key that joins this running pod back to the deploy workflow
+            # that produced it. Sourced from the Pod's annotations via the
+            # Downward API: `deploy-common.yml` patches the Deployment
+            # template with `windsurf.io/deployment-id=<env>-<run_id>-<attempt>`
+            # before `kubectl apply`, so every pod inherits the same id
+            # without requiring a fresh image build. The prediction logger
+            # attaches it to every event (D-21/D-22).
+            - name: DEPLOYMENT_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.annotations['windsurf.io/deployment-id']
           resources:
             requests:
               cpu: "500m"       # TODO: Set based on profiling

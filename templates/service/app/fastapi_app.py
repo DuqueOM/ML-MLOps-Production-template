@@ -381,6 +381,13 @@ async def _fire_and_forget_log(
             prediction_class=prediction_class,
             slices=slices or {},
             latency_ms=latency_ms,
+            # PR-C1 (ADR-015): correlation key linking the prediction
+            # to the deploy that produced this pod. Sourced from the
+            # K8s Downward API at pod start (see deployment.yaml). The
+            # ``"local"`` fallback keeps host-mode tests honest — the
+            # value queried in BigQuery still distinguishes "this row
+            # came from a CI pod" from "this row came from prod".
+            deployment_id=os.getenv("DEPLOYMENT_ID", "local"),
         )
         await _prediction_logger.log_prediction(event)
         prediction_log_total.inc()

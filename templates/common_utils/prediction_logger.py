@@ -65,6 +65,14 @@ class PredictionEvent:
     prediction_class: str | int
     slices: dict[str, str] = field(default_factory=dict)
     latency_ms: float | None = None
+    # PR-C1 (ADR-015): deployment_id is the canonical correlation key
+    # joining each prediction back to the deploy workflow that produced
+    # the running pod. Optional (default None) so existing call sites
+    # and tests continue to work; populated from $DEPLOYMENT_ID env var
+    # by the FastAPI handler (sourced via the K8s Downward API). Maps
+    # to a nullable column in BigQuery / Parquet backends; SQLite gets
+    # a generated column for local development. See `docs/correlation-ids.md`.
+    deployment_id: str | None = None
 
     def __post_init__(self) -> None:
         if not self.prediction_id:
@@ -121,11 +129,22 @@ class SQLiteBackend:
               score REAL NOT NULL,
               prediction_class TEXT NOT NULL,
               slices_json TEXT NOT NULL,
-              latency_ms REAL
+              latency_ms REAL,
+              deployment_id TEXT
             )
             """)
+        # PR-C1: lazy schema migration for SQLite databases created by
+        # earlier versions. ``ALTER TABLE ... ADD COLUMN`` is idempotent
+        # via the ``OperationalError`` catch (sqlite3 raises if the column
+        # already exists). Local-dev-only backend, so we do not need a
+        # full migration framework.
+        try:
+            self._conn.execute("ALTER TABLE predictions_log ADD COLUMN deployment_id TEXT")
+        except Exception:
+            pass
         self._conn.execute("CREATE INDEX IF NOT EXISTS idx_entity ON predictions_log(entity_id)")
         self._conn.execute("CREATE INDEX IF NOT EXISTS idx_ts ON predictions_log(timestamp)")
+        self._conn.execute("CREATE INDEX IF NOT EXISTS idx_deploy ON predictions_log(deployment_id)")
         self._conn.commit()
 
     def write_batch(self, events: list[PredictionEvent]) -> None:
@@ -140,11 +159,12 @@ class SQLiteBackend:
                 str(e.prediction_class),
                 json.dumps(e.slices),
                 e.latency_ms,
+                e.deployment_id,
             )
             for e in events
         ]
         self._conn.executemany(
-            "INSERT OR REPLACE INTO predictions_log VALUES (?,?,?,?,?,?,?,?,?)",
+            "INSERT OR REPLACE INTO predictions_log VALUES (?,?,?,?,?,?,?,?,?,?)",
             rows,
         )
         self._conn.commit()

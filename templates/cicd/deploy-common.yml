@@ -230,6 +230,27 @@ jobs:
         run: |
           kubectl apply -k ${{ inputs.overlay_path }}
 
+      # PR-C1 (ADR-015): patch the deployment_id annotation AFTER apply
+      # so the value is `<env>-<run_id>-<run_attempt>` and not the
+      # template's literal "local". Patching the Deployment template
+      # triggers a controlled rollout — this is the canonical event
+      # marking "this revision corresponds to that workflow run".
+      # Pods then expose `DEPLOYMENT_ID` via the Downward API. We
+      # patch BEFORE waiting for rollout so the rollout we then watch
+      # is the new revision, not the unpatched one.
+      - name: Stamp deployment_id annotation
+        env:
+          NAMESPACE: ${{ steps.ns.outputs.namespace }}
+          DEPLOYMENT_ID: "${{ inputs.environment }}-${{ github.run_id }}-${{ github.run_attempt }}"
+        run: |
+          set -euo pipefail
+          for svc in $(echo '${{ inputs.services }}' | jq -r '.[]'); do
+            DEPLOY="$(echo $svc | tr 'A-Z' 'a-z')-predictor"
+            echo "→ Stamping $DEPLOY with deployment_id=$DEPLOYMENT_ID"
+            kubectl patch deployment "$DEPLOY" -n "$NAMESPACE" \
+              --patch '{"spec":{"template":{"metadata":{"annotations":{"windsurf.io/deployment-id":"'"$DEPLOYMENT_ID"'"}}}}}'
+          done
+
       - name: Wait for rollout
         env:
           NAMESPACE: ${{ steps.ns.outputs.namespace }}

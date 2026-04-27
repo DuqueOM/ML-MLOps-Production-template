@@ -20,6 +20,7 @@ import os
 import shutil
 import sys
 import time
+import uuid
 from pathlib import Path
 from typing import Optional
 from urllib.request import Request, urlopen
@@ -154,7 +155,18 @@ def detect_drift(
     numeric_cols = ref_df.select_dtypes(include=[np.number]).columns
     common_cols = [c for c in numeric_cols if c in cur_df.columns]
 
-    results: dict = {"timestamp": time.time(), "features": {}}
+    # PR-C1 (ADR-015): drift_run_id correlates this drift evaluation
+    # across the JSON report, the audit log, GitHub Issues created on
+    # alert, and the Pushgateway timestamp gauge. Format: 32-char hex.
+    # Honour an inbound $DRIFT_RUN_ID env var so the CronJob workflow
+    # can supply a deterministic id (e.g. ``drift-<run_id>-<attempt>``)
+    # — same pattern used by the deploy chain for deployment_id.
+    drift_run_id = os.getenv("DRIFT_RUN_ID") or uuid.uuid4().hex
+    results: dict = {
+        "drift_run_id": drift_run_id,
+        "timestamp": time.time(),
+        "features": {},
+    }
     alerts: list[str] = []
     warnings: list[str] = []
 
@@ -206,7 +218,12 @@ def detect_drift(
 
 
 def push_metrics(results: dict) -> None:
-    """Push PSI scores to Prometheus via Pushgateway."""
+    """Push PSI scores to Prometheus via Pushgateway.
+
+    PR-C1 (ADR-015): also pushes a ``{service}_drift_run_info`` gauge
+    labelled with ``drift_run_id`` so post-incident queries can JOIN
+    Prometheus samples to the JSON report and the audit entry.
+    """
     registry = CollectorRegistry()
 
     psi_gauge = Gauge(
@@ -222,13 +239,23 @@ def push_metrics(results: dict) -> None:
         registry=registry,
     )
 
+    drift_run_info = Gauge(
+        "{service}_drift_run_info",
+        "Drift run correlation key (always 1; the value carries the timestamp)",
+        ["drift_run_id"],
+        registry=registry,
+    )
+
     for feature, data in results.get("features", {}).items():
         psi_gauge.labels(feature=feature).set(data["psi"])
 
     timestamp_gauge.set(time.time())
 
+    drift_run_id = results.get("drift_run_id", "unknown")
+    drift_run_info.labels(drift_run_id=drift_run_id).set(1)
+
     push_to_gateway(PUSHGATEWAY_URL, job=JOB_NAME, registry=registry)
-    logger.info("Metrics pushed to Pushgateway")
+    logger.info("Metrics pushed to Pushgateway (drift_run_id=%s)", drift_run_id)
 
 
 def create_github_issue(results: dict, repo: str, token: str) -> None:
@@ -238,9 +265,11 @@ def create_github_issue(results: dict, repo: str, token: str) -> None:
     The CI/CD workflow can also call this via drift-detection.yml.
     """
     alerts = results["summary"]["alerts"]
+    drift_run_id = results.get("drift_run_id", "unknown")
     body_lines = [
         "## Drift Alert",
         "",
+        f"**drift_run_id**: `{drift_run_id}`",
         f"**Features with alert-level PSI**: {', '.join(alerts)}",
         "",
         "| Feature | PSI | Status | Ref Mean | Cur Mean |",
