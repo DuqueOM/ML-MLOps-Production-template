@@ -58,7 +58,7 @@ add operational quality. If A5 fails on day one, A1–A4 are premature.
 
 | PR | Scope |
 |----|-------|
-| **B1** | `quality_gates.yaml` per service + Pandera-equivalent JSON schema + CI validation step |
+| **B1** | `quality_gates.yaml` per service + Pandera-equivalent JSON schema + CI validation step (✅ shipped — `templates/service/configs/quality_gates.schema.json` + `scripts/validate_quality_gates.py` + drift-gate `test_quality_gates_schema_sync.py` + CI lint step) |
 | **B2** | EDA produces 5 versioned artifacts (`eda_summary.json`, `schema_ranges.json`, `baseline_distributions.parquet`, `feature_catalog.yaml`, `leakage_report.json`); training/drift/retrain consume them by reference |
 | **B3** | Leakage hardening (temporal split when timestamp present; grouped split when entity_id present; random split requires explicit config) + reproducibility manifest per run |
 | **B4** | Promotion gate enforcement — verify `promote_to_mlflow` blocks without an evidence bundle from B2/B3 |
@@ -102,7 +102,7 @@ The template is "productized" when ALL of:
 3. `audit_record.py` works on a minimal CI runner (✅ achieved v1.10.0)
 4. `terraform plan` per env with real remote backend works (✅ achieved v1.10.0;
    Phase A2 will tighten the bootstrap/live split)
-5. Each scaffolded service ships `quality_gates.yaml` validated by CI (PR-B1)
+5. Each scaffolded service ships `quality_gates.yaml` validated by CI (✅ achieved — PR-B1)
 6. EDA emits 5 artifacts consumed by schema/drift/retrain (PR-B2)
 7. Retrain produces `promotion_packet.json` with statistical evidence
    (✅ partially: `b8708b6` for adapters; PR-B4 enforces gate)
