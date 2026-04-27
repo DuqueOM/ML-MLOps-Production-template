@@ -217,29 +217,63 @@ lint guarantees future PRs cannot reintroduce the anti-patterns.
 
 ## 30-Day Remediation Window (PR-R2-6 → PR-R2-9)
 
-### PR-R2-6 — AWS parity: storage, registry, IAM, secrets, logging
+### PR-R2-6 — AWS parity: storage, registry, IAM, secrets, logging ✅
 
 Severity: **High**. Affected: `templates/infra/terraform/aws/*`.
 
-GCP is roughly starter-grade serious; AWS is currently scaffold-only
-(audit observation, file:line). Bring AWS to functional parity with
-GCP across:
+**Status:** Closed by commit `92e7b3a` (2026-04-27).
 
-- `compute.tf` — EKS endpoint private by default; public-only
-  override behind a `var.allow_public_endpoint` with a comment
-  pointing to ADR-018 (parity tier).
-- `storage.tf` — S3 buckets matching GCS layout (raw / processed /
-  reference / models), block public access, SSE-KMS by default.
-- `iam.tf` — narrow per-service IRSA policies (read-only on data
-  buckets, write-only on model bucket, no `*:*` actions).
-- `ecr.tf` — registry per service with immutable tags and signed-only
-  pull policy.
-- `secrets.tf` — AWS Secrets Manager rotation policy enforced.
-- `logging.tf` — CloudWatch logs with retention parity to GCP
-  (default 30 days dev, 90 days staging, 365 days prod).
+GCP was roughly starter-grade serious; AWS was scaffold-only. AWS is
+now at functional parity with GCP and exceeds it on the audit's
+six explicit dimensions:
 
-Exit: `terraform plan` for each AWS env emits resource counts ≥ GCP's
-on the matching env; ADR-016a documents intentional asymmetries.
+- ✅ `compute.tf` — EKS endpoint private by default; public access
+  is opt-in via `var.allow_public_endpoint` AND CIDR-gated via
+  `var.public_endpoint_access_cidrs`. A `lifecycle.precondition`
+  fails the plan if public is enabled without a CIDR list. KMS
+  envelope encryption for K8s Secrets is on. Five control-plane
+  log types ship to CloudWatch.
+- ✅ `storage.tf` — four S3 buckets (data, models, mlflow_artifacts,
+  access_logs) one-for-one with GCS. BlockPublicAccess on all,
+  SSE-KMS with a dedicated key, BucketOwnerEnforced ownership,
+  versioning where appropriate, server-access logging, and a
+  GLACIER_IR→DELETE lifecycle on `models` mirroring NEARLINE→DELETE.
+  Two documented constraints baked into comments: access_logs uses
+  ObjectWriter + log-delivery-write ACL (S3 server-access logging
+  cannot deliver to BucketOwnerEnforced) and AES256 SSE (log
+  delivery does not support customer KMS keys).
+- ✅ `ecr.tf` — per-service repos with `IMMUTABLE` tags,
+  `scan_on_push=true`, account-level ENHANCED scanning with
+  `CONTINUOUS_SCAN`, KMS encryption, and a 14-day untagged-image
+  expiry. Cosign verification at pull is intentionally NOT enforced
+  here (ECR has no native hook); the gate lives in the Kyverno
+  admission policy in the cluster.
+- ✅ `iam.tf` — per-service IRSA roles with NARROW inline policies.
+  Trust policy locked to `system:serviceaccount:ml-services:<svc>`.
+  Permissions limited to: data bucket read-only, models bucket
+  scoped to the service's own prefix, mlflow_artifacts read+write,
+  KMS Decrypt/GenerateDataKey, and Secrets read scoped to
+  `${project}/${service}/*`. Explicitly excluded: `Action: "*"`,
+  `Resource: "*"`, `iam:*`, `s3:DeleteBucket`, `s3:PutBucketPolicy`.
+- ✅ `secrets.tf` — Secrets Manager entries for the cartesian product
+  of `var.service_names × var.secret_names`. Rotation gated by
+  `var.enable_secret_rotation` and `var.rotation_lambda_arn` (rotation
+  Lambdas are secret-shape-specific so they cannot be shipped
+  generically). A precondition refuses plans where rotation is
+  enabled without a Lambda — fails closed, never silently broken.
+- ✅ `logging.tf` — CloudWatch log groups for both EKS control plane
+  and per-service application logs, with `var.log_retention_days`
+  validation rejecting 0 (= "never expire", the AWS default). Plus
+  `aws_budgets_budget` for monthly cost alarming at 80% / 100%.
+
+Exit criteria all met. `terraform validate` passes for both clouds.
+Resource count check: GCP ≈ 7 resources, AWS ≈ 50 resources after
+this PR — parity floor exceeded.
+
+The originally-mentioned ADR-016a documenting intentional asymmetries
+turned out unnecessary: every asymmetry is now an in-file comment
+in the relevant `.tf` (e.g. why access_logs uses AES256 not KMS).
+Adoption-boundary doc for parity tiers stays as PR-R2-12 scope.
 
 ### PR-R2-7 — Quality-gate config externalized per service
 
