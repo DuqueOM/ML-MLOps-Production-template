@@ -13,7 +13,7 @@ kind: Kustomization
 
 # Default namespace ONLY for `kustomize build templates/k8s/base` standalone.
 # Every overlay overrides this via its own `namespace:` field
-# (e.g. `{service}-prod`, `{service}-staging`, `{service}-dev`),
+# (e.g. `{service-name}-prod`, `{service-name}-staging`, `{service-name}-dev`),
 # which is the supported deployment path. Audit R2 / PR-R2-3
 # ensured no resource hardcodes `namespace: ml-services` so the
 # overlay's value reaches every Role / RoleBinding / NetworkPolicy /
@@ -22,7 +22,7 @@ namespace: ml-services
 
 labels:
   - pairs:
-      app: "{service}"
+      app: "{service-name}"
       managed-by: kustomize
 
 resources:

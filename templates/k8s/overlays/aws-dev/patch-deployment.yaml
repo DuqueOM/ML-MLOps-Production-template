@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: "{service}-predictor"
+  name: "{service-name}-predictor"
 spec:
   replicas: 1
   template:
@@ -15,13 +15,13 @@ spec:
             - aws
             - s3
             - cp
-            - "s3://{MODEL_BUCKET}/{service}/model.joblib"
+            - "s3://{MODEL_BUCKET}/{service-name}/model.joblib"
             - /models/model.joblib
           volumeMounts:
             - name: model-storage
               mountPath: /models
       containers:
-        - name: "{service}-predictor"
+        - name: "{service-name}-predictor"
           resources:
             requests:
               cpu: "100m"

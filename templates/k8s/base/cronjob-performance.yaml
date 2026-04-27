@@ -11,9 +11,9 @@
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: "{service}-performance-monitor"
+  name: "{service-name}-performance-monitor"
   labels:
-    app: "{service}-perf"
+    app: "{service-name}-perf"
 spec:
   # Run 1h after drift-detection to give ground-truth ingester time to finish
   schedule: "0 4 * * *"
@@ -27,13 +27,13 @@ spec:
       template:
         metadata:
           labels:
-            app: "{service}-perf"
+            app: "{service-name}-perf"
         spec:
-          serviceAccountName: "{service}-sa"
+          serviceAccountName: "{service-name}-sa"
           restartPolicy: Never
           containers:
             - name: performance-monitor
-              image: "{service}-predictor:latest"
+              image: "{service-name}-predictor:latest"
               command:
                 - python
                 - -m
@@ -72,7 +72,7 @@ spec:
               # a CSI driver (gcsfuse, s3-csi). Default here is a PVC placeholder
               # that the user must provision.
               persistentVolumeClaim:
-                claimName: "{service}-monitoring-data"
+                claimName: "{service-name}-monitoring-data"
 ---
 # =============================================================================
 # CronJob — Ground-truth ingester
@@ -82,9 +82,9 @@ spec:
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: "{service}-ground-truth-ingester"
+  name: "{service-name}-ground-truth-ingester"
   labels:
-    app: "{service}-gt"
+    app: "{service-name}-gt"
 spec:
   schedule: "0 3 * * *"
   concurrencyPolicy: Forbid
@@ -97,13 +97,13 @@ spec:
       template:
         metadata:
           labels:
-            app: "{service}-gt"
+            app: "{service-name}-gt"
         spec:
-          serviceAccountName: "{service}-sa"
+          serviceAccountName: "{service-name}-sa"
           restartPolicy: Never
           containers:
             - name: ground-truth-ingester
-              image: "{service}-predictor:latest"
+              image: "{service-name}-predictor:latest"
               command:
                 - python
                 - -m
@@ -126,4 +126,4 @@ spec:
           volumes:
             - name: data-storage
               persistentVolumeClaim:
-                claimName: "{service}-monitoring-data"
+                claimName: "{service-name}-monitoring-data"

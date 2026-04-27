@@ -23,30 +23,30 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Rollout
 metadata:
-  name: "{service}-predictor"
+  name: "{service-name}-predictor"
   labels:
-    app: "{service}"
+    app: "{service-name}"
 spec:
   replicas: 2
   revisionHistoryLimit: 3
   selector:
     matchLabels:
-      app: "{service}"
+      app: "{service-name}"
   template:
     metadata:
       labels:
-        app: "{service}"
+        app: "{service-name}"
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8000"
         prometheus.io/path: "/metrics"
     spec:
-      serviceAccountName: "{service}-sa"
+      serviceAccountName: "{service-name}-sa"
 
       initContainers:
         - name: model-downloader
           image: google/cloud-sdk:slim
-          command: ["gsutil", "cp", "gs://{MODEL_BUCKET}/{service}/model.joblib", "/models/model.joblib"]
+          command: ["gsutil", "cp", "gs://{MODEL_BUCKET}/{service-name}/model.joblib", "/models/model.joblib"]
           volumeMounts:
             - name: model-storage
               mountPath: /models
@@ -55,8 +55,8 @@ spec:
       terminationGracePeriodSeconds: 30
 
       containers:
-        - name: "{service}-predictor"
-          image: "{service}-predictor:latest"
+        - name: "{service-name}-predictor"
+          image: "{service-name}-predictor:latest"
           command: ["uvicorn"]
           args:
             - "app.main:app"
@@ -110,7 +110,7 @@ spec:
 
   strategy:
     canary:
-      # Canary analysis — runs '{service}-cc-online' (ADR-008).
+      # Canary analysis — runs '{service-name}-cc-online' (ADR-008).
       # The AnalysisTemplate itself lives in
       # analysistemplate-champion-challenger.yaml so the C/C rules are
       # version-controlled independently of the rollout manifest.
@@ -118,7 +118,7 @@ spec:
       # error rate vs stable, score-distribution shift, p95 latency).
       analysis:
         templates:
-          - templateName: "{service}-cc-online"
+          - templateName: "{service-name}-cc-online"
         args:
           - name: service-name
             value: "{service}"

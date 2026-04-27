@@ -12,12 +12,12 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: "{service}-role"
+  name: "{service-name}-role"
   # Namespace is OWNED by the overlay (kustomization.yaml `namespace:`).
   # Hardcoding it here breaks the overlay's `namespace:` field for any
   # env that uses a different namespace (PR-R2-3, audit R2).
   labels:
-    app: "{service}"
+    app: "{service-name}"
     managed-by: kustomize
 rules:
   # Read ConfigMaps (e.g., feature flags, config)
@@ -37,16 +37,16 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: "{service}-rolebinding"
+  name: "{service-name}-rolebinding"
   # Namespace owned by overlay; see comment on Role above.
   labels:
-    app: "{service}"
+    app: "{service-name}"
     managed-by: kustomize
 subjects:
   - kind: ServiceAccount
-    name: "{service}-sa"
+    name: "{service-name}-sa"
     # Namespace owned by overlay; see comment on Role above.
 roleRef:
   kind: Role
-  name: "{service}-role"
+  name: "{service-name}-role"
   apiGroup: rbac.authorization.k8s.io

@@ -12,7 +12,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: "{service}-predictor"
+  name: "{service-name}-predictor"
 spec:
   replicas: 2
   template:
@@ -25,13 +25,13 @@ spec:
           command:
             - gsutil
             - cp
-            - "gs://{MODEL_BUCKET}/{service}/model.joblib"
+            - "gs://{MODEL_BUCKET}/{service-name}/model.joblib"
             - /models/model.joblib
           volumeMounts:
             - name: model-storage
               mountPath: /models
       containers:
-        - name: "{service}-predictor"
+        - name: "{service-name}-predictor"
           resources:
             requests:
               cpu: "500m"

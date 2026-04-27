@@ -3,42 +3,42 @@ groups:
     rules:
       # P1 — Immediate rollback
       - alert: "HighErrorRate_{service}"
-        expr: 'rate(http_requests_total{service="{service}", status=~"5.."}[5m]) > 0.05'
+        expr: 'rate(http_requests_total{service="{service-name}", status=~"5.."}[5m]) > 0.05'
         for: 2m
         labels:
           severity: P1
-          service: "{service}"
+          service: "{service-name}"
           action: page
         annotations:
           summary: "High error rate on {service}"
           description: "Error rate above 5% for 2 minutes. Immediate rollback required."
-          runbook_url: "docs/runbooks/{service}-runbook.md#p1"
+          runbook_url: "docs/runbooks/{service-name}-runbook.md#p1"
 
       # P1 — Service down
       - alert: "ServiceDown_{service}"
-        expr: 'up{job="{service}"} == 0'
+        expr: 'up{job="{service-name}"} == 0'
         for: 1m
         labels:
           severity: P1
-          service: "{service}"
+          service: "{service-name}"
           action: page
         annotations:
           summary: "{service} is down"
           description: "No scrape target responding for {service}."
-          runbook_url: "docs/runbooks/{service}-runbook.md#p1-service-down"
+          runbook_url: "docs/runbooks/{service-name}-runbook.md#p1-service-down"
 
       # P2 — Drift detection heartbeat missing
       - alert: "DriftHeartbeatMissing_{service}"
-        expr: '(time() - drift_detection_last_run_timestamp{job="{service}-drift-detection"}) > 172800'
+        expr: '(time() - drift_detection_last_run_timestamp{job="{service-name}-drift-detection"}) > 172800'
         for: 5m
         labels:
           severity: P2
-          service: "{service}"
+          service: "{service-name}"
           action: page
         annotations:
           summary: "Drift detection CronJob silent for >48h"
           description: "No drift detection run in 48 hours. CronJob may be broken."
-          runbook_url: "docs/runbooks/{service}-runbook.md#p2"
+          runbook_url: "docs/runbooks/{service-name}-runbook.md#p2"
 
       # P2 — High latency
       - alert: "HighLatency_{service}"
@@ -46,12 +46,12 @@ groups:
         for: 5m
         labels:
           severity: P2
-          service: "{service}"
+          service: "{service-name}"
           action: page
         annotations:
           summary: "P95 latency above 1s for {service}"
           description: "P95 prediction latency exceeds SLA. Check event loop blocking or resource limits."
-          runbook_url: "docs/runbooks/{service}-runbook.md#p2-latency"
+          runbook_url: "docs/runbooks/{service-name}-runbook.md#p2-latency"
 
       # P3 — Critical feature drift
       - alert: "CriticalFeatureDrift_{service}"
@@ -59,12 +59,12 @@ groups:
         for: 1h
         labels:
           severity: P3
-          service: "{service}"
+          service: "{service-name}"
           action: ticket
         annotations:
           summary: "Critical feature drift detected on {service}"
           description: "PSI > 0.20 on critical feature. Consider retraining."
-          runbook_url: "docs/runbooks/{service}-runbook.md#p3"
+          runbook_url: "docs/runbooks/{service-name}-runbook.md#p3"
 
       # P4 — Warning drift
       - alert: "WarningFeatureDrift_{service}"
@@ -72,35 +72,35 @@ groups:
         for: 24h
         labels:
           severity: P4
-          service: "{service}"
+          service: "{service-name}"
           action: notify
         annotations:
           summary: "Feature drift warning on {service}"
           description: "PSI > 0.10 sustained for 24h. Monitor closely."
-          runbook_url: "docs/runbooks/{service}-runbook.md#p4-drift-warning"
+          runbook_url: "docs/runbooks/{service-name}-runbook.md#p4-drift-warning"
 
   - name: "{service}_resources"
     rules:
       - alert: "HighCPU_{service}"
-        expr: 'rate(container_cpu_usage_seconds_total{pod=~"{service}-predictor.*"}[5m]) > 0.9'
+        expr: 'rate(container_cpu_usage_seconds_total{pod=~"{service-name}-predictor.*"}[5m]) > 0.9'
         for: 10m
         labels:
           severity: P3
-          service: "{service}"
+          service: "{service-name}"
           action: ticket
         annotations:
           summary: "High CPU usage on {service} pods"
           description: "CPU above 90% for 10 minutes. HPA should scale."
-          runbook_url: "docs/runbooks/{service}-runbook.md#p3-high-cpu"
+          runbook_url: "docs/runbooks/{service-name}-runbook.md#p3-high-cpu"
 
       - alert: "PodRestart_{service}"
-        expr: 'increase(kube_pod_container_status_restarts_total{pod=~"{service}-predictor.*"}[1h]) > 3'
+        expr: 'increase(kube_pod_container_status_restarts_total{pod=~"{service-name}-predictor.*"}[1h]) > 3'
         for: 5m
         labels:
           severity: P2
-          service: "{service}"
+          service: "{service-name}"
           action: page
         annotations:
           summary: "{service} pods restarting frequently"
           description: "More than 3 restarts in the last hour."
-          runbook_url: "docs/runbooks/{service}-runbook.md#p2-pod-restart"
+          runbook_url: "docs/runbooks/{service-name}-runbook.md#p2-pod-restart"

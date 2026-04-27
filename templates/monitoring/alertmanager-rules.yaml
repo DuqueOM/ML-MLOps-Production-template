@@ -12,15 +12,15 @@
 # TODO: Adjust thresholds based on your service's baseline measurements.
 # =============================================================================
 groups:
-  - name: "{service}-service-health"
+  - name: "{service-name}-service-health"
     rules:
       # --- P1: Service Down ---
       - alert: "{service}ServiceDown"
-        expr: up{job="{service}"} == 0
+        expr: up{job="{service-name}"} == 0
         for: 2m
         labels:
           severity: critical
-          service: "{service}"
+          service: "{service-name}"
           action: page
         annotations:
           summary: "{service} is down"
@@ -35,7 +35,7 @@ groups:
         for: 3m
         labels:
           severity: critical
-          service: "{service}"
+          service: "{service-name}"
           action: page
         annotations:
           summary: "Error rate > 5% for {service}"
@@ -51,14 +51,14 @@ groups:
         for: 5m
         labels:
           severity: warning
-          service: "{service}"
+          service: "{service-name}"
           action: ticket
         annotations:
           summary: "P95 latency > 1s for {service}"
           description: "P95 inference latency is {{ $value | humanizeDuration }}."
           runbook_url: "docs/runbooks/runbook-template.md#p2-latency"
 
-  - name: "{service}-drift-detection"
+  - name: "{service-name}-drift-detection"
     rules:
       # --- P2: Drift Heartbeat Missing (CronJob broken) ---
       # This is the most critical monitoring rule for ML in production.
@@ -66,11 +66,11 @@ groups:
       # into model degradation. This fires if no run in 48h.
       - alert: "{service}DriftDetectionHeartbeatMissing"
         expr: |
-          time() - drift_detection_last_run_timestamp{job="{service}-drift-detection"} > 172800
+          time() - drift_detection_last_run_timestamp{job="{service-name}-drift-detection"} > 172800
         for: 10m
         labels:
           severity: warning
-          service: "{service}"
+          service: "{service-name}"
           action: page
         annotations:
           summary: "Drift detection CronJob hasn't run in 48h"
@@ -78,7 +78,7 @@ groups:
             The drift detection CronJob for {service} hasn't pushed metrics
             in {{ $value | humanizeDuration }}. Check CronJob status:
               kubectl get cronjobs -n ml-services
-              kubectl describe cronjob {service}-drift-detection -n ml-services
+              kubectl describe cronjob {service-name}-drift-detection -n ml-services
           runbook_url: "docs/runbooks/runbook-template.md#p2-drift-heartbeat"
 
       # --- P3: PSI Drift Alert ---
@@ -87,7 +87,7 @@ groups:
         for: 0m
         labels:
           severity: info
-          service: "{service}"
+          service: "{service-name}"
           action: ticket
         annotations:
           summary: "PSI drift detected for {{ $labels.feature }}"
@@ -102,25 +102,25 @@ groups:
         for: 0m
         labels:
           severity: info
-          service: "{service}"
+          service: "{service-name}"
           action: notify
         annotations:
           summary: "Elevated PSI for {{ $labels.feature }}"
           description: "Feature {{ $labels.feature }} PSI={{ $value }}. Monitor closely."
           runbook_url: "docs/runbooks/runbook-template.md#p3-drift-warning"
 
-  - name: "{service}-resources"
+  - name: "{service-name}-resources"
     rules:
       # --- P4: CPU Approaching Limit ---
       - alert: "{service}HighCPU"
         expr: |
-          rate(container_cpu_usage_seconds_total{container="{service}-predictor"}[5m])
-          / container_spec_cpu_quota{container="{service}-predictor"}
-          * container_spec_cpu_period{container="{service}-predictor"} > 0.85
+          rate(container_cpu_usage_seconds_total{container="{service-name}-predictor"}[5m])
+          / container_spec_cpu_quota{container="{service-name}-predictor"}
+          * container_spec_cpu_period{container="{service-name}-predictor"} > 0.85
         for: 10m
         labels:
           severity: info
-          service: "{service}"
+          service: "{service-name}"
           action: notify
         annotations:
           summary: "CPU usage > 85% for {service}"
@@ -129,11 +129,11 @@ groups:
 
       # --- P4: Pod Restarts ---
       - alert: "{service}PodRestarting"
-        expr: rate(kube_pod_container_status_restarts_total{container="{service}-predictor"}[15m]) > 0
+        expr: rate(kube_pod_container_status_restarts_total{container="{service-name}-predictor"}[15m]) > 0
         for: 5m
         labels:
           severity: warning
-          service: "{service}"
+          service: "{service-name}"
           action: page
         annotations:
           summary: "{service} pod restarting"

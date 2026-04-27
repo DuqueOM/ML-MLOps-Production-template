@@ -1,14 +1,14 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: "{service}-hpa"
+  name: "{service-name}-hpa"
   labels:
-    app: "{service}"
+    app: "{service-name}"
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: "{service}-predictor"
+    name: "{service-name}-predictor"
   # minReplicas MUST be >= 2 so PodDisruptionBudget.minAvailable: 1 can
   # tolerate voluntary disruptions (node drain, rolling node upgrade).
   # Single-replica services: set PDB minAvailable: 0 and document the

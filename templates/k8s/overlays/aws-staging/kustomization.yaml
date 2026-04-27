@@ -6,15 +6,15 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-namespace: "{service}-staging"
+namespace: "{service-name}-staging"
 
 resources:
   - ../../base
   - namespace.yaml
 
 images:
-  - name: "{service}-predictor"
-    newName: "{AWS_ACCOUNT_ID}.dkr.ecr.{REGION}.amazonaws.com/{service}-predictor"
+  - name: "{service-name}-predictor"
+    newName: "{AWS_ACCOUNT_ID}.dkr.ecr.{REGION}.amazonaws.com/{service-name}-predictor"
     newTag: "v1.0.0"
   # Init container CLI — staging pins by digest (PR-R2-2, ADR-016).
   # Bootstrap runbook documents the resolve step.

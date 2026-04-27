@@ -31,10 +31,10 @@
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
-  name: "{service}-slo"
+  name: "{service-name}-slo"
   # Namespace owned by overlay (PR-R2-3, audit R2).
   labels:
-    app: "{service}"
+    app: "{service-name}"
     role: slo
     managed-by: kustomize
 spec:
@@ -112,14 +112,14 @@ spec:
           for: 2m
           labels:
             severity: P1
-            service: "{service}"
+            service: "{service-name}"
             slo: availability
             action: page
             burn_rate: "14.4"
           annotations:
             summary: "{ServiceName} SLO: availability burn rate CRITICAL (14.4x, 1h+5m)"
             description: "Errors are consuming the 30-day availability budget at >14.4x over BOTH a 1h and a 5m window. At this rate the budget is exhausted in <2 days. Immediate action required."
-            runbook_url: "https://your-org.github.io/{service}/operations/runbook/#p1-availability-burn-rate-critical"
+            runbook_url: "https://your-org.github.io/{service-name}/operations/runbook/#p1-availability-burn-rate-critical"
 
         # ───── P2 slow burn (page) ─────
         # 6x over 6h AND 30m.
@@ -143,14 +143,14 @@ spec:
           for: 15m
           labels:
             severity: P2
-            service: "{service}"
+            service: "{service-name}"
             slo: availability
             action: page
             burn_rate: "6"
           annotations:
             summary: "{ServiceName} SLO: availability burn rate HIGH (6x, 6h+30m)"
             description: "Errors are consuming the availability budget at >6x over BOTH a 6h and a 30m window. At this rate the budget is exhausted within ~5 days."
-            runbook_url: "https://your-org.github.io/{service}/operations/runbook/#p2-availability-burn-rate-high"
+            runbook_url: "https://your-org.github.io/{service-name}/operations/runbook/#p2-availability-burn-rate-high"
 
         # ───── P3 medium burn (ticket) ─────
         # 3x over 1d AND 2h.
@@ -174,14 +174,14 @@ spec:
           for: 1h
           labels:
             severity: P3
-            service: "{service}"
+            service: "{service-name}"
             slo: availability
             action: ticket
             burn_rate: "3"
           annotations:
             summary: "{ServiceName} SLO: availability burn rate MEDIUM (3x, 1d+2h)"
             description: "Sustained moderate error rate. Open ticket; fix within 24h before P2 fires."
-            runbook_url: "https://your-org.github.io/{service}/operations/runbook/#p3-availability-burn-rate-medium"
+            runbook_url: "https://your-org.github.io/{service-name}/operations/runbook/#p3-availability-burn-rate-medium"
 
         # ───── P4 slow burn (notify) ─────
         # 1x over 3d AND 6h. Trending poorly; informational.
@@ -205,14 +205,14 @@ spec:
           for: 3h
           labels:
             severity: P4
-            service: "{service}"
+            service: "{service-name}"
             slo: availability
             action: notify
             burn_rate: "1"
           annotations:
             summary: "{ServiceName} SLO: availability burn rate SLOW (1x, 3d+6h)"
             description: "Long-running low-grade errors. Track and investigate without urgency."
-            runbook_url: "https://your-org.github.io/{service}/operations/runbook/#p4-availability-burn-rate-slow"
+            runbook_url: "https://your-org.github.io/{service-name}/operations/runbook/#p4-availability-burn-rate-slow"
 
         # ───── P2 latency SLO ─────
         - alert: "{SERVICE}_SLO_LatencyBudgetBurning"
@@ -221,13 +221,13 @@ spec:
           for: 10m
           labels:
             severity: P2
-            service: "{service}"
+            service: "{service-name}"
             slo: latency
             action: page
           annotations:
             summary: "{ServiceName} SLO: <95% of requests within 500ms latency target"
             description: "P95 latency SLO is being violated — fewer than 95% of requests complete within 500ms."
-            runbook_url: "https://your-org.github.io/{service}/operations/runbook/#p2-latency-slo"
+            runbook_url: "https://your-org.github.io/{service-name}/operations/runbook/#p2-latency-slo"
 
         # ───── P3 error budget low (ticket) ─────
         - alert: "{SERVICE}_SLO_ErrorBudgetLow"
@@ -236,10 +236,10 @@ spec:
           for: 30m
           labels:
             severity: P3
-            service: "{service}"
+            service: "{service-name}"
             slo: error_budget
             action: ticket
           annotations:
             summary: "{ServiceName} SLO: error budget below 25%"
             description: "Less than 25% of the monthly availability error budget remains."
-            runbook_url: "https://your-org.github.io/{service}/operations/runbook/#p3-error-budget-low"
+            runbook_url: "https://your-org.github.io/{service-name}/operations/runbook/#p3-error-budget-low"

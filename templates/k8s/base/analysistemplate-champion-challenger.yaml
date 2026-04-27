@@ -9,14 +9,14 @@
 #      - Tri-state: promote / keep / block (exit codes 0 / 1 / 2)
 #      - Blocks image promotion on exit 2
 #
-#   2. ONLINE (this file — '{service}-cc-online')
+#   2. ONLINE (this file — '{service-name}-cc-online')
 #      - Proxy metrics during the 8-minute canary window
 #      - Ground-truth labels have NOT arrived yet → cannot compute AUC/F1
 #      - Uses: prediction_log error rate, score-distribution shift,
 #        http error rate per version, p95 latency
 #      - Failures auto-rollback via Argo Rollouts
 #
-#   3. POST-DEPLOY (this file — '{service}-cc-post-deploy')
+#   3. POST-DEPLOY (this file — '{service-name}-cc-post-deploy')
 #      - Real business metrics from performance_monitor CronJob
 #      - Runs as a scheduled CronJob after labels accumulate
 #      - Labels vary by service (hours to weeks)
@@ -38,9 +38,9 @@
 apiVersion: argoproj.io/v1alpha1
 kind: AnalysisTemplate
 metadata:
-  name: "{service}-cc-online"
+  name: "{service-name}-cc-online"
   labels:
-    app: "{service}"
+    app: "{service-name}"
     analysis-type: online
 spec:
   args:
@@ -149,9 +149,9 @@ spec:
 apiVersion: argoproj.io/v1alpha1
 kind: AnalysisTemplate
 metadata:
-  name: "{service}-cc-post-deploy"
+  name: "{service-name}-cc-post-deploy"
   labels:
-    app: "{service}"
+    app: "{service-name}"
     analysis-type: post-deploy
 spec:
   args:

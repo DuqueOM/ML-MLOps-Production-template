@@ -8,9 +8,9 @@
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
-  name: "{service}-performance-alerts"
+  name: "{service-name}-performance-alerts"
   labels:
-    app: "{service}"
+    app: "{service-name}"
     prometheus: kube-prometheus
 spec:
   groups:
@@ -25,7 +25,7 @@ spec:
           for: 30m
           labels:
             severity: critical
-            service: "{service}"
+            service: "{service-name}"
             category: concept_drift
             action: page
           annotations:
@@ -47,7 +47,7 @@ spec:
           for: 30m
           labels:
             severity: critical
-            service: "{service}"
+            service: "{service-name}"
             category: sliced_concept_drift
             action: page
           annotations:
@@ -70,7 +70,7 @@ spec:
           for: 30m
           labels:
             severity: warning
-            service: "{service}"
+            service: "{service-name}"
             category: performance_regression
             action: ticket
           annotations:
@@ -89,13 +89,13 @@ spec:
           for: 1h
           labels:
             severity: warning
-            service: "{service}"
+            service: "{service-name}"
             category: monitoring_health
             action: ticket
           annotations:
             summary: "Performance monitor has not reported in 48h"
             description: |
-              The {service}-performance-monitor CronJob has not pushed metrics
+              The {service-name}-performance-monitor CronJob has not pushed metrics
               in > 48h. Verify the CronJob is running and ground-truth
               ingestion is producing labels.
             runbook_url: "https://github.com/{owner}/{repo}/blob/main/RUNBOOK.md#performance-monitor-stale"
@@ -112,7 +112,7 @@ spec:
           for: 15m
           labels:
             severity: warning
-            service: "{service}"
+            service: "{service-name}"
             category: observability_degraded
             action: ticket
           annotations:

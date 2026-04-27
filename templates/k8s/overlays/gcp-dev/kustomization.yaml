@@ -7,15 +7,15 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-namespace: "{service}-dev"
+namespace: "{service-name}-dev"
 
 resources:
   - ../../base
   - namespace.yaml
 
 images:
-  - name: "{service}-predictor"
-    newName: "{REGION}-docker.pkg.dev/{PROJECT_ID}/ml-images/{service}-predictor"
+  - name: "{service-name}-predictor"
+    newName: "{REGION}-docker.pkg.dev/{PROJECT_ID}/ml-images/{service-name}-predictor"
     newTag: "v1.0.0"
   # Init container CLI — dev tier may use a moving tag; staging/prod must
   # pin by digest (PR-R2-2, ADR-016). The base manifest references this

@@ -1,9 +1,9 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: "{service}-predictor"
+  name: "{service-name}-predictor"
   labels:
-    app: "{service}"
+    app: "{service-name}"
     version: v1.0.0
     # `environment:` label is OWNED by the overlay (commonLabels in
     # k8s/overlays/<cloud>-<env>/kustomization.yaml). Adding it here
@@ -17,7 +17,7 @@ spec:
   replicas: 2
   selector:
     matchLabels:
-      app: "{service}"
+      app: "{service-name}"
   strategy:
     type: RollingUpdate
     rollingUpdate:
@@ -26,7 +26,7 @@ spec:
   template:
     metadata:
       labels:
-        app: "{service}"
+        app: "{service-name}"
         version: v1.0.0
       annotations:
         prometheus.io/scrape: "true"
@@ -41,7 +41,7 @@ spec:
         # report `deployment_id=local`, which is honest and queryable.
         windsurf.io/deployment-id: "local"
     spec:
-      serviceAccountName: "{service}-sa"
+      serviceAccountName: "{service-name}-sa"
 
       # Pod-level securityContext — satisfies PSS 'restricted' (v1.8.1).
       # All containers inherit runAsNonRoot + the seccomp profile.
@@ -70,7 +70,7 @@ spec:
           command:
             - gsutil
             - cp
-            - gs://{MODEL_BUCKET}/{service}/model.joblib
+            - gs://{MODEL_BUCKET}/{service-name}/model.joblib
             - /models/model.joblib
           securityContext:
             # PSS restricted: init container must also pass the gate.
@@ -90,8 +90,8 @@ spec:
       terminationGracePeriodSeconds: 30
 
       containers:
-        - name: "{service}-predictor"
-          image: "{service}-predictor:latest"   # Patched by Kustomize overlay
+        - name: "{service-name}-predictor"
+          image: "{service-name}-predictor:latest"   # Patched by Kustomize overlay
           command: ["uvicorn"]
           args:
             - "app.main:app"

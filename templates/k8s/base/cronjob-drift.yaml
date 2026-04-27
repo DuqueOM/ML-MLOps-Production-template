@@ -1,9 +1,9 @@
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: "{service}-drift-detection"
+  name: "{service-name}-drift-detection"
   labels:
-    app: "{service}-drift"
+    app: "{service-name}-drift"
 spec:
   schedule: "0 2 * * *"   # Daily at 02:00 UTC
   concurrencyPolicy: Forbid
@@ -16,16 +16,16 @@ spec:
       template:
         metadata:
           labels:
-            app: "{service}-drift"
+            app: "{service-name}-drift"
         spec:
-          serviceAccountName: "{service}-sa"
+          serviceAccountName: "{service-name}-sa"
           restartPolicy: Never
           containers:
             - name: drift-detector
-              image: "{service}-predictor:latest"
+              image: "{service-name}-predictor:latest"
               command:
                 - python
-                - src/{service}/monitoring/drift_detection.py
+                - src/{service-name}/monitoring/drift_detection.py
                 - --reference
                 - data/reference/reference.csv
                 - --current

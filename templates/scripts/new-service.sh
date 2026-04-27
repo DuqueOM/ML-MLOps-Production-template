@@ -7,9 +7,10 @@
 #   ./templates/scripts/new-service.sh ChurnPredictor churn_predictor
 #
 # Creates a new directory with all template files, placeholders replaced:
-#   {ServiceName}  → FraudDetector
-#   {service}      → fraud_detector
-#   {SERVICE}      → FRAUD_DETECTOR
+#   {ServiceName}   → FraudDetector
+#   {service-name}  → fraud-detector   (kebab — RFC 1123 K8s names, image refs, URLs)
+#   {service}       → fraud_detector   (snake — Python identifiers, Prometheus metrics)
+#   {SERVICE}       → FRAUD_DETECTOR
 #
 # After scaffolding:
 #   1. cd into the new directory
@@ -43,6 +44,19 @@ fi
 SERVICE_NAME="$1"
 SERVICE_SLUG="$2"
 SERVICE_UPPER=$(echo "$SERVICE_SLUG" | tr '[:lower:]' '[:upper:]')
+# PR-A5b (ADR-015) — `{service-name}` is the kebab-case variant used
+# in any context that must satisfy RFC 1123 (Kubernetes resource
+# names, namespaces, labels, image refs, IRSA/WI annotations, URL
+# paths). It is derived from the snake_case slug by replacing `_`
+# with `-`. With a slug like `golden_path` the unrendered K8s
+# manifests previously yielded names such as `golden_path-dev` which
+# violate RFC 1123 (`_` not allowed); kustomize build then refused
+# the manifest with `Invalid value: "golden_path-dev": a lowercase
+# RFC 1123 label must consist of lower case alphanumeric characters
+# or '-'`. The two-placeholder split keeps `{service}` for snake-case
+# contexts (Python identifiers, Prometheus metric names) and uses
+# `{service-name}` for kebab-case contexts.
+SERVICE_KEBAB=$(echo "$SERVICE_SLUG" | tr '_' '-')
 
 # Locate the templates directory relative to this script
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -181,8 +195,13 @@ find "$TARGET_DIR" -type f \( -name "*.py" -o -name "*.yaml" -o -name "*.yml" \
     -o -name "*.tf" -o -name "*.md" -o -name "*.toml" -o -name "*.sh" \
     -o -name "Dockerfile" -o -name ".dockerignore" -o -name "Makefile" \
     -o -name "*.json" -o -name "*.txt" -o -name "*.env*" \) | while read -r file; do
-    # Replace in order: specific first, general last
+    # Replace in order: specific first, general last.
+    # `{service-name}` MUST be substituted before `{service}` so the
+    # snake replacement doesn't accidentally consume the kebab placeholder
+    # (their literal forms differ at the closing brace, but specific-first
+    # is the safer code hygiene). PR-A5b (ADR-015).
     sed -i "s/{ServiceName}/$SERVICE_NAME/g" "$file"
+    sed -i "s/{service-name}/$SERVICE_KEBAB/g" "$file"
     sed -i "s/{service}/$SERVICE_SLUG/g" "$file"
     sed -i "s/{SERVICE}/$SERVICE_UPPER/g" "$file"
 done
