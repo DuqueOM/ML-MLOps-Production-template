@@ -67,7 +67,7 @@ add operational quality. If A5 fails on day one, A1–A4 are premature.
 
 | PR | Scope |
 |----|-------|
-| **C1** | Correlation IDs standard (`request_id`, `prediction_id`, `model_version`, `deployment_id`, `audit_id`, `drift_run_id`, `retrain_run_id`) carried through serving logs, events, audit |
+| **C1** | Correlation IDs standard (`request_id`, `prediction_id`, `model_version`, `deployment_id`, `audit_id`, `drift_run_id`, `retrain_run_id`) carried through serving logs, events, audit (✅ shipped — `audit_id` in `agent_context` + `audit_record.py`; `deployment_id` via Downward API + `deploy-common.yml` patch; `drift_run_id` in report/Pushgateway/issue; contract codified in `templates/service/docs/correlation-ids.md`) |
 | **C2** | Alert routing: `runbook_url` field MANDATORY on every PrometheusRule; multi-window burn-rate SLO alerts with action mapping |
 | **C3** | 2 reproducible drills: drift simulated + deploy degraded; per-drill evidence in `docs/runbooks/drills/` |
 
@@ -107,7 +107,7 @@ The template is "productized" when ALL of:
 7. Retrain produces `promotion_packet.json` with statistical evidence
    (✅ partially: `b8708b6` for adapters; PR-B4 enforces gate)
 8. Every alert has a `runbook_url` (PR-C2)
-9. Logs/events correlate by standard IDs (PR-C1)
+9. Logs/events correlate by standard IDs (✅ achieved — PR-C1)
 10. ≥1 drift drill + ≥1 deploy-degraded drill repeat cleanly (PR-C3)
 
 ## Risks watched
