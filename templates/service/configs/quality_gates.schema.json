@@ -61,6 +61,47 @@
       "maximum": 1.0,
       "default": 0.0,
       "description": "Minimum delta over the current production baseline required to auto-promote. 0.0 disables baseline-comparison promotion."
+    },
+    "split": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Train/test split policy enforced by Trainer._split_data (PR-B3). Strategy choice is a correctness contract, not a hyperparameter — random split on temporal data leaks information from the future into training (D-13).",
+      "properties": {
+        "strategy": {
+          "type": "string",
+          "enum": ["temporal", "grouped", "random"],
+          "default": "random",
+          "description": "Which split policy to apply. temporal=requires timestamp_column; grouped=requires entity_id_column; random=requires acknowledge_iid:true."
+        },
+        "timestamp_column": {
+          "type": ["string", "null"],
+          "default": null,
+          "description": "Column to sort on for temporal split. Required when strategy=temporal."
+        },
+        "entity_id_column": {
+          "type": ["string", "null"],
+          "default": null,
+          "description": "Group key for grouped split (GroupShuffleSplit). Required when strategy=grouped."
+        },
+        "test_fraction": {
+          "type": "number",
+          "exclusiveMinimum": 0.0,
+          "exclusiveMaximum": 1.0,
+          "default": 0.2,
+          "description": "Fraction of rows assigned to the test set."
+        },
+        "random_state": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 42,
+          "description": "Used by grouped + random strategies. Recorded in the training manifest."
+        },
+        "acknowledge_iid": {
+          "type": "boolean",
+          "default": false,
+          "description": "Adopter assertion that rows are independent and identically distributed. REQUIRED to be true when strategy=random."
+        }
+      }
     }
   }
 }

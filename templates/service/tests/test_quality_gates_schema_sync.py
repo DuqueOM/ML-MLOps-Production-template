@@ -135,6 +135,48 @@ _CASES: list[tuple[str, dict[str, Any], bool]] = [
         "secondary_threshold": 0.55,
         "protected_attributes": ["gender", "gender"],
     }, False),
+    # PR-B3 — SplitConfig sub-block.
+    # Both validators must accept all three legal strategies and reject
+    # an unknown strategy / out-of-range fraction. ``acknowledge_iid``
+    # is checked at runtime by ``validate_against_data`` (it's the
+    # cross-config check), not at YAML-parse time, so a payload with
+    # ``random`` + ``acknowledge_iid: false`` is structurally valid here.
+    ("split_temporal", {
+        "primary_metric": "roc_auc", "primary_threshold": 0.8,
+        "secondary_metric": "f1", "secondary_threshold": 0.55,
+        "protected_attributes": [],
+        "split": {"strategy": "temporal", "timestamp_column": "ts", "test_fraction": 0.25},
+    }, True),
+    ("split_grouped", {
+        "primary_metric": "roc_auc", "primary_threshold": 0.8,
+        "secondary_metric": "f1", "secondary_threshold": 0.55,
+        "protected_attributes": [],
+        "split": {"strategy": "grouped", "entity_id_column": "customer_id"},
+    }, True),
+    ("split_random_with_ack", {
+        "primary_metric": "roc_auc", "primary_threshold": 0.8,
+        "secondary_metric": "f1", "secondary_threshold": 0.55,
+        "protected_attributes": [],
+        "split": {"strategy": "random", "acknowledge_iid": True},
+    }, True),
+    ("split_unknown_strategy", {
+        "primary_metric": "roc_auc", "primary_threshold": 0.8,
+        "secondary_metric": "f1", "secondary_threshold": 0.55,
+        "protected_attributes": [],
+        "split": {"strategy": "temproal"},  # typo
+    }, False),
+    ("split_test_fraction_out_of_range", {
+        "primary_metric": "roc_auc", "primary_threshold": 0.8,
+        "secondary_metric": "f1", "secondary_threshold": 0.55,
+        "protected_attributes": [],
+        "split": {"strategy": "random", "acknowledge_iid": True, "test_fraction": 1.5},
+    }, False),
+    ("split_unknown_field", {
+        "primary_metric": "roc_auc", "primary_threshold": 0.8,
+        "secondary_metric": "f1", "secondary_threshold": 0.55,
+        "protected_attributes": [],
+        "split": {"strategy": "random", "acknowledge_iid": True, "extraneous": True},
+    }, False),
 ]
 
 

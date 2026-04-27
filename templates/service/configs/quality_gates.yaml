@@ -85,3 +85,45 @@ latency_sla_ms: 100.0
 # (every promotion requires a human review, the safer default for
 # brand-new services).
 promotion_threshold: 0.0
+
+# --- Train/test split (PR-B3) ----------------------------------------------
+# Choice of split strategy is a CORRECTNESS contract, not a hyperparameter.
+# Random split on temporal data leaks information from the future into
+# training (D-13) and inflates test metrics. Codifying the choice here
+# means a typo fails fast and a strategy change is a reviewable PR.
+#
+# strategy: temporal | grouped | random
+#   temporal — Sort by `timestamp_column` ascending; last `test_fraction`
+#              of rows go to test. The only correct choice for fraud,
+#              churn, recommendation feedback, anything time-ordered.
+#              Required: timestamp_column.
+#   grouped  — sklearn GroupShuffleSplit on `entity_id_column`. Mandatory
+#              when one entity (customer, device) generates multiple rows;
+#              prevents the model from memorising the entity rather than
+#              learning the task. Required: entity_id_column.
+#   random   — Stratified train_test_split. Acceptable ONLY when rows
+#              are i.i.d. by construction. Adopters MUST set
+#              acknowledge_iid: true to confirm the assumption.
+#
+# The default below is `random` + `acknowledge_iid: false`, which raises
+# at training start. That deliberate failure forces every service to
+# pick a strategy explicitly — a quiet default would let leakage ship.
+#
+# Examples (uncomment + adjust for your service):
+#
+#   split:
+#     strategy: temporal
+#     timestamp_column: created_at
+#     test_fraction: 0.2
+#
+#   split:
+#     strategy: grouped
+#     entity_id_column: customer_id
+#     test_fraction: 0.25
+#
+#   split:
+#     strategy: random
+#     acknowledge_iid: true   # I've confirmed rows are independent.
+split:
+  strategy: random
+  acknowledge_iid: false   # Set to true after auditing the i.i.d. assumption.

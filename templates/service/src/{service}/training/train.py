@@ -16,6 +16,7 @@ import hashlib
 import json
 import logging
 import os
+import time
 from pathlib import Path
 from typing import Any
 
@@ -51,6 +52,22 @@ except ImportError:  # pragma: no cover
     EDAArtifactNotFoundError = FileNotFoundError  # type: ignore[misc,assignment]
     load_feature_catalog = None  # type: ignore[assignment]
     load_leakage_report = None  # type: ignore[assignment]
+
+# PR-B3: every successful (and failed) training run writes a
+# ``training_manifest.json`` next to its model artifact. Fail-soft so
+# legacy services without common_utils on the path keep training,
+# but log a clear warning so operators know reproducibility evidence
+# is missing.
+try:
+    from common_utils.training_manifest import (
+        MANIFEST_FILENAME,
+        build_initial_manifest,
+        file_sha256,
+    )
+except ImportError:  # pragma: no cover
+    build_initial_manifest = None  # type: ignore[assignment]
+    file_sha256 = None  # type: ignore[assignment]
+    MANIFEST_FILENAME = "training_manifest.json"
 
 logger = logging.getLogger(__name__)
 
@@ -119,6 +136,7 @@ class Trainer:
         # Cross-config sanity: target_column vs protected_attributes.
         quality_gates.validate_against_data(target_column)
         self.gates = quality_gates
+        self.quality_gates_path = quality_gates_path  # recorded in manifest
 
         # PR-B2: EDA gate. Runs in milliseconds (just a JSON read);
         # halts a doomed training run before the 30-minute Optuna
@@ -199,6 +217,12 @@ class Trainer:
         logger.info("Step 1: Loading and validating data")
         df = self._load_data()
 
+        # PR-B3: build the manifest as soon as we have row/column counts.
+        # Doing it BEFORE feature engineering means the manifest reflects
+        # the AS-INGESTED dataset shape (the auditable input), not a
+        # post-FE artefact whose shape would shift on FE changes.
+        manifest = self._build_manifest(df, optuna_trials=optuna_trials)
+
         # Step 2: Feature engineering
         logger.info("Step 2: Engineering features")
         X, y = self.feature_engineer.transform(df)
@@ -206,6 +230,8 @@ class Trainer:
         # Step 3: Split
         logger.info("Step 3: Splitting train/val/test")
         splits = self._split_data(X, y)
+        if manifest is not None:
+            manifest.split = self._split_meta
 
         # Step 4: Hyperparameter tuning with Optuna
         logger.info("Step 4: Optuna hyperparameter tuning (%d trials)", optuna_trials)
@@ -244,6 +270,20 @@ class Trainer:
         logger.info("Step 10: Checking quality gates")
         gates_result = self._quality_gates(metrics)
 
+        # PR-B3: finalise + persist the manifest. Written even if the
+        # gates fail (the dict carries `quality_gates_passed: False`)
+        # so the audit trail is complete on REJECTED runs too —
+        # otherwise we'd lose evidence of the very runs that need
+        # the most scrutiny.
+        manifest_path = self._finalize_manifest(
+            manifest,
+            artifact_path=artifact_path,
+            metrics=metrics,
+            cv_scores=cv_scores,
+            best_params=best_params,
+            gates_passed=gates_result.get("all_passed", False),
+        )
+
         return {
             "metrics": metrics,
             "cv_scores": cv_scores.tolist(),
@@ -251,7 +291,87 @@ class Trainer:
             "best_params": best_params,
             "artifact_path": str(artifact_path),
             "quality_gates": gates_result,
+            "manifest_path": str(manifest_path) if manifest_path else None,
         }
+
+    # ------------------------------------------------------------------
+    # PR-B3 manifest helpers
+    # ------------------------------------------------------------------
+
+    def _build_manifest(self, df: pd.DataFrame, *, optuna_trials: int):
+        """Construct the initial training manifest.
+
+        Returns ``None`` when ``common_utils.training_manifest`` is not
+        importable (legacy path) — the caller treats ``None`` as "no
+        manifest will be written". Failure to compute a SHA over the
+        input data IS fatal: a manifest without a content hash is
+        worse than no manifest at all.
+        """
+        if build_initial_manifest is None:
+            logger.warning(
+                "Training manifest skipped: common_utils.training_manifest "
+                "not importable. Reproducibility evidence is missing for "
+                "this run."
+            )
+            return None
+        try:
+            return build_initial_manifest(
+                data_path=self.data_path,
+                quality_gates_path=self.quality_gates_path,
+                target_column=self.target_column,
+                n_rows=int(len(df)),
+                n_columns=int(df.shape[1]),
+                optuna_trials=optuna_trials,
+                cv_folds=CV_FOLDS,
+                eda_artifacts_dir=self.eda_artifacts_dir,
+            )
+        except FileNotFoundError as exc:
+            # The hash computation requires the data + quality gates
+            # files to exist on disk. If either is missing we cannot
+            # produce a meaningful manifest; log loudly and continue
+            # rather than block training (the operator may be running
+            # against an in-memory dataframe).
+            logger.warning("Training manifest construction failed: %s", exc)
+            return None
+
+    def _finalize_manifest(
+        self,
+        manifest,
+        *,
+        artifact_path: Path,
+        metrics: dict[str, float],
+        cv_scores: np.ndarray,
+        best_params: dict[str, Any],
+        gates_passed: bool,
+    ) -> Path | None:
+        """Fill in result fields and persist the manifest next to the model."""
+        if manifest is None:
+            return None
+        manifest.finished_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        # Prefer monotonic-derived runtime when available; fall back to
+        # parsing the started_at field. The manifest module records
+        # started_at as wall-clock UTC so a clock skew between the
+        # training pod and the manifest writer would only affect this
+        # cosmetic field, not the deterministic provenance facts.
+        try:
+            started = time.strptime(manifest.started_at, "%Y-%m-%dT%H:%M:%SZ")
+            manifest.runtime_seconds = max(0.0, time.mktime(time.gmtime()) - time.mktime(started))
+        except ValueError:
+            manifest.runtime_seconds = None
+
+        manifest.model_artifact_path = str(artifact_path)
+        if file_sha256 is not None and Path(artifact_path).exists():
+            manifest.model_artifact_sha256 = file_sha256(artifact_path)
+        manifest.metrics = {k: float(v) for k, v in metrics.items() if isinstance(v, (int, float))}
+        manifest.cv_scores = [float(s) for s in cv_scores]
+        manifest.best_params = dict(best_params)
+        manifest.quality_gates_passed = bool(gates_passed)
+
+        # Write next to the model artifact, not in self.output_dir, so
+        # an MLflow run that copies the artifact directory picks up the
+        # manifest in the same operation.
+        out = Path(artifact_path).parent / MANIFEST_FILENAME
+        return manifest.write(out)
 
     def _load_data(self) -> pd.DataFrame:
         """Load and validate data with Pandera."""
@@ -261,14 +381,103 @@ class Trainer:
         return validated
 
     def _split_data(self, X: pd.DataFrame, y: pd.Series) -> dict[str, pd.DataFrame | pd.Series]:
-        """Split into train/test.
+        """Split into train/test according to the configured strategy (PR-B3).
 
-        TODO: If your data has temporal ordering, use temporal split
-        instead of random split to prevent data leakage.
+        Dispatches on ``self.gates.split.strategy``:
+
+        - ``temporal``: sort by ``timestamp_column`` ascending; last
+          ``test_fraction`` rows form the test set. No shuffling. The
+          ONLY correct choice when features depend on ordered events
+          (D-13).
+        - ``grouped``: ``GroupShuffleSplit`` on ``entity_id_column`` so
+          all rows of one entity stay on the same side. Mandatory when
+          one customer/device produces many rows.
+        - ``random``: stratified ``train_test_split``. Allowed only
+          when ``acknowledge_iid: true`` is set in the config (the
+          ``SplitConfig.validate_columns_present`` check enforces it).
+
+        The split metadata (strategy, columns, sizes, random_state) is
+        recorded on ``self._split_meta`` for the training manifest
+        (PR-B3 manifest writer).
         """
-        from sklearn.model_selection import train_test_split
+        from sklearn.model_selection import GroupShuffleSplit, train_test_split
 
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=RANDOM_STATE, stratify=y)
+        split_cfg = self.gates.split
+        # Cross-check column presence + acknowledgement BEFORE we burn
+        # any compute on the split itself.
+        split_cfg.validate_columns_present(list(X.columns))
+
+        strategy = split_cfg.strategy
+        test_fraction = split_cfg.test_fraction
+        random_state = split_cfg.random_state
+
+        if strategy == "temporal":
+            ts_col = split_cfg.timestamp_column
+            assert ts_col is not None  # validate_columns_present guarantees this
+            order = X[ts_col].argsort(kind="mergesort")
+            X_sorted = X.iloc[order].reset_index(drop=True)
+            y_sorted = y.iloc[order].reset_index(drop=True)
+            n_test = max(1, int(round(len(X_sorted) * test_fraction)))
+            split_idx = len(X_sorted) - n_test
+            X_train, X_test = X_sorted.iloc[:split_idx], X_sorted.iloc[split_idx:]
+            y_train, y_test = y_sorted.iloc[:split_idx], y_sorted.iloc[split_idx:]
+            logger.info(
+                "Temporal split on %s: train=%d (≤ %s), test=%d (> %s)",
+                ts_col,
+                len(X_train),
+                X_sorted[ts_col].iloc[split_idx - 1] if split_idx > 0 else "n/a",
+                len(X_test),
+                X_sorted[ts_col].iloc[split_idx - 1] if split_idx > 0 else "n/a",
+            )
+        elif strategy == "grouped":
+            group_col = split_cfg.entity_id_column
+            assert group_col is not None
+            groups = X[group_col].to_numpy()
+            gss = GroupShuffleSplit(n_splits=1, test_size=test_fraction, random_state=random_state)
+            train_idx, test_idx = next(gss.split(X, y, groups=groups))
+            X_train, X_test = X.iloc[train_idx], X.iloc[test_idx]
+            y_train, y_test = y.iloc[train_idx], y.iloc[test_idx]
+            n_train_groups = X_train[group_col].nunique()
+            n_test_groups = X_test[group_col].nunique()
+            overlap = set(X_train[group_col]) & set(X_test[group_col])
+            assert not overlap, (
+                f"GroupShuffleSplit invariant violated: {len(overlap)} group(s) "
+                f"appear in both splits (e.g. {next(iter(overlap))})"
+            )
+            logger.info(
+                "Grouped split on %s: train=%d rows / %d groups, test=%d rows / %d groups",
+                group_col,
+                len(X_train),
+                n_train_groups,
+                len(X_test),
+                n_test_groups,
+            )
+        else:  # strategy == "random" — guarded by validate_columns_present
+            X_train, X_test, y_train, y_test = train_test_split(
+                X,
+                y,
+                test_size=test_fraction,
+                random_state=random_state,
+                stratify=y,
+            )
+            logger.warning(
+                "Random split chosen — adopter has set acknowledge_iid=true. "
+                "Review the assumption if the model behaves oddly in production."
+            )
+
+        # Record split metadata for the training manifest (PR-B3).
+        # Stored on self so ``run()`` can pick it up without rerunning
+        # the split or threading another return value.
+        self._split_meta: dict[str, Any] = {
+            "strategy": strategy,
+            "timestamp_column": split_cfg.timestamp_column,
+            "entity_id_column": split_cfg.entity_id_column,
+            "test_fraction": test_fraction,
+            "random_state": random_state,
+            "n_train": int(len(X_train)),
+            "n_test": int(len(X_test)),
+        }
+
         return {
             "X_train": X_train,
             "X_test": X_test,

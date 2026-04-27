@@ -329,12 +329,22 @@ if [[ "${SCAFFOLD_SMOKE:-0}" == "1" ]]; then
   # Without these, a service could ship the canonical artifacts but
   # silently fall back to legacy CSV mode in production — exactly the
   # silent-divergence ADR-015 PR-B2 closes.
+  # `test_split_strategies.py` + `test_training_manifest.py` (PR-B3)
+  # gate the leakage-hardening + reproducibility-evidence contract:
+  #   - Trainer._split_data dispatches on quality_gates.split.strategy;
+  #     temporal split forbids future-leak; grouped split keeps entities
+  #     disjoint; random refuses without explicit acknowledge_iid.
+  #   - Every Trainer.run() writes a versioned training_manifest.json
+  #     with content hashes, dependency versions, EDA cross-reference,
+  #     and quality-gate verdict — even on rejected runs.
   if (cd "$SERVICE_DIR" && PYTHONPATH=. timeout 180 pytest \
         tests/test_api.py tests/test_training.py \
         tests/test_quality_gates_config.py \
         tests/test_quality_gates_schema_sync.py \
         tests/test_eda_gate.py \
         tests/test_drift_eda_baseline.py \
+        tests/test_split_strategies.py \
+        tests/test_training_manifest.py \
         tests/test_prediction_logger_lifecycle.py \
         tests/test_error_envelope.py \
         tests/test_input_validation.py \

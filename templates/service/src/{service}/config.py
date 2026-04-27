@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Any, List
 
 import yaml
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 logger = logging.getLogger(__name__)
 
@@ -44,9 +44,135 @@ DEMOGRAPHIC_TARGET_TOKENS: tuple[str, ...] = (
 )
 
 
+# Split-strategy enum + matching pydantic model. Lives at module level
+# so external tooling (`scripts/validate_quality_gates.py`,
+# `test_quality_gates_schema_sync.py`) can import it without pulling in
+# the whole service package.
+SPLIT_STRATEGIES: tuple[str, ...] = ("temporal", "grouped", "random")
+
+
 # ---------------------------------------------------------------------------
 # Sub-configs — one per YAML section
 # ---------------------------------------------------------------------------
+
+
+# PR-B3: train/test split policy. Lives under `quality_gates.yaml`
+# because the choice of split strategy is a CORRECTNESS contract, not a
+# hyperparameter — using `random` on temporal data leaks information
+# from the future into training (D-13). Codifying the choice in the
+# governance config means:
+#   * a typo (e.g. `temproal`) fails fast at config load, not after a
+#     30-min Optuna run on a leaking split
+#   * a service that switches from random→temporal must do so via PR
+#     review, like every other governance change
+#   * the manifest writer (PR-B3) records the EXACT strategy used
+#     in `training_manifest.json` for full auditability
+class SplitConfig(BaseModel):
+    """Train/test split policy enforced by ``Trainer._split_data``.
+
+    Three strategies, exactly one applies per service:
+
+    - ``temporal``: requires ``timestamp_column``. Sorts ascending,
+      uses the last ``test_fraction`` of rows as the test set. The
+      ONLY sound choice for any service whose features depend on
+      ordered events (fraud, churn, recommendation feedback, …).
+    - ``grouped``: requires ``entity_id_column``. Uses
+      ``GroupShuffleSplit`` so all rows belonging to the same entity
+      stay on the same side of the split. Mandatory whenever a single
+      entity (customer, device, …) generates multiple rows — random
+      split would let the model memorise the entity rather than
+      learn the task.
+    - ``random``: stratified ``train_test_split``. Acceptable only
+      when rows are i.i.d. by construction. Picking this strategy
+      is a deliberate, audited choice — adopters MUST set
+      ``acknowledge_iid: true`` to confirm they reviewed the
+      assumption. The default (no acknowledgement) refuses to load.
+
+    Why a sub-model rather than a flat field?
+    Conditional validation: ``timestamp_column`` is only meaningful
+    for ``temporal`` and ``entity_id_column`` for ``grouped``. Flat
+    fields would force every service to either fill in fields it
+    doesn't need or rely on documentation alone — exactly the silent-
+    misuse mode this PR closes.
+    """
+
+    # Mirror ``additionalProperties: false`` from the JSON Schema —
+    # the schema-sync test enforces equivalence and will fail if these
+    # drift. A typo'd field would otherwise be silently ignored, which
+    # is the worst possible outcome for a correctness contract.
+    model_config = ConfigDict(extra="forbid")
+
+    strategy: str = Field(
+        "random",
+        description="Which split policy to apply: temporal | grouped | random.",
+    )
+    timestamp_column: str | None = Field(
+        None,
+        description="Column to sort on for temporal split. Required when strategy=temporal.",
+    )
+    entity_id_column: str | None = Field(
+        None,
+        description="Group key for grouped split. Required when strategy=grouped.",
+    )
+    test_fraction: float = Field(
+        0.2,
+        gt=0.0,
+        lt=1.0,
+        description="Fraction of rows assigned to the test set.",
+    )
+    random_state: int = Field(
+        42,
+        ge=0,
+        description="Used by grouped + random strategies. Recorded in the manifest.",
+    )
+    acknowledge_iid: bool = Field(
+        False,
+        description=(
+            "Adopter assertion that rows are independent and identically "
+            "distributed. REQUIRED to be true when strategy=random."
+        ),
+    )
+
+    @field_validator("strategy")
+    @classmethod
+    def _strategy_in_enum(cls, v: str) -> str:
+        if v not in SPLIT_STRATEGIES:
+            raise ValueError(
+                f"strategy must be one of {SPLIT_STRATEGIES}, got {v!r}"
+            )
+        return v
+
+    def validate_columns_present(self, columns: list[str] | tuple[str, ...]) -> None:
+        """Cross-check that the column referenced by the strategy
+        actually exists in the loaded dataframe. Called from
+        ``Trainer._split_data`` AFTER load_data so the failure points
+        at the missing column, not at YAML parse time when we don't
+        yet know the dataframe.
+        """
+        if self.strategy == "temporal":
+            if not self.timestamp_column:
+                raise ValueError("split.strategy='temporal' requires split.timestamp_column")
+            if self.timestamp_column not in columns:
+                raise ValueError(
+                    f"split.timestamp_column={self.timestamp_column!r} not found "
+                    f"in dataframe columns {sorted(columns)}"
+                )
+        elif self.strategy == "grouped":
+            if not self.entity_id_column:
+                raise ValueError("split.strategy='grouped' requires split.entity_id_column")
+            if self.entity_id_column not in columns:
+                raise ValueError(
+                    f"split.entity_id_column={self.entity_id_column!r} not found "
+                    f"in dataframe columns {sorted(columns)}"
+                )
+        elif self.strategy == "random":
+            if not self.acknowledge_iid:
+                raise ValueError(
+                    "split.strategy='random' requires split.acknowledge_iid: true. "
+                    "Set this only after confirming rows are i.i.d. (no temporal "
+                    "ordering, no shared entity producing multiple rows). For any "
+                    "doubt, prefer 'temporal' or 'grouped'."
+                )
 
 
 # TODO: Adjust hyperparameter fields and defaults for your model types.
@@ -195,6 +321,15 @@ class QualityGatesConfig(BaseModel):
             "Minimum delta over the current production baseline required "
             "to auto-promote. 0.0 disables baseline-comparison promotion."
         ),
+    )
+
+    # PR-B3: train/test split policy. Defaults to a SplitConfig with
+    # ``strategy=random`` and ``acknowledge_iid=False`` — that combination
+    # raises in `validate_against_data` so a service that doesn't
+    # think about splits gets a loud failure, not silent leakage.
+    split: SplitConfig = Field(
+        default_factory=SplitConfig,
+        description="Train/test split strategy (temporal | grouped | random).",
     )
 
     @field_validator("primary_metric", "secondary_metric")
