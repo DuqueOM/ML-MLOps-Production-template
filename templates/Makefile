@@ -12,7 +12,10 @@
 #
 # TODO: Replace {service} and {SERVICE_SLUG} with your actual service names.
 
-.PHONY: help install train serve test lint format build deploy health-check clean
+.PHONY: help install train serve test lint format build deploy health-check clean \
+        new-service eda drift-check retrain release-checklist rollback \
+        incident-runbook performance-review cost-review new-adr \
+        secret-breach-check security-audit audit-rules batch-inference
 
 # Colors
 RED    := \033[0;31m
@@ -149,6 +152,141 @@ demo-down: ## Stop demo stack
 	@echo "$(YELLOW)Stopping demo stack...$(NC)"
 	docker compose -f docker-compose.demo.yml down
 	@echo "$(GREEN)✓ Demo stopped$(NC)"
+
+# ═══════════════════════════════════════════════
+# Non-agentic on-ramp (PR-R2-12)
+#
+# Every /slash workflow has a `make` equivalent below. Teams that don't
+# operate with AI assistants can adopt the template without inheriting
+# the agentic surface. See docs/ADOPTION.md for the full mapping table
+# and the maturity matrix per cloud × environment.
+#
+# Each target either:
+#   (a) invokes a real script (drift drills, retrain, security scan), or
+#   (b) prints the canonical runbook path for procedures that are
+#       inherently human-judgment (cost review, incident response).
+# ═══════════════════════════════════════════════
+
+new-service: ## Scaffold a new ML service (NAME=PascalCase SLUG=snake_case)
+	@if [ -z "$(NAME)" ] || [ -z "$(SLUG)" ]; then \
+		echo "$(RED)Usage:$(NC) make new-service NAME=FraudDetector SLUG=fraud_detector"; \
+		exit 1; \
+	fi
+	bash templates/scripts/new-service.sh $(NAME) $(SLUG)
+
+eda: ## Run 6-phase EDA pipeline on data/raw/
+	@echo "$(GREEN)Running EDA pipeline...$(NC)"
+	@if [ -f eda/run_eda.py ]; then \
+		python eda/run_eda.py; \
+	else \
+		echo "$(YELLOW)See eda/README.md for the 6-phase pipeline.$(NC)"; \
+	fi
+
+drift-check: ## Run reproducible drift drill against data/production/
+	@echo "$(GREEN)Running drift drill...$(NC)"
+	python scripts/drills/run_drift_drill.py
+
+retrain: ## Run training pipeline + quality gates (non-agentic equivalent of /retrain)
+	@echo "$(GREEN)Retraining $(SERVICE_SLUG)...$(NC)"
+	python src/$(SERVICE_SLUG)/training/train.py --data $(DATA_PATH)
+	@echo "$(GREEN)Validating quality gates...$(NC)"
+	python scripts/validate_quality_gates.py --require-at-least-one
+	@echo "$(GREEN)✓ Retraining + gate validation complete$(NC)"
+	@echo "$(YELLOW)Promotion is a CONSULT-class operation \u2014 see docs/runbooks/model-retrain.md$(NC)"
+
+release-checklist: ## Print the canonical release checklist
+	@echo "$(GREEN)Release checklist:$(NC)"
+	@if [ -f docs/runbooks/release-checklist.md ]; then \
+		cat docs/runbooks/release-checklist.md; \
+	else \
+		echo "$(YELLOW)See .windsurf/skills/release-checklist/SKILL.md$(NC)"; \
+	fi
+
+rollback: ## Roll back the last deploy (REV=<revision> optional)
+	@echo "$(RED)EMERGENCY ROLLBACK \u2014 STOP-class operation$(NC)"
+	@echo "$(YELLOW)See docs/runbooks/rollback.md before proceeding.$(NC)"
+	@if [ -n "$(REV)" ]; then \
+		kubectl rollout undo deployment/$(SERVICE_SLUG)-predictor --to-revision=$(REV); \
+	else \
+		kubectl rollout undo deployment/$(SERVICE_SLUG)-predictor; \
+	fi
+	kubectl rollout status deployment/$(SERVICE_SLUG)-predictor --timeout=5m
+
+incident-runbook: ## Print the incident-response runbook
+	@echo "$(GREEN)Incident response runbook:$(NC)"
+	@if [ -f docs/runbooks/incident-response.md ]; then \
+		cat docs/runbooks/incident-response.md; \
+	else \
+		echo "$(YELLOW)See .windsurf/workflows/incident.md$(NC)"; \
+	fi
+
+performance-review: ## Sliced performance review (concept drift detection)
+	@echo "$(GREEN)Running performance review...$(NC)"
+	@if [ -f scripts/run_performance_review.py ]; then \
+		python scripts/run_performance_review.py; \
+	else \
+		echo "$(YELLOW)See docs/runbooks/performance-review.md$(NC)"; \
+	fi
+
+cost-review: ## Print the cost-review runbook
+	@echo "$(GREEN)Monthly cost review procedure:$(NC)"
+	@if [ -f docs/runbooks/cost-review.md ]; then \
+		cat docs/runbooks/cost-review.md; \
+	else \
+		echo "$(YELLOW)See .windsurf/skills/cost-audit/SKILL.md$(NC)"; \
+	fi
+
+new-adr: ## Create a new ADR (TITLE='<title>')
+	@if [ -z "$(TITLE)" ]; then \
+		echo "$(RED)Usage:$(NC) make new-adr TITLE='Introduce feature flags'"; \
+		exit 1; \
+	fi
+	@bash -c 'set -e; \
+		num=$$(ls docs/decisions/ADR-*.md 2>/dev/null | sed -E "s/.*ADR-([0-9]+).*/\1/" | sort -n | tail -1); \
+		num=$${num:-000}; \
+		next=$$(printf "%03d" $$((10#$$num + 1))); \
+		slug=$$(echo "$(TITLE)" | tr "[:upper:] " "[:lower:]-" | tr -cd "a-z0-9-"); \
+		path="docs/decisions/ADR-$$next-$$slug.md"; \
+		if [ -f docs/decisions/template.md ]; then \
+			cp docs/decisions/template.md "$$path"; \
+		else \
+			printf "# ADR-%s: %s\n\n## Status\n\nProposed\n\n## Context\n\n## Decision\n\n## Consequences\n" "$$next" "$(TITLE)" > "$$path"; \
+		fi; \
+		echo "$(GREEN)Created$(NC) $$path"'
+
+secret-breach-check: ## Scan for leaked secrets (gitleaks)
+	@echo "$(GREEN)Scanning for leaked secrets...$(NC)"
+	gitleaks detect --no-git --source=. --redact
+
+security-audit: ## Run combined security audit (gitleaks + bandit + trivy)
+	@echo "$(GREEN)Running security audit...$(NC)"
+	@$(MAKE) secret-breach-check
+	@$(MAKE) security-scan
+	@if [ -f $(IMAGE_TAG) ] || docker image inspect $(IMAGE_TAG) >/dev/null 2>&1; then \
+		$(MAKE) scan; \
+	else \
+		echo "$(YELLOW)Image $(IMAGE_TAG) not built locally \u2014 skipping trivy.$(NC)"; \
+	fi
+
+audit-rules: ## Validate AGENTS.md D-XX invariants are documented + tested
+	@echo "$(GREEN)Validating AGENTS.md invariants...$(NC)"
+	@if [ -f scripts/validate_agentic.py ]; then \
+		python scripts/validate_agentic.py; \
+	fi
+	@echo "$(GREEN)Running policy suite over scaffolded output...$(NC)"
+	pytest templates/service/tests/policy/ -v --no-cov --tb=short || true
+
+batch-inference: ## Run batch scoring job (DATA=path/to/input.parquet)
+	@if [ -z "$(DATA)" ]; then \
+		echo "$(RED)Usage:$(NC) make batch-inference DATA=data/batch/input.parquet"; \
+		exit 1; \
+	fi
+	@echo "$(GREEN)Running batch inference on $(DATA)...$(NC)"
+	@if [ -f scripts/batch_inference.py ]; then \
+		python scripts/batch_inference.py --input $(DATA); \
+	else \
+		echo "$(YELLOW)See .windsurf/skills/batch-inference/SKILL.md for the K8s CronJob pattern$(NC)"; \
+	fi
 
 # ═══════════════════════════════════════════════
 # Cleanup

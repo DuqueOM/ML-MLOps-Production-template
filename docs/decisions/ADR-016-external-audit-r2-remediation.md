@@ -457,15 +457,73 @@ adding a 6-line header that names the role this file plays in the
 ADR-017 5-identity split. This is the exact kind of latent
 documentation drift the suite is designed to catch.
 
-### PR-R2-12 — Adoption-boundary doc + agentic-fallback path
+### PR-R2-12 — Adoption-boundary doc + agentic-fallback path ✅
 
-- Publish an explicit adoption-boundary table per cloud × maturity
-  level (dev / staging / prod) so a platform reviewer can answer
-  "is this ready for our org?" in 60 seconds.
-- Provide a non-agentic on-ramp: every skill / workflow we ship has
-  an equivalent `make` target documented in `Makefile`. Teams that
-  don't operate with AI assistants can adopt the template without
-  inheriting the agentic surface.
+✅ **shipped**.
+
+Three deliverables, all enforced by a contract test so they cannot
+silently drift:
+
+**1. Maturity matrix per cloud × environment (`docs/ADOPTION.md`)**
+
+A platform reviewer can answer "is this ready for our org?" in 60
+seconds. Each capability is rated `ready` / `partial` / `roadmap`
+across dev/staging/prod, organized by area: compute & networking,
+container & supply chain, secrets & IAM, ML quality & observability,
+delivery, governance. The doc also lists what the template explicitly
+does NOT claim (multi-region active-active, compliance certifications,
+LLM serving, mobile/edge inference) so README copy can never drift
+toward over-promising.
+
+**2. Non-agentic on-ramp via `make` targets (`templates/Makefile`)**
+
+Every `/slash` workflow in `.windsurf/workflows/` has a corresponding
+`make` target. Teams that don't operate with AI assistants get the
+same safety guarantees through `make` + contract tests:
+
+| Workflow | Make target |
+|----------|-------------|
+| `/new-service` | `make new-service NAME=… SLUG=…` |
+| `/eda` | `make eda` |
+| `/drift-check` | `make drift-check` |
+| `/retrain` | `make retrain` |
+| `/load-test` | `make load-test` |
+| `/release` | `make release-checklist` |
+| `/rollback` | `make rollback REV=<n>` |
+| `/incident` | `make incident-runbook` |
+| `/performance-review` | `make performance-review` |
+| `/cost-review` | `make cost-review` |
+| `/new-adr` | `make new-adr TITLE='…'` |
+| `/secret-breach` | `make secret-breach-check` |
+
+Plus three convenience aggregates that compose existing scripts:
+`make security-audit` (gitleaks + bandit + trivy), `make audit-rules`
+(validate_agentic.py + policy suite), `make batch-inference`.
+
+The point is operational: agentic surface is a productivity
+multiplier, never a load-bearing safety component. All production
+invariants (D-01..D-31) live in tests, CI workflows, and Kyverno
+policies — not in agent behavior.
+
+**3. README pointer + contract test (`test_adoption_boundary_contract.py`)**
+
+README.md now has an `## Adoption boundary` section that links to
+`docs/ADOPTION.md`. The contract test enforces 7 invariants (all 7
+PASS):
+
+- `ADOPTION.md` exists
+- `ADOPTION.md` has a maturity matrix (ready/partial/roadmap rows)
+- `ADOPTION.md` has the canonical non-claims list (multi-region,
+  compliance, feature store)
+- The canonical `WORKFLOW_TO_MAKE` map matches the filesystem (no
+  workflow without a mapping; no stale mapping entries)
+- Every workflow's mapped make target actually exists in `Makefile`
+- Every make target is referenced in `ADOPTION.md`
+- README links to `ADOPTION.md` AND has the section header
+
+Combined, these prevent the agentic surface from quietly accumulating:
+any new workflow MUST ship its non-agentic `make` equivalent and
+documentation, or the contract test fails on the very PR that adds it.
 
 ## Low-severity items (next sprint, no PR yet)
 
@@ -499,7 +557,7 @@ documentation drift the suite is designed to catch.
 - [x] PR-R2-1 through PR-R2-5 merged within 7 calendar days of
       this ADR's date.
 - [ ] PR-R2-6 through PR-R2-9 merged within 30 calendar days.
-- [ ] PR-R2-10 through PR-R2-12 merged within 90 calendar days.
+- [x] PR-R2-10 through PR-R2-12 merged within 90 calendar days.
 - [ ] Each PR closes its corresponding finding with a comment
       linking back to the audit transcript and this ADR.
 

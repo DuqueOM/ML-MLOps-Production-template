@@ -534,6 +534,18 @@ Deploy, incident, and retrain are part of one operating model, not separate ad-h
 
 ---
 
+## Adoption boundary
+
+For platform reviewers asking *"is this ready for our org?"* and teams that want to adopt the template **without using AI agents**, see [`docs/ADOPTION.md`](docs/ADOPTION.md). It contains:
+
+- **Maturity matrix** per capability × cloud × environment (dev/staging/prod), with explicit `ready` / `partial` / `roadmap` ratings
+- **Non-agentic on-ramp**: every `/slash` workflow has a `make` equivalent or runbook reference; teams that don't use AI assistants get the same safety guarantees through `make` targets and contract tests
+- **Explicit non-claims**: what the template does NOT cover (multi-region active-active, compliance certifications, LLM serving, mobile/edge inference)
+
+The agentic surface is a productivity multiplier; it is not a load-bearing component of the template's safety guarantees. All production invariants (D-01..D-31) live in tests, CI workflows, and Kyverno policies — not in agent behavior.
+
+---
+
 ## Scope boundaries
 
 **Included:**
