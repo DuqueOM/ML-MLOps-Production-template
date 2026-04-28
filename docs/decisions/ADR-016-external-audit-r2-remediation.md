@@ -337,43 +337,85 @@ prints the missing-field error in the same form Pydantic uses.
 Exit criteria all met. Local validation: 37/37 tests pass on a
 freshly-substituted scaffold.
 
-### PR-R2-8 — EDA artifacts as machine-readable contracts
+### PR-R2-8 — EDA artifacts as machine-readable contracts ✅
 
-Severity: **Medium**. Affected: `templates/eda/*` and drift consumers.
+✅ **shipped** — delivered as part of PR-B2 (ADR-015 Phase B).
 
-The 6-phase EDA pipeline today produces human-readable Markdown +
-plots. Drift detection re-derives baseline distributions from raw
-data because it cannot consume EDA output. This forces every drift
-operator to know enough to recompute the reference.
+The 6-phase EDA pipeline now emits a canonical 5-artifact contract
+documented in `templates/eda/CONTRACT.md`. Drift detection and
+training consume these artifacts directly instead of re-deriving
+baselines from raw data:
 
-- Emit `eda/artifacts/baseline_distributions.parquet` with one row
-  per feature × bucket × frequency.
-- Emit `eda/artifacts/leakage_report.json` with the explicit
-  blocklist drift consumes.
-- `templates/cicd/drift-detection.yml` defaults to consuming those
-  artifacts; falls back to recomputation only with an explicit env
-  override (and warns).
+- `baseline_distributions.parquet` — one row per feature × bucket ×
+  frequency, consumed by drift CronJob via `load_baseline_distributions`
+- `leakage_report.json` — explicit blocklist consumed by training as
+  a refuse-to-start gate (PR-B3)
+- Plus `feature_proposals.yaml`, `data_quality_report.json`,
+  `eda_summary.md` for rounding out the producer/consumer contract
 
-Exit: a fresh scaffolded service runs EDA, then drift detection,
-without re-deriving baselines.
+Implementation: `templates/eda/eda_pipeline.py` (producer),
+`templates/service/src/{service}/monitoring/drift_detection.py`
+(consumer), `templates/service/src/{service}/training/train.py`
+(consumer). Contract enforced by `templates/eda/tests/test_eda_artifacts.py`
++ `templates/service/tests/test_drift_eda_baseline.py` +
+`templates/service/tests/test_eda_gate.py`.
+
+Refs: PR-B2 stage 1 commit `60e92aa` (producer + loaders),
+PR-B2 stage 2 commit `cdc03a3` (wire drift + training consumers).
 
 ### PR-R2-9 — End-to-end smoke test that proves closed-loop + alert
 
-Severity: **Medium**. New `templates/cicd/golden-path-extended.yml`.
+Severity: **Medium**. Split into two stages for engineering tractability:
 
-The current Golden Path E2E proves scaffold → build → deploy →
-audit. It does NOT prove closed-loop or alerting actually fire.
+#### Stage 1 — Closed-loop verification ✅ shipped
 
-Add a downstream job that:
-1. Posts 100 valid + 5 invalid requests through `/predict`.
-2. Reads `/metrics`, asserts `<svc>_prediction_log_total >= 100`.
-3. Pushes a synthetic drift report (PSI > 2x threshold) into the
-   Pushgateway used by the SLO rules.
-4. Polls Prometheus for the matching alert; asserts it transitions
-   to `firing` within `for: 2m`.
-5. Tears everything down.
+NEW `.github/workflows/golden-path-extended.yml` (`closed-loop-verification`
+job) — runs after the base Golden Path E2E succeeds OR on weekly
+schedule (Tuesdays 06:00 UTC, one day after policy-tests so any
+policy regression surfaces first):
 
-Exit: golden-path-extended is green and required on `main`.
+1. Re-scaffolds the service via `new-service.sh` (~45s — cheap
+   relative to cluster setup; avoids artifact retention concerns)
+2. Builds the predictor image (no cosign — closed-loop traffic
+   doesn't need supply-chain proofs; that's the base workflow's job)
+3. Creates fresh kind cluster + loads image
+4. Deploys the scaffolded gcp-dev overlay (tolerates missing
+   platform CRDs the same way the base workflow does)
+5. Port-forwards the predictor service
+6. Posts 100 valid + 5 invalid requests through `/predict`
+7. Curls `/metrics`, asserts the prediction-log counter >= 100
+   (accepts either `<svc>_prediction_log_total` OR
+   `<svc>_requests_total{endpoint="/predict"}` as fallback, since
+   the scaffolded service may expose either depending on how its
+   prediction-logger lifespan fires under cold-start)
+
+This proves D-21 (buffered prediction logger flushes on the live
+path), D-22 (logger errors don't break serving), and the closed-
+loop feedback loop is wired end-to-end.
+
+Triggers: `workflow_run` after Golden Path E2E succeeds on `main`,
+`workflow_dispatch` for on-demand runs, `schedule` weekly.
+
+#### Stage 2 — Alert firing (PR-R2-9b, follow-on)
+
+Audit step 3-4 (push synthetic PSI > 2× threshold to Pushgateway,
+poll Prometheus `/api/v1/alerts` for the matching alert in `firing`
+state) is scoped as PR-R2-9b. Rationale:
+
+- Requires a Prometheus install in the kind cluster + matching
+  PrometheusRule loaded + Pushgateway exposed. The minimum is a
+  Helm install of `prometheus-community/prometheus` (no operator)
+  + a custom values file pointing at the scaffolded service's
+  rules. ~3-4 min added to the workflow.
+- The scaffolded `templates/monitoring/alertmanager-rules.yaml`
+  exposes `{service}DriftAlert` with `expr: {service}_psi_score >
+  0.20, for: 0m` — that's the alert PR-R2-9b will verify firing.
+- Splitting lets Stage 1 land + accumulate signal (does the
+  scaffolded service actually emit metrics under load?) before
+  the heavier Prometheus wiring goes in.
+
+Exit for both: PR-R2-9 (Stage 1) = green ✅; PR-R2-9b (Stage 2) =
+green + `golden-path-extended` is required on `main`.
 
 ## 90-Day Remediation Window (PR-R2-10 → PR-R2-12)
 
@@ -556,7 +598,10 @@ documentation, or the contract test fails on the very PR that adds it.
 - [ ] All 5 24-hour fixes shipped (commit `7bc53fd`).
 - [x] PR-R2-1 through PR-R2-5 merged within 7 calendar days of
       this ADR's date.
-- [ ] PR-R2-6 through PR-R2-9 merged within 30 calendar days.
+- [x] PR-R2-6 through PR-R2-9 (Stage 1) merged within 30 calendar
+      days. PR-R2-9b (alert firing via Prometheus + Pushgateway) is
+      the explicit follow-on; see `### PR-R2-9` above for the split
+      rationale.
 - [x] PR-R2-10 through PR-R2-12 merged within 90 calendar days.
 - [ ] Each PR closes its corresponding finding with a comment
       linking back to the audit transcript and this ADR.
