@@ -1,0 +1,169 @@
+# =============================================================================
+# CI Autofix Policy — canonical contract for Agent-CIRepair (ADR-019).
+#
+# This file is the single source of truth for which CI failures may be
+# auto-repaired, under what mode, with what blast radius, and which
+# verifiers must go green before the fix is committed.
+#
+# CONTRACT TEST: templates/service/tests/test_ci_autofix_policy_contract.py
+# Any drift between this file and that test means one of them is wrong.
+#
+# IMPORTANT: editing `protected_paths` or downgrading any STOP class to
+# AUTO/CONSULT requires:
+#   1. ADR addendum (this is a non-trivial decision per AGENTS.md)
+#   2. Contract test still green
+#   3. Reviewer approval per CODEOWNERS
+# =============================================================================
+
+version: 1
+
+defaults:
+  branch_prefix: "codex/ci-fix"
+  max_attempts_per_run: 2
+  stable_models_only: true
+  require_green_verification: true
+  # Memory plane (ADR-018) — advisory only until Phase 5 of that ADR.
+  # Memory hits NEVER demote a STOP; can only escalate AUTO -> CONSULT.
+
+# Blast-radius limits per mode. The autofix runtime MUST refuse any patch
+# whose changeset exceeds these. `blast_radius_exceeded` failure class
+# fires automatically and demotes to STOP.
+limits:
+  auto:
+    max_files_changed: 5
+    max_lines_changed: 120
+  consult:
+    max_files_changed: 12
+    max_lines_changed: 350
+
+# Paths that NO autofix mode (AUTO or CONSULT) may touch. STOP class
+# `infra_or_deploy` / `security_or_auth` enforce this in addition.
+protected_paths:
+  - ".github/workflows/deploy-*.yml"
+  - "templates/cicd/deploy-*.yml"
+  - "templates/infra/terraform/**"
+  - "templates/k8s/overlays/*prod*/**"
+  - "templates/common_utils/secrets.py"
+  - "templates/common_utils/risk_context.py"
+  - "scripts/audit_record.py"
+  - "templates/config/ci_autofix_policy.yaml"
+  - "templates/config/model_routing_policy.yaml"
+
+failure_classes:
+  # ---------- AUTO ----------
+  formatter_drift:
+    mode: AUTO
+    description: "black/isort/ruff/whitespace drift; deterministic"
+    allowed_paths: ["**/*.py", "**/*.md", "**/*.yaml", "**/*.yml", "**/*.toml"]
+    verifiers: ["lint-style"]
+
+  docs_quality_minor:
+    mode: AUTO
+    description: "markdownlint, internal links, doc references"
+    allowed_paths: ["docs/**", "README.md", "QUICK_START.md", "CHANGELOG.md"]
+    verifiers: ["docs-quality"]
+
+  syntax_config_minor:
+    mode: AUTO
+    description: "invalid YAML/TOML/JSON in non-prod CI surfaces"
+    allowed_paths:
+      - "templates/config/**"
+      - ".github/workflows/*.yml"
+      - "templates/cicd/*.yml"
+    blocked_if_paths_match:
+      - ".github/workflows/deploy-*.yml"
+      - "templates/cicd/deploy-*.yml"
+    verifiers: ["yaml-parse", "workflow-lint"]
+
+  snapshot_regen_deterministic:
+    mode: AUTO
+    description: "regenerable artifacts that drifted without semantic change"
+    allowed_paths:
+      - "**/tests/contract/**"
+      - "**/openapi.snapshot.json"
+    verifiers: ["contract-tests"]
+
+  # ---------- CONSULT ----------
+  test_fixture_alignment:
+    mode: CONSULT
+    description: "fixtures/mocks/payloads misaligned after refactor"
+    allowed_paths: ["**/tests/**", "**/conftest.py"]
+    verifiers: ["targeted-tests"]
+
+  workflow_nonprod_fix:
+    mode: CONSULT
+    description: "non-deploy CI workflow path/artifact/matrix"
+    allowed_paths: [".github/workflows/*.yml", "templates/cicd/*.yml"]
+    blocked_if_paths_match:
+      - ".github/workflows/deploy-*.yml"
+      - "templates/cicd/deploy-*.yml"
+    verifiers: ["workflow-lint", "targeted-tests"]
+
+  build_harness_fix:
+    mode: CONSULT
+    description: "scaffolding/validation/contract test infra"
+    allowed_paths: ["scripts/**", "templates/scripts/**", "templates/cicd/**"]
+    verifiers: ["targeted-tests", "scaffold-e2e"]
+
+  dependency_pin_nonruntime:
+    mode: CONSULT
+    description: "CI/lint/docs tooling pins (NOT runtime ML deps)"
+    allowed_paths: [".github/**", "pyproject.toml", ".pre-commit-config.yaml"]
+    verifiers: ["targeted-tests"]
+
+  # ---------- STOP ----------
+  # STOP classes have NO allowed_paths; they refuse any autofix attempt.
+  # Contract test enforces this.
+  security_or_auth:
+    mode: STOP
+    description: "gitleaks, trivy, WIF, IRSA, secrets, signing"
+
+  infra_or_deploy:
+    mode: STOP
+    description: "Terraform, K8s prod/staging, deploy chain"
+
+  quality_gate:
+    mode: STOP
+    description: "fairness/drift/retrain/contract break"
+
+  blast_radius_exceeded:
+    mode: STOP
+    description: "exceeded max_files_changed / max_lines_changed / protected path"
+
+# Verifier groups — every failure_class.verifiers entry MUST resolve here.
+# Contract test enforces this.
+verifier_groups:
+  lint-style:
+    - "ruff check ."
+    - "black --check ."
+    - "isort --check-only ."
+
+  docs-quality:
+    - "python scripts/validate_agentic.py --strict"
+
+  yaml-parse:
+    - "python scripts/ci_verify_yaml.py"
+
+  workflow-lint:
+    - "python scripts/ci_verify_workflows.py"
+
+  contract-tests:
+    - "pytest tests/contract -q"
+
+  targeted-tests:
+    - "python scripts/ci_verify_targeted.py"
+
+  scaffold-e2e:
+    - "bash scripts/test_scaffold.sh"
+
+audit:
+  enabled: true
+  record_with: "scripts/audit_record.py"
+
+# Operational Memory Plane integration (ADR-018). Memory is ADVISORY only
+# until ADR-018 Phase 5 graduates to guarded-gate. Memory signals can ONLY
+# escalate prudence — never demote a STOP / CONSULT.
+memory:
+  enabled: true
+  mode: advisory
+  max_similar_cases: 5

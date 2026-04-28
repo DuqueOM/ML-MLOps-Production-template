@@ -1,0 +1,98 @@
+# =============================================================================
+# Model Routing Policy — provider/model selection per task class (ADR-019).
+#
+# Decouples model identity from autofix code so adopters can swap providers
+# without touching scripts. The contract test enforces:
+#   - every `tasks.*.route` references a real `routes.*` entry
+#   - preview-maturity models are never used in tasks that can land on
+#     protected branches
+#
+# MAINTENANCE: model names are a moving target. Each entry has a
+# `verified_at` field (year-month) so reviewers know when this file was
+# last reconciled with vendor catalogs. If a name in this file no longer
+# exists with the vendor, the routing layer falls back to the NEXT
+# candidate in the list — never silently switches families.
+#
+# Honest engineering note: model names below reflect the cadence the
+# adopter requested (gpt-5.x, claude-opus-4.x, gemini-3.x). At PR time,
+# verify each name exists in the corresponding provider's stable catalog
+# before enabling for any production-adjacent route.
+# =============================================================================
+
+version: 1
+verified_at: "2026-04"
+
+profiles:
+  balanced_enterprise:
+    stable_only: true
+    allow_preview_in_nonprod: false
+
+  experimental_frontier:
+    stable_only: false
+    allow_preview_in_nonprod: true
+
+routes:
+  # Triage / classification / extraction — high volume, low complexity.
+  router_low_cost:
+    selection: "cheapest_healthy"
+    candidates:
+      - { provider: openai,    model: "gpt-5.4-nano",          maturity: stable, reasoning: low }
+      - { provider: anthropic, model: "claude-haiku-4-5",      maturity: stable, reasoning: low }
+      - { provider: google,    model: "gemini-2.5-flash-lite", maturity: stable, reasoning: low }
+
+  # Patch generation for minor mechanical fixes (formatter, docs, YAML).
+  patch_worker:
+    selection: "cost_then_quality"
+    candidates:
+      - { provider: openai,    model: "gpt-5.4-mini",          maturity: stable, reasoning: medium }
+      - { provider: google,    model: "gemini-2.5-flash",      maturity: stable, reasoning: medium }
+      - { provider: anthropic, model: "claude-haiku-4-5",      maturity: stable, reasoning: medium }
+
+  # Reviewer / gatekeeper — validates diffs before commit. Quality matters.
+  reviewer_gatekeeper:
+    selection: "quality_first"
+    candidates:
+      - { provider: anthropic, model: "claude-sonnet-4-6",     maturity: stable, reasoning: medium }
+      - { provider: openai,    model: "gpt-5.4",               maturity: stable, reasoning: medium }
+      - { provider: google,    model: "gemini-2.5-pro",        maturity: stable, reasoning: medium }
+
+  # Hard escalation — RCA, multi-file root cause, refactor with ripple.
+  escalation_hard:
+    selection: "best_available"
+    candidates:
+      - { provider: openai,    model: "gpt-5.5",               maturity: stable, reasoning: high }
+      - { provider: anthropic, model: "claude-opus-4-6",       maturity: stable, reasoning: high }
+      - { provider: google,    model: "gemini-2.5-pro",        maturity: stable, reasoning: high }
+
+  # Preview / frontier — non-prod benchmarking ONLY. Never used by tasks
+  # that may land on protected branches. Restricted by contract test.
+  frontier_preview_nonprod:
+    selection: "best_available"
+    candidates:
+      - { provider: google, model: "gemini-3.1-pro-preview",   maturity: preview, reasoning: high }
+      - { provider: google, model: "gemini-3-flash-preview",   maturity: preview, reasoning: medium }
+
+# Task → route mapping. These names are the contract; the autofix
+# runtime calls `route_for_task("ci_failure_classification")` and gets
+# back the route definition.
+tasks:
+  ci_failure_classification:
+    route: router_low_cost
+
+  ci_memory_recall:
+    route: router_low_cost
+
+  ci_patch_generation_minor:
+    route: patch_worker
+
+  ci_patch_review:
+    route: reviewer_gatekeeper
+
+  ci_multifile_root_cause:
+    route: escalation_hard
+
+  # Benchmarking only — workflow_dispatch lane on non-protected branches.
+  # Contract test refuses to add this route to any task that runs on
+  # `push` or `workflow_run` to main.
+  ci_nonprod_benchmark:
+    route: frontier_preview_nonprod

@@ -299,6 +299,34 @@ The template treats model selection as a routing problem, not a brand decision.
 
 The important part is not the provider. It is the routing policy, verification layer, and operation mode boundaries.
 
+### Recommended baseline (verified 2026-04)
+
+The canonical mapping lives in [`templates/config/model_routing_policy.yaml`](templates/config/model_routing_policy.yaml). The table below is a snapshot — model names are a moving target; verify each entry exists in the corresponding provider's stable catalog at adoption time. The ADR-019 contract test enforces structure (preview never lands on protected branches), not specific model identities.
+
+| Role | OpenAI | Anthropic | Google | Use it for |
+|------|--------|-----------|--------|------------|
+| **Router / cheap classify** | `gpt-5.4-nano` | `claude-haiku-4-5` | `gemini-2.5-flash-lite` | Failure triage, extraction, label classification |
+| **Patch worker** | `gpt-5.4-mini` | `claude-haiku-4-5` | `gemini-2.5-flash` | Small patches, formatter fixes, doc edits |
+| **Reviewer / gatekeeper** | `gpt-5.4` | `claude-sonnet-4-6` | `gemini-2.5-pro` | Diff review, risk evaluation, consistency check |
+| **Hard escalation** | `gpt-5.5` | `claude-opus-4-6` | `gemini-2.5-pro` | Multi-file RCA, refactors with ripple, rare CI failures |
+| **Frontier preview (non-prod only)** | — | — | `gemini-3.1-pro-preview`, `gemini-3-flash-preview` | Benchmarking lane, `workflow_dispatch` only — never on `main` |
+
+#### Three pre-tuned profiles
+
+- **Maximum simplicity** (single family): `gpt-5.4-nano` → `gpt-5.4-mini` → `gpt-5.4` → `gpt-5.5`. Cleanest cost/quality gradient.
+- **Mix cost + quality**: `gemini-2.5-flash-lite` (router) → `gpt-5.4-mini` (patcher) → `claude-sonnet-4-6` (reviewer) → `gpt-5.5` or `claude-opus-4-6` (escalation). Strong gatekeeper without paying frontier cost on every call.
+- **Aggressive cost minimization**: `gemini-2.5-flash-lite` → `gemini-2.5-flash` → `gemini-2.5-pro` → escalation only when needed. Best volume economics.
+
+#### Hard rules (codified in `ci_autofix_policy.yaml`)
+
+- AUTO mode never uses escalation-tier models — bounded blast radius implies bounded reasoning need.
+- Preview models are restricted to `workflow_dispatch` and benchmarking lanes; they cannot land on protected branches. The contract test refuses configurations that violate this.
+- Memory-plane signals (ADR-018) can route a query to a more capable model on `repeat_failure_pattern`, but never the other way around — same escalation-only discipline as ADR-010.
+
+#### Honesty caveat
+
+Vendor model names rotate every 6–12 months. The `verified_at` field in `model_routing_policy.yaml` declares when the catalog was last reconciled. If a name in this table no longer exists at the provider, the routing layer falls back to the next candidate in the route — it never silently switches families. Reviewers should re-verify before any rollout to a protected branch.
+
 ---
 
 ## Anti-patterns encoded
