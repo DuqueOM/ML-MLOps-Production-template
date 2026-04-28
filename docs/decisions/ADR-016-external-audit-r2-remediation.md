@@ -383,13 +383,79 @@ Convert the existing runbook templates into reproducible drills with
 captured evidence under `docs/runbooks/drills/` so adopters can
 practise. One drill per quarter; results signed and stored.
 
-### PR-R2-11 — D-01..D-30 anti-patterns as policy tests
+### PR-R2-11 — D-01..D-31 anti-patterns as policy tests ✅
 
-Today D-01..D-30 are documented + enforced by ad-hoc grep checks.
-Promote them to policy tests over **scaffolded repos** (not just the
-template repo) — a dedicated `tests/policy/` suite that runs against
-the output of `new-service.sh`. This catches drift between the
-template's claims and what users actually receive.
+✅ **shipped**.
+
+Promotes D-01..D-31 from ad-hoc grep checks into a dedicated
+`templates/service/tests/policy/` suite that runs against the
+**output of `new-service.sh`**, not the template repo itself. This
+closes the gap between the template's claims and what users actually
+receive when they scaffold a service.
+
+**What landed:**
+
+- `templates/service/tests/policy/conftest.py` — session-scoped
+  `scaffold_dir` fixture that runs `new-service.sh` once per test
+  session into a tmpdir (~45s) and yields the path. Helpers
+  `file_text` / `glob_files` / `yaml_load_all` / `json_load` accept
+  either a relative string or an absolute Path so call-sites stay
+  short. `KEEP_SCAFFOLD=1` preserves the tmpdir for post-mortem.
+
+- `templates/service/tests/policy/test_smoke.py` — 3 fixture-level
+  invariants: (1) directory created, (2) canonical structure
+  (`src/`, `k8s/`, `tests/`), (3) no raw `{ServiceName}` /
+  `{SERVICE}` placeholders survive substitution.
+
+- `templates/service/tests/policy/test_anti_patterns.py` — 11 D-XX
+  policy tests (10 PASS + 1 SKIP because `.gitignore` is at repo
+  root, not service-level):
+    - **D-01** no multi-worker uvicorn in Dockerfile or k8s manifests
+    - **D-02** HPA does not reference memory metric
+    - **D-05** ML packages (numpy/pandas/scipy/sklearn/xgboost/
+      lightgbm) pinned with `~=`, never `==`
+    - **D-10** `.gitignore` blocks `*.tfstate*` (skipped: gitignore
+      lives at repo root, not service)
+    - **D-11** Dockerfile does not COPY models/ or `*.joblib`/`*.pkl`
+    - **D-17** no direct `os.environ["API_KEY"]`-style reads outside
+      `common_utils/secrets.py`
+    - **D-23** liveness and readiness probes use distinct paths
+    - **D-25** `terminationGracePeriodSeconds >= 30` on base
+      Deployments (overlay patches inherit the base value)
+    - **D-27** at least one `PodDisruptionBudget` ships in `k8s/`
+    - **D-29** every overlay Namespace carries
+      `pod-security.kubernetes.io/enforce` label
+    - **D-31** AWS + GCP `iam*.tf` reference all 5 ADR-017 identities
+      (ci / deploy / runtime / drift / retrain)
+  - 2 process-only invariants (D-06, D-13) are present as explicit
+    `@pytest.mark.skip` with reasons tying back to where they ARE
+    enforced (training-time gates, EDA isolation policy).
+
+- `.github/workflows/policy-tests.yml` — runs the suite weekly
+  (Mondays 06:00 UTC) + on-demand via `workflow_dispatch` + on push
+  to `main` when files that could affect the rendered output change
+  (templates/scripts, templates/k8s, templates/infra/terraform,
+  Dockerfile, requirements.txt, AGENTS.md). 15-minute job timeout.
+
+**Why a separate workflow (not part of regular CI):**
+
+Each scaffold takes ~45s on GitHub-hosted runners; the full suite
+runs in ~4-5 minutes. Adding ~5 minutes to every PR's wall-clock
+buys low marginal value (the regular contract tests catch most
+drift) while costing every developer noticeably more iteration time.
+Weekly catches drift before it accumulates; `workflow_dispatch` is
+the on-demand escape hatch for any contributor who wants a green
+signal before merging a templates-touching PR.
+
+**Bug surfaced + fixed during R2-11 itself:**
+
+`templates/infra/terraform/aws/iam.tf` did not mention the literal
+string `runtime` — the per-service IRSA roles ARE the runtime
+identity, but the file's header comment did not say so. The D-31
+test caught this immediately on first run. Fixed in this commit by
+adding a 6-line header that names the role this file plays in the
+ADR-017 5-identity split. This is the exact kind of latent
+documentation drift the suite is designed to catch.
 
 ### PR-R2-12 — Adoption-boundary doc + agentic-fallback path
 

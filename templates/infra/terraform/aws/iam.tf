@@ -1,6 +1,12 @@
 # =============================================================================
 # Per-service IRSA roles + narrow policies (PR-R2-6, audit R2 §3.4).
 #
+# This file implements the `runtime` identity of the ADR-017 5-identity
+# split (ci / deploy / runtime / drift / retrain). The `runtime` IRSA
+# is per-service rather than shared so a compromised service's token
+# cannot move laterally. See iam-roles-split.tf for ci/deploy/drift/
+# retrain (shared infrastructure identities).
+#
 # Each entry in var.service_names gets:
 #   * an IAM role assumable by the K8s ServiceAccount of the same
 #     name in namespace `ml-services`, via the EKS OIDC provider;

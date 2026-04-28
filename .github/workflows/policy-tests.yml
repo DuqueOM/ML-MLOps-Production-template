@@ -1,0 +1,83 @@
+# =============================================================================
+# Policy Tests — D-XX anti-patterns enforced on SCAFFOLDED output.
+#
+# Authority: ADR-016 PR-R2-11.
+#
+# This workflow runs the `templates/service/tests/policy/` suite, which
+# scaffolds a fresh service via `templates/scripts/new-service.sh` and then
+# asserts that AGENTS.md D-01..D-31 invariants hold on the rendered output.
+#
+# Why a dedicated workflow (not part of the regular test job):
+#   - Each scaffold takes ~45s + tests take ~4-5 min total
+#   - The signal is "do scaffolded users get a compliant repo?" — a
+#     per-PR gate is overkill; weekly + on-demand is sufficient
+#   - When this fails, it ALWAYS surfaces a real template drift, never
+#     a flake (the suite is fully deterministic)
+#
+# Triggers:
+#   - schedule: every Monday 06:00 UTC (catches drift introduced over
+#     the previous week's PRs)
+#   - workflow_dispatch: on-demand from the Actions tab
+#   - push to main (informational only — the regular CI gate already
+#     ran the cheap contract tests)
+# =============================================================================
+
+name: Policy Tests (D-XX anti-patterns)
+
+on:
+  schedule:
+    # Mondays 06:00 UTC — early enough that drift from weekend merges
+    # is reported before the team starts the new week.
+    - cron: "0 6 * * 1"
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths:
+      - "templates/scripts/new-service.sh"
+      - "templates/service/tests/policy/**"
+      - "templates/k8s/**"
+      - "templates/infra/terraform/**"
+      - "templates/Dockerfile"
+      - "templates/requirements*.txt"
+      - "AGENTS.md"
+
+permissions:
+  contents: read
+
+jobs:
+  policy-tests:
+    name: Run policy suite over scaffolded output
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pyyaml
+
+      - name: Run policy suite
+        run: |
+          python -m pytest templates/service/tests/policy/ \
+            -v --no-cov -p no:cacheprovider \
+            --tb=short --color=no
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Policy test result: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Suite scaffolds a service via \`new-service.sh\` and asserts" >> $GITHUB_STEP_SUMMARY
+          echo "AGENTS.md D-01..D-31 invariants hold on the rendered output." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "If FAILED: a template change caused drift between the" >> $GITHUB_STEP_SUMMARY
+          echo "documented invariants and what users actually receive." >> $GITHUB_STEP_SUMMARY

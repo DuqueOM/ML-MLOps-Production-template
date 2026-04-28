@@ -178,7 +178,7 @@ locals {
 # plan-time error semantics.
 resource "terraform_data" "network_mode_validation" {
   input = {
-    network_mode    = var.network_mode
+    network_mode     = var.network_mode
     subnet_ids_count = length(var.subnet_ids)
   }
 
