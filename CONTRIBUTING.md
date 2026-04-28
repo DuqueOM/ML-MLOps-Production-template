@@ -1,57 +1,103 @@
 # Contributing to ML-MLOps Production Template
 
-Thank you for considering contributing! This template aims to be the canonical reference for shipping ML models to production.
+Thanks for contributing. This repository is meant to be a serious production template, so we optimize for changes that improve reliability, clarity, security, and repeatability in real ML systems.
 
-## How to Contribute
+## Ground rules
 
-### Reporting Bugs
-- Use [Bug Report](.github/ISSUE_TEMPLATE/bug_report.md) template
-- Include which template file is affected and reproduction steps
+- Follow the invariants and operating model in [AGENTS.md](AGENTS.md).
+- Keep solutions proportional to the problem. This repo is intentionally opinionated, but it should not drift into platform over-engineering.
+- Prefer production-backed patterns over purely theoretical abstractions.
+- If a change affects architecture, governance, security posture, or default behavior, document it with an ADR.
 
-### Suggesting Features
-- Use [Feature Request](.github/ISSUE_TEMPLATE/feature_request.md) template
-- Consider the **Engineering Calibration Principle** — is the proposed change proportional to the problem?
+## How to contribute
 
-### Submitting Changes
+1. Fork the repository.
+2. Create a branch for your change.
+3. Install local checks:
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Install pre-commit hooks: `pip install pre-commit && pre-commit install`
-4. Make your changes
-5. Run quality checks: `pre-commit run --all-files`
-6. Commit using [Conventional Commits](https://www.conventionalcommits.org/):
+   ```bash
+   pip install pre-commit
+   pre-commit install
    ```
-   feat: add GPU node pool to GKE Terraform template
-   fix: correct HPA targetCPUUtilizationPercentage in deployment.yaml
-   docs: add ADR for model versioning strategy
+
+4. Make your changes.
+5. Run the relevant quality gates locally.
+6. Commit with sign-off:
+
+   ```bash
+   git commit -s -m "feat: describe your change"
    ```
-7. Push and open a Pull Request
 
-### Contribution Guidelines
+7. Push and open a pull request.
 
-#### Template Code
-- All template files must have thorough comments explaining customization points
-- Use `{service}`, `{ServiceName}`, `{namespace}` as placeholders — never hardcoded names
-- Follow the invariants in `AGENTS.md` — PRs violating any anti-pattern **D-01 through D-30** will be rejected (the full table is in `AGENTS.md §Anti-Patterns`)
-- Use compatible release pinning (`~=`) for Python ML packages
-- New invariants are documented in an ADR before being added to the table
+## Developer Certificate of Origin (DCO)
 
-#### Agentic System (`.windsurf/`)
-- Rules must specify correct glob patterns for context activation
-- Skills must include `allowed-tools`, `when_to_use`, `argument-hint`, and per-step `Success criteria`
-- Workflows must follow the YAML frontmatter + markdown format
+This project uses the Developer Certificate of Origin (DCO).
 
-#### Documentation
-- Create an ADR for any non-trivial architectural decision
-- Use measured data, not estimates
-- Follow Google-style docstrings for Python
+By contributing, you certify that:
 
-### What We're Looking For
-- New template patterns extracted from production experience
-- Improvements to existing templates based on real-world usage
-- Additional anti-pattern detectors (D-13+)
-- Multi-cloud parity improvements (GCP ↔ AWS)
-- Load test scenarios and production baseline data
+- you created the contribution or otherwise have the right to submit it
+- you understand the contribution will be distributed under the Apache License 2.0
 
-### Code of Conduct
+Every commit must include a `Signed-off-by` line. The simplest way is to use `git commit -s`.
+
+## Commit style
+
+We recommend Conventional Commits:
+
+```text
+feat: add guarded CI autofix policy
+fix: align SLO metric names with service exporter
+docs: clarify operational memory plane boundaries
+```
+
+## What kinds of contributions are useful here
+
+- improvements extracted from real production usage
+- stronger tests for template guarantees
+- better cloud parity between GCP and AWS
+- security, observability, and CI/CD hardening
+- documentation that reduces ambiguity for adopters
+- safer agentic workflows and clearer operating boundaries
+
+## Contribution expectations
+
+### Template code
+
+- Keep scaffolded repos self-contained.
+- Do not introduce hidden runtime dependencies on the template root.
+- Preserve the separation between training, serving, monitoring, and infrastructure concerns.
+- Avoid mutable image tags and static cloud credentials.
+- Keep production defaults safe by default.
+
+### Documentation
+
+- Use measured evidence where possible.
+- Be explicit about boundaries and non-goals.
+- Keep README, ADRs, runbooks, and contribution guidance in sync when behavior changes.
+
+### Agentic system
+
+- `AUTO`, `CONSULT`, and `STOP` behavior must remain auditable.
+- Dynamic risk escalation must only increase caution, never silently weaken policy.
+- New automated repair paths need bounded blast radius and deterministic verification.
+
+## Pull request review
+
+Reviewers will look for:
+
+- operational safety
+- alignment with template invariants
+- clarity of documentation
+- test coverage proportional to risk
+- open-source maintainability
+
+## License
+
+All contributions are accepted under the Apache License 2.0. No Contributor License Agreement (CLA) is required.
+
+By submitting a contribution, you agree to the terms defined in the DCO.
+
+## Code of conduct
+
 This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md).

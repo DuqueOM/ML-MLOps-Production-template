@@ -1,921 +1,608 @@
 # ML-MLOps Production Template
 
-**Ship ML models to production without reinventing the infrastructure.** This template encodes **30 production anti-patterns**, multi-cloud K8s deployment (GKE + EKS), an agentic behavior protocol with **dynamic risk escalation** (AUTO / CONSULT / STOP — ADR-010), closed-loop monitoring with delayed ground truth + sliced performance + champion/challenger, supply-chain security (Cosign + SBOM attestation + Kyverno + Pod Security Standards), and a formal environment-promotion chain (dev → staging → prod) with governed GitHub Environment gates (ADR-011) — so your AI assistant builds it right the first time.
+Opinionated, production-grade template for building and operating ML systems on Kubernetes with multi-cloud deployment (GKE + EKS), governed CI/CD, closed-loop monitoring, supply-chain security, and agentic automation that stays inside enterprise guardrails.
 
 [![Release](https://img.shields.io/github/v/release/DuqueOM/ML-MLOps-Production-Template.svg)](https://github.com/DuqueOM/ML-MLOps-Production-Template/releases)
 [![Python 3.11 | 3.12](https://img.shields.io/badge/python-3.11_%7C_3.12-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-yellow.svg)](LICENSE)
 [![Terraform >= 1.7](https://img.shields.io/badge/terraform-%3E%3D1.7-blueviolet.svg)](https://www.terraform.io/)
 [![Kubernetes](https://img.shields.io/badge/k8s-GKE%20%2B%20EKS-326CE5.svg)](https://kubernetes.io/)
 
 [![Validate Templates](https://github.com/DuqueOM/ML-MLOps-Production-Template/actions/workflows/validate-templates.yml/badge.svg)](https://github.com/DuqueOM/ML-MLOps-Production-Template/actions/workflows/validate-templates.yml)
 [![codecov](https://codecov.io/gh/DuqueOM/ML-MLOps-Production-Template/branch/main/graph/badge.svg)](https://codecov.io/gh/DuqueOM/ML-MLOps-Production-Template)
-
 [![Template](https://img.shields.io/badge/use%20as-template-brightgreen.svg)](https://github.com/DuqueOM/ML-MLOps-Production-Template/generate)
-[![Anti-Patterns](https://img.shields.io/badge/anti--patterns-30%20encoded-red.svg)](#anti-pattern-detection)
-[![Clouds](https://img.shields.io/badge/clouds-GCP%20%2B%20AWS-orange.svg)](#technology-stack)
+[![Anti-Patterns](https://img.shields.io/badge/anti--patterns-30%20encoded-red.svg)](#anti-patterns-encoded)
 [![Agentic](https://img.shields.io/badge/agentic-Windsurf_%7C_Claude_Code_%7C_Cursor-blueviolet.svg)](#agentic-system)
 
 ```bash
-# Clone → scaffold → serve in 3 commands
 git clone https://github.com/DuqueOM/ML-MLOps-Production-Template.git
 cd ML-MLOps-Production-Template
 ./templates/scripts/new-service.sh ChurnPredictor churn_predictor
 ```
 
-**[QUICK_START.md](QUICK_START.md)** — From clone to first model served in 10 minutes
-&nbsp;|&nbsp; **[RUNBOOK.md](RUNBOOK.md)** — Template operations reference
+**Start here:** [QUICK_START.md](QUICK_START.md) | [RUNBOOK.md](RUNBOOK.md) | [AGENTS.md](AGENTS.md) | [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ---
 
-## Quick Navigation — pick your role
+## What this template is
 
-Different readers want different things. Find your row, jump to the
-section that matches.
+This repository is a reference template for teams that want strong production defaults without adopting a heavyweight ML platform too early. It is intentionally opinionated where production failures are expensive and intentionally flexible where teams need domain-specific control.
+
+It ships:
+
+- Async ML serving patterns that avoid common Kubernetes and FastAPI failure modes.
+- Multi-cloud Kubernetes and Terraform scaffolding for GCP and AWS.
+- Environment promotion from `dev -> staging -> prod` with audit trail, approvals, digest-based deploys, signing, and attestations.
+- Closed-loop monitoring with prediction logging, delayed ground truth, sliced performance, champion/challenger evaluation, and retraining hooks.
+- Security controls for secrets, identity federation, SBOM generation, image signing, admission policy, and pod hardening.
+- Agentic governance through `AUTO / CONSULT / STOP`, plus dynamic risk escalation based on live signals.
+- Safe CI self-healing for low-risk failures, with bounded blast radius and mandatory verification.
+- An optional Operational Memory Plane that helps agents retrieve prior incidents, decisions, deploy regressions, and successful remediations.
+
+This is not a generic "starter repo". It is a production template with encoded operating constraints.
+
+---
+
+## What is production-ready here
+
+The template is positioned as a hardened open-source baseline for enterprise ML services. After scaffold and environment wiring, the following areas are treated as production-ready:
+
+| Area | Status | What that means |
+|------|--------|-----------------|
+| Service scaffold | Production-ready | FastAPI serving, async inference, contract versioning, structured errors, domain hooks, tests, and observability are wired as first-class concerns. |
+| Kubernetes runtime | Production-ready | Single-worker pod model, split probes, startup gating, PDB, HPA, pod security labels, digest-pinned deploys, and non-root runtime defaults are part of the base. |
+| Multi-cloud infrastructure | Production-ready | GCP and AWS both ship with environment separation, remote state, identity federation, secret manager patterns, and reproducible Terraform layouts. |
+| CI/CD | Production-ready | Build, scan, sign, attest, promote, smoke-test, drift-check, retrain, and audit paths are governed and traceable. |
+| Closed-loop monitoring | Production-ready | Prediction logging, ground-truth ingestion, sliced performance analysis, drift heartbeat, and champion/challenger comparisons are part of the standard operating model. |
+| Security and supply chain | Production-ready | Secret scanning, SBOM, image signing, admission policy, and least-privilege cloud identity are part of the deploy contract. |
+| Agentic controls | Production-ready | Static operation modes, dynamic risk escalation, typed handoffs, and auditable decisions are all encoded. |
+| Operational Memory Plane | Optional companion | Recommended for larger teams or repos with frequent incident/release cycles. It augments decisions; it is not a required dependency for serving. |
+
+External dependencies still remain your responsibility: cloud accounts, Kubernetes clusters, MLflow backend, secret stores, and observability backends must exist before the template can operate in a real environment.
+
+---
+
+## Quick navigation
 
 | If you want to... | Read first | Then |
 |-------------------|------------|------|
-| **See the demo work** (5 min, no commit) | [Try It in 5 Minutes](#try-it-in-5-minutes) | [QUICK_START.md](QUICK_START.md) |
-| **Scaffold a new ML service** for your domain | [Quick Start](#quick-start) | [Templates Detail](#templates-detail) → run `./templates/scripts/new-service.sh` |
-| **Understand the architecture** before adopting | [Template Maturity Levels](#template-maturity-levels) | [Architecture Overview](#architecture-overview) → [Repository Structure](#repository-structure) |
-| **Operate a service in production** | [RUNBOOK.md](RUNBOOK.md) | [Critical Patterns (Invariants)](#critical-patterns-invariants) → [Anti-Pattern Detection](#anti-pattern-detection) |
-| **Decide whether this beats other templates** | [What's Different](#whats-different-from-other-templates) | [Real-World Example](#real-world-example) |
-| **Contribute or extend** the agentic system | [Agentic System](#agentic-system) | [CONTRIBUTING.md](CONTRIBUTING.md) → `AGENTS.md` |
-| **Customize for your stack** (auth, secrets, IaC) | [docs/runbooks/](docs/runbooks/) (gcp-wif-setup, mcp-config-hygiene) | `templates/infra/terraform/` |
-
-## Real-World Example
-
-This template was extracted from **[ML-MLOps-Portfolio](https://github.com/DuqueOM/ML-MLOps-Portfolio)** — a production portfolio with 3 ML services (BankChurn, NLPInsight, ChicagoTaxi), 18 ADRs, 395+ tests, and live deployments on GKE + EKS.
-
-| Resource | Link |
-|----------|------|
-| **Source repo** | [github.com/DuqueOM/ML-MLOps-Portfolio](https://github.com/DuqueOM/ML-MLOps-Portfolio) |
-| **Full documentation (MkDocs)** | [duqueom.github.io/ML-MLOps-Portfolio](https://duqueom.github.io/ML-MLOps-Portfolio/) |
-| **Architecture decisions (18 ADRs)** | [portfolio ADR index](https://duqueom.github.io/ML-MLOps-Portfolio/decisions/) |
-| **Operational status** | [PORTFOLIO_STATUS.md](https://github.com/DuqueOM/ML-MLOps-Portfolio/blob/main/PORTFOLIO_STATUS.md) |
-
-The portfolio demonstrates the patterns this template encodes — real
-incidents diagnosed, real trade-offs documented, real deployments verified.
+| Scaffold a new ML service | [QUICK_START.md](QUICK_START.md) | `./templates/scripts/new-service.sh` |
+| Understand the operating model | [AGENTS.md](AGENTS.md) | [docs/decisions/](docs/decisions/) |
+| Review deployment and rollback flow | [RUNBOOK.md](RUNBOOK.md) | `templates/cicd/` and `templates/k8s/` |
+| Evaluate security posture | [SECURITY.md](SECURITY.md) | `templates/infra/`, `templates/k8s/`, `templates/cicd/` |
+| Extend agentic behavior | [AGENTS.md](AGENTS.md) | `.windsurf/`, `.cursor/`, `.claude/` |
+| Contribute to the template | [CONTRIBUTING.md](CONTRIBUTING.md) | This README's license and governance sections |
 
 ---
 
-## What This Is
+## Architecture overview
 
-A **complete, opinionated template** for shipping ML models to production — not a toy notebook, not a mega-framework. It includes:
-
-- **An agentic system** (**15 rules, 16 skills, 12 slash workflows** — full parity across Windsurf + Claude Code + Cursor) with the **Agent Behavior Protocol** (AUTO/CONSULT/STOP) AND the **Dynamic Behavior Protocol** (ADR-010) that escalates based on live risk signals: `incident_active`, `drift_severe`, `error_budget_exhausted`, `off_hours`, `recent_rollback`
-- **Production-ready templates** for every layer: EDA → training → serving → infrastructure → CI/CD → monitoring → documentation
-- **30 encoded invariants** (D-01 → D-30) that prevent the most common ML production failures — event loop blocking, memory HPA, model-in-image, data leakage, hardcoded credentials, unsigned images, probe mis-split, missing PodDisruptionBudget, API contract drift, Pod Security Standards violations, missing SBOM attestations, and more
-- **Supply-chain security** — gitleaks, Trivy, Syft SBOM, Cosign keyless signing (GitHub OIDC), Cosign attestations, Kyverno admission, PSS namespace labels
-- **Closed-loop monitoring** — prediction logger + delayed ground truth ingestion + sliced performance monitor + Champion/Challenger statistical gate (McNemar + bootstrap ΔAUC) + Grafana closed-loop dashboard (10 panels)
-- **Engineering calibration** — every component is sized to actual requirements; avoids both under-engineering and over-engineering (CronJob not Airflow, Pandera not Great Expectations, kubectl-apply not ArgoCD until ADR-013 triggers fire)
-
-## Template Maturity Levels
-
-Not every component ships at the same readiness. This table tells you
-what works **today**, what works **after scaffolding** your service,
-and what requires **production hardening before customer traffic**.
-Read it before adopting — it sets expectations and prevents surprises.
-
-| Component | Maturity | What that means |
-|-----------|:--------:|------------------|
-| `examples/minimal/` (E2E demo) | 🟢 demo-ready | `git clone && python train.py && uvicorn serve:app` works in <2 min. CI proves it on every PR (`example-e2e` job). |
-| Anti-pattern catalog (D-01..D-30) | 🟢 demo-ready | Encoded in agent rules across all 3 IDEs. Detection on every code-touching session. |
-| `validate_agentic.py` + CI gate | 🟢 demo-ready | `--strict` is required for green CI; broken cross-references fail the PR. |
-| FastAPI service template (`templates/service/`) | 🟡 scaffold-ready | Real Python, Pydantic schemas, ThreadPoolExecutor, SHAP. Customize `app/schemas.py` + `src/<svc>/training/` per your domain. `pytest tests/` passes after scaffolding. |
-| Kustomize base + 6 overlays (`templates/k8s/`) | 🟡 scaffold-ready | All 6 overlays ship: `gcp-{dev,staging,prod}` and `aws-{dev,staging,prod}`. Each carries env-specific resources + `namespace.yaml` with PSS labels (D-29: dev/staging baseline+restricted-warn, prod restricted enforce). Verify replica counts + resource requests against your traffic profile. |
-| Terraform IaC (`templates/infra/terraform/{gcp,aws}`) | 🟡 scaffold-ready | Valid plans for both clouds. Replace placeholders (project IDs, regions, bucket names). Run `terraform plan` against your env before `apply`. |
-| CI/CD chain dev→staging→prod (`templates/cicd/`) | 🟡 scaffold-ready | Reusable `deploy-common.yml`. Requires GitHub Environment Protection Rules configured (see `docs/environment-promotion.md`). |
-| Closed-loop monitoring (prediction logger + ground truth + sliced perf) | 🟡 scaffold-ready | Code is canonical; you provide the ground-truth source config (`configs/ground_truth_source.yaml`) and slice definitions (`configs/slices.yaml`). |
-| Drift detection + Retraining (`drift-detection.yml` + `retrain-service.yml`) | 🟡 scaffold-ready | PSI computation, Champion/Challenger statistical comparison, and model promotion are wired end-to-end with cloud-aware adapters. Set `DATA_BUCKET_KIND={gcs\|s3}` + `MODEL_BUCKET_KIND={gcs\|s3}` plus the bucket names; workflows fail loudly on missing vars (no more silent no-op TODO). Calibrate per-feature thresholds with at least 30 days of production data before flipping alerts to enforce. |
-| Cosign keyless signing + SBOM attestation by digest | � scaffold-ready | Build job captures image digest, signs `<repo>@sha256:...`, attaches SBOM as Cosign attestation, and `deploy-common.yml` patches the overlay to `kubectl apply` the same digest. Closes the trust chain end-to-end. Production adoption only requires: GCP WIF (`docs/runbooks/gcp-wif-setup.md`), AWS IRSA (`docs/runbooks/aws-irsa-setup.md`), and a one-time Kyverno install per cluster. |
-| Dynamic Behavior Protocol (live Prometheus signals, ADR-010) | 🔴 prod-hardening | `_load_prometheus_signals` is implemented and tested. Production adoption requires Prometheus reachable from CI runners, plus the metrics from `templates/monitoring/prometheus/rules/*.yaml` shipped to your scrape targets. |
-| MLflow tracking server | 🔴 prod-hardening | Service code logs runs and registers models. Self-host or use Databricks/Sagemaker MLflow; the template does not provision the server. |
-| Multi-region failover, blue/green, canary | ⚫ not in scope | Out of template scope. Use Argo Rollouts (mentioned in `rollback` skill) once you outgrow the rolling-update default. |
-
-**Reading the table**: 🟢 = works as shipped. 🟡 = works after `new-service.sh` + your domain wiring. 🔴 = template provides the contract; you provision the external infra. ⚫ = explicitly excluded by ADR-001 boundaries.
-
-## Who It's For
-
-- ML engineers shipping models to production for the first time
-- Teams standardizing their MLOps across multiple services
-- Engineers using AI coding assistants (Windsurf Cascade, Claude Code, Cursor) who want those tools to follow best practices automatically
-
----
-
-## Try It in 5 Minutes
-
-A working fraud detection service that demonstrates the entire pipeline:
-
-```bash
-git clone https://github.com/DuqueOM/ML-MLOps-Production-Template.git
-cd ML-MLOps-Production-Template
-
-# Zero-to-ready in one command (detects OS, installs deps, configures MCPs, runs example)
-make bootstrap
-
-# Or just the demo (install → train → test → drift)
-make demo-minimal
-
-# Or with Docker (API + MLflow)
-docker compose up --build
-# API: http://localhost:8000/docs | MLflow: http://localhost:5000
+```mermaid
+flowchart TD
+    A["Source + Data"] --> B["Training + Validation"]
+    B --> C["Model Registry / Artifacts"]
+    C --> D["Docker Build + Sign + Attest"]
+    D --> E["Dev -> Staging -> Prod Promotion"]
+    E --> F["Kubernetes Serving"]
+    F --> G["Metrics / Logs / Alerts"]
+    F --> H["Prediction Logging"]
+    H --> I["Ground Truth + Sliced Performance"]
+    I --> J["Drift / Quality / Retrain Decisions"]
+    G --> K["Operational Memory Plane (optional)"]
+    I --> K
+    E --> K
+    K --> L["Agentic Recall for CI, Deploy, Incident, Retrain"]
 ```
 
-> `make bootstrap` is idempotent and safe to re-run. Flags: `--skip-mcp`, `--skip-demo`, `--check-only`.
+### Design principles
 
-Or step by step:
+- The training, serving, monitoring, and retraining path is explicit and reviewable.
+- The scaffolded repository is self-contained. It does not depend on hidden files from the template root after generation.
+- The template uses strong defaults for production invariants and lets teams customize domain features, schema, model selection, thresholds, and integrations.
+- Governance is additive. Dynamic signals can escalate a decision to a safer mode; they cannot silently weaken policy.
+
+---
+
+## Core capabilities
+
+### Serving and APIs
+
+- Async FastAPI serving with `run_in_executor` for CPU-bound inference.
+- Single-worker pod model for correct HPA behavior.
+- Request validation, contract versioning, snapshot-based API checks, and structured error envelopes.
+- Model loading through init containers and shared volumes instead of baking models into images.
+- Warm-up path for model readiness and SHAP explainer caching.
+
+### Kubernetes and runtime
+
+- Kustomize base plus six overlays: `gcp-dev`, `gcp-staging`, `gcp-prod`, `aws-dev`, `aws-staging`, `aws-prod`.
+- CPU-only HPA, PodDisruptionBudget, NetworkPolicy, RBAC, non-root security context, and Pod Security Standards labels.
+- Separate liveness, readiness, and startup probes.
+- Digest-based deployment and immutable image flow.
+
+### Infrastructure
+
+- Terraform layouts separated by cloud and environment concerns.
+- Remote state patterns for both GCP and AWS.
+- Workload Identity and IRSA as the default runtime identity model.
+- Example resource topology for buckets, registries, clusters, IAM, and observability prerequisites.
+
+### CI/CD and controlled automation
+
+- Build -> scan -> sign -> attest -> deploy -> smoke-test promotion chain.
+- Drift detection and retraining workflows as first-class operational paths.
+- Audit trail written to JSONL and surfaced in GitHub Actions summaries.
+- Controlled CI self-healing for minor failures with policy-based limits.
+
+### Data validation and ML quality
+
+- Pandera-based contracts for data validation.
+- Leakage checks, baseline distributions, reproducibility hooks, and configurable quality gates.
+- Fairness checks, champion/challenger evaluation, and retraining evidence packages.
+- Versioned artifacts and model promotion rules that are meant to fail closed.
+
+### Observability and closed-loop monitoring
+
+- Prometheus metrics, structured logs, Grafana dashboards, and alert rules.
+- Prediction logging with `prediction_id` and `entity_id` as required primitives.
+- Delayed ground-truth ingestion, sliced performance monitoring, heartbeat monitoring, and trend analysis.
+- Metrics and alerts designed for incident response and governed promotion.
+
+### Security and supply chain
+
+- Secret scanning, vulnerability scanning, SBOM generation, Cosign signing, and attestation.
+- Admission-policy-oriented deployment posture.
+- Least-privilege identity patterns for cloud access.
+- Clear separation of dev, staging, and production credentials and approval paths.
+
+### Technology stack
+
+This is the concrete stack behind the template. These are also the terms most teams search for when evaluating whether a template fits their environment.
+
+| Layer | Primary technologies | What they cover |
+|-------|----------------------|-----------------|
+| ML and training | Python 3.11+, scikit-learn, XGBoost, LightGBM, Optuna | baseline models, ensembles, hyperparameter tuning |
+| Serving and API | FastAPI, Uvicorn, Pydantic | async inference API, contract validation, structured responses |
+| Explainability | SHAP | feature attribution in original feature space |
+| Data validation and pipelines | Pandera, pandas, DVC | schema checks, dataset versioning, reproducible pipelines |
+| Model registry and artifacts | MLflow, joblib | experiment tracking, model registry, serialized artifacts |
+| Containers and packaging | Docker, multi-stage builds | image build, non-root runtime, init-container model loading |
+| Kubernetes runtime | Kubernetes, Kustomize, HPA, PodDisruptionBudget, NetworkPolicy | deployment, autoscaling, resilience, network isolation |
+| Infrastructure as code | Terraform, GKE, EKS, GCS, S3, Artifact Registry, ECR | cloud provisioning, remote state, multi-cloud separation |
+| Observability | Prometheus, Grafana, Alertmanager, Evidently | metrics, dashboards, alerting, drift and performance monitoring |
+| CI/CD and security | GitHub Actions, Trivy, Syft, Cosign, Kyverno, gitleaks | build, scan, sign, attest, policy enforcement, secret detection |
+
+---
+
+## Agentic system
+
+The template treats agent behavior as an engineering surface, not a prompt trick.
+
+### Static decision protocol
+
+Every operation maps to one of three modes:
+
+| Mode | Meaning | Examples |
+|------|---------|----------|
+| `AUTO` | Safe to execute without waiting for approval | scaffolding, docs, tests, local training, lint, read-only inspection |
+| `CONSULT` | Propose plan and rationale, then wait for approval | staging deploys, workflow changes with moderate blast radius, non-prod infra changes |
+| `STOP` | Block and require explicit human governance | production infra changes, quality-gate override, secret rotation, destructive cloud actions |
+
+### Dynamic escalation
+
+The template also supports live escalation based on risk signals such as:
+
+- severe drift
+- active incident
+- exhausted error budget
+- recent rollback
+- off-hours deployment
+- suspicious quality signals
+- detected credential pattern
+
+Dynamic escalation only moves toward a safer mode. It never downgrades a risky action.
+
+### Typed handoffs and auditability
+
+- Inter-agent handoffs use typed dataclasses instead of ad-hoc dictionaries.
+- Every meaningful operation produces an audit entry.
+- Consulted or blocked operations can be surfaced as GitHub issues with evidence.
+
+See [AGENTS.md](AGENTS.md) for the canonical operation matrix and invariant catalog.
+
+---
+
+## Operational Memory Plane
+
+The Operational Memory Plane is an optional companion capability for repos that want agents to learn from prior work without introducing hidden behavior.
+
+### What it is
+
+- A retrieval layer for prior incidents, deploy regressions, postmortems, drift events, training decisions, and successful fixes.
+- A derived memory system, not the source of truth.
+- Backed by structured metadata, embeddings, and evidence references to canonical artifacts.
+
+### What it is not
+
+- It is not in the synchronous `/predict` path.
+- It does not change policy by itself.
+- It does not replace audit logs, issues, runbooks, or ADRs.
+
+### How it is used
+
+- Before deploy: retrieve similar release failures and known bad remediation patterns.
+- Before retrain: recall similar drift events, challenger outcomes, and previous thresholds.
+- During incidents: retrieve similar symptoms, runbooks, and postmortem summaries.
+- During CI repair: recall past failures and successful bounded fixes.
+
+The operational rule is simple: memory can add context and escalate caution, but it cannot silently approve a risky action.
+
+---
+
+## Agentic CI self-healing
+
+The template supports a bounded self-healing lane for CI. This is not "let the agent fix anything." It is a policy-governed repair loop with verification, audit, and branch isolation.
+
+### Safety model
+
+- Repairs happen on a dedicated branch, never directly on `main`.
+- Blast radius is capped by file count, line count, and retry count.
+- Protected paths and sensitive workflows are excluded from `AUTO`.
+- Every fix must re-run targeted verification before it can be proposed.
+- Failure to verify escalates the action to `CONSULT` or `STOP`.
+
+### Repair matrix
+
+| Failure class | Mode | Examples |
+|---------------|------|----------|
+| formatting drift | `AUTO` | lint formatting, imports, whitespace |
+| documentation quality | `AUTO` | markdown issues, link fixes, generated docs drift |
+| non-sensitive config syntax | `AUTO` | YAML, TOML, JSON syntax repairs in low-risk areas |
+| fixture or snapshot alignment | `CONSULT` | test payload alignment, deterministic snapshot refresh |
+| non-prod workflow repair | `CONSULT` | CI-only workflow fixes, path updates, harness repairs |
+| security, auth, deploy, infra, or quality gate failures | `STOP` | secrets, identity, prod deploy, Terraform, fairness, drift, retrain gates |
+
+This lane is designed to keep CI moving without allowing agent autonomy to leak into high-risk change surfaces.
+
+---
+
+## Model routing policy
+
+The template assumes model usage should be cost-aware, task-aware, and vendor-agnostic.
+
+### Routing roles
+
+| Task type | Route | Expected behavior |
+|-----------|-------|-------------------|
+| failure classification, extraction, low-cost triage | low-cost router | prioritize speed and cost |
+| small patch generation | patch worker | optimize for bounded code edits |
+| diff review and risk evaluation | reviewer / gatekeeper | prioritize consistency and policy awareness |
+| multi-file root cause analysis | escalation | use stronger reasoning only when needed |
+
+### Provider stance
+
+- OpenAI, Anthropic, and Google models can all fit this template.
+- Stable, mid-cost workhorse models should handle the default lanes.
+- Frontier models should be reserved for escalation paths, hard RCA, or advisory benchmarking.
+- Preview models should not be used on protected branches or governance-critical workflows.
+
+The important part is not the brand. It is the routing policy, verification layer, and operation mode boundaries.
+
+---
+
+## Anti-patterns encoded
+
+The template encodes and audits 30 production anti-patterns across serving, training, Kubernetes, Terraform, security, observability, and delivery.
+
+| ID | Anti-pattern | Corrective action |
+|----|--------------|-------------------|
+| D-01 | `uvicorn --workers N` in Kubernetes | Use one worker per pod and move CPU-bound inference into `ThreadPoolExecutor`. |
+| D-02 | Memory as an HPA metric for ML pods | Use CPU-only HPA so scale-down remains meaningful. |
+| D-03 | `model.predict()` called directly in an async endpoint | Wrap inference with `run_in_executor`. |
+| D-04 | `shap.TreeExplainer` with ensemble or pipeline models | Use `KernelExplainer` with a stable prediction wrapper. |
+| D-05 | Exact `==` version pinning for ML dependencies | Use compatible release pinning such as `~=`. |
+| D-06 | Unrealistically high primary metric | Treat as a leakage investigation, not as a promotion win. |
+| D-07 | SHAP background sample contains only one class | Replace with a representative background sample. |
+| D-08 | PSI computed with uniform bins | Use quantile-based bins derived from the reference distribution. |
+| D-09 | Drift detection without heartbeat alerting | Add heartbeat alerting for broken or stalled CronJobs. |
+| D-10 | `terraform.tfstate` committed to Git | Move state to remote storage and rotate exposed credentials. |
+| D-11 | Model artifacts baked into the Docker image | Download models at runtime through init containers and shared volumes. |
+| D-12 | No quality gates before promotion | Enforce metrics, fairness, leakage, and integrity gates before deploy. |
+| D-13 | EDA executed directly on production data | Work from an isolated copy under `data/raw/` and keep EDA out of prod paths. |
+| D-14 | Pandera schema without observed bounds from EDA | Add observed ranges and constraints from exploratory analysis. |
+| D-15 | Baseline distributions not persisted for drift | Save and version baseline distributions for drift consumers. |
+| D-16 | Feature engineering without rationale | Document feature proposals and tie them to EDA evidence. |
+| D-17 | Hardcoded credentials in code or config | Use secret manager integrations through shared utilities. |
+| D-18 | Static AWS keys or GCP JSON keys in production | Use IRSA on AWS and Workload Identity on GCP. |
+| D-19 | Unsigned images or missing SBOM in production | Sign images, generate SBOMs, and enforce them at admission time. |
+| D-20 | Prediction logs missing `prediction_id` or `entity_id` | Require both fields for traceability and ground-truth joins. |
+| D-21 | Prediction logging blocks the async event loop | Buffer and flush logging asynchronously in the background. |
+| D-22 | Logging backend failure leaks into the HTTP response path | Swallow logging failures and surface them as observability counters. |
+| D-23 | Shared liveness and readiness endpoint | Split `/health`, `/ready`, and startup gating for warm-up correctness. |
+| D-24 | SHAP explainer rebuilt on every request | Build once during warm-up and reuse from application state. |
+| D-25 | Pod can be terminated mid-request | Keep `terminationGracePeriodSeconds` above graceful shutdown timeout. |
+| D-26 | Deploys bypass staging validation | Enforce dev -> staging -> prod promotion with environment approvals. |
+| D-27 | Deployment ships without a PodDisruptionBudget | Require a PDB and sane minimum replica assumptions. |
+| D-28 | Breaking API change without version bump and snapshot refresh | Refresh OpenAPI snapshot and apply semantic version discipline. |
+| D-29 | Namespace missing Pod Security Standards labels | Label namespaces and enforce the correct pod security level by environment. |
+| D-30 | Production image lacks SBOM attestation | Attach CycloneDX SBOM attestation as part of the signed release chain. |
+
+The full invariant text and operating rules live in [AGENTS.md](AGENTS.md), but this table is the fast scan most adopters want before they clone the repo.
+
+---
+
+## Repository structure
+
+```text
+templates/
+  service/            FastAPI app, training package, tests, Dockerfile
+  common_utils/       shared contracts, audit, secrets, persistence, telemetry
+  k8s/                base manifests, overlays, policies, monitoring rules
+  infra/              Terraform for GCP and AWS, local MLflow helpers
+  cicd/               GitHub Actions workflow templates
+  scripts/            scaffolding, deploy, health, promotion helpers
+  docs/               ADR templates, runbooks, service docs, release assets
+  monitoring/         Grafana and Prometheus templates
+
+examples/
+  minimal/            local end-to-end demo
+
+docs/
+  decisions/          template-level ADRs
+
+.windsurf/
+.cursor/
+.claude/
+  rules, skills, workflows, and parity shims for supported IDEs
+```
+
+<details>
+<summary>Expanded repository tree</summary>
+
+```text
+templates/
+  service/
+    app/
+      main.py
+      fastapi_app.py
+      schemas.py
+    src/{service}/
+      training/
+        train.py
+        features.py
+        evaluate.py
+      monitoring/
+        drift_detection.py
+        performance_monitor.py
+      schemas.py
+    tests/
+      unit/
+      integration/
+      contract/
+      load_test.py
+    scripts/
+      refresh_contract.py
+      benchmark_executor.py
+    Dockerfile
+    pyproject.toml
+    requirements.txt
+    dvc.yaml
+  common_utils/
+    agent_context.py
+    risk_context.py
+    secrets.py
+    prediction_logger.py
+    telemetry.py
+  k8s/
+    base/
+      deployment.yaml
+      hpa.yaml
+      pdb.yaml
+      networkpolicy.yaml
+      rbac.yaml
+      slo-prometheusrule.yaml
+    overlays/
+      gcp-dev/
+      gcp-staging/
+      gcp-prod/
+      aws-dev/
+      aws-staging/
+      aws-prod/
+    policies/
+      pod-security-standards.yaml
+  infra/
+    terraform/
+      gcp/
+      aws/
+    docker-compose.mlflow.yml
+  cicd/
+    ci.yml
+    deploy-common.yml
+    drift-detection.yml
+    retrain-service.yml
+  scripts/
+    new-service.sh
+    deploy.sh
+    promote_model.sh
+    health_check.sh
+  docs/
+    ADR-template.md
+    runbook-template.md
+    CHECKLIST_RELEASE.md
+  monitoring/
+    grafana/
+    prometheus/
+
+docs/
+  decisions/
+  runbooks/
+  incidents/
+  internal/
+
+examples/
+  minimal/
+    train.py
+    serve.py
+    drift_check.py
+
+.windsurf/
+  rules/
+  skills/
+  workflows/
+.cursor/
+  rules/
+  commands/
+  skills/
+.claude/
+  rules/
+  commands/
+  skills/
+```
+
+</details>
+
+---
+
+## Quick start
+
+### 1. Try the demo
+
+```bash
+make bootstrap
+make demo-minimal
+```
+
+Or run the minimal example manually:
 
 ```bash
 cd examples/minimal
 pip install -r requirements.txt
-
-# Train model (generates synthetic data, validates with Pandera, runs quality gates)
 python train.py
-
-# Start the API (async inference + SHAP + Prometheus metrics)
 uvicorn serve:app --host 0.0.0.0 --port 8000
-
-# Predict (in another terminal)
-curl -X POST http://localhost:8000/predict \
-  -H "Content-Type: application/json" \
-  -d '{"amount": 150.0, "hour": 2, "is_foreign": true, "merchant_risk": 0.8, "distance_from_home": 45.0}'
-
-# With SHAP explanation
-curl "http://localhost:8000/predict?explain=true" \
-  -X POST -H "Content-Type: application/json" \
-  -d '{"amount": 9500.0, "hour": 3, "is_foreign": true, "merchant_risk": 0.9, "distance_from_home": 200.0}'
-
-# Run regression tests (leakage, SHAP consistency, latency, fairness)
-pytest test_service.py -v
-
-# Run drift detection (simulates production drift)
-python drift_check.py
 ```
 
-See [`examples/minimal/`](examples/minimal/) for the full working example.
-
----
-
-## Architecture Overview
-
-```
-┌──────────────────────────────────────────────────────────────────────────┐
-│                     AGENTIC SYSTEM                                       │
-│                                                                          │
-│  AGENTS.md           → Canonical invariants (D-01 → D-30) + protocols    │
-│  CLAUDE.md           → Claude Code project context                       │
-│  .claude/rules/      → 14 context-aware rules (paths: globs)             │
-│  .claude/commands/   → 12 slash commands (pointers to workflows)         │
-│  .claude/skills/     → INDEX.md with 16 skills + authorization modes     │
-│  .cursor/rules/      → 12 MDC rules (globs)                              │
-│  .cursor/commands/   → 12 slash commands (pointers to workflows)         │
-│  .cursor/skills/     → INDEX.md with 16 skills + authorization modes     │
-│  .windsurf/rules/    → 15 context-aware behavioral constraints           │
-│  .windsurf/skills/   → 16 multi-step operational procedures              │
-│  .windsurf/workflows/→ 12 prompt-triggered slash commands                │
-│  Agent Behavior Protocol → static AUTO/CONSULT/STOP mapping (AGENTS.md)  │
-│  Dynamic Behavior Protocol → ADR-010 risk-signal escalation              │
-│                                                                          │
-├──────────────────────────────────────────────────────────────────────────┤
-│                     TEMPLATE SYSTEM                                      │
-│                                                                          │
-│  templates/service/     → FastAPI + training + monitoring                │
-│  templates/common_utils/→ Shared library (seed, logging, persistence)    │
-│  templates/k8s/base/    → Deployment, HPA, Kustomize base, Argo Rollouts │
-│  templates/infra/       → Terraform GCP + AWS                            │
-│  templates/cicd/        → GitHub Actions (CI, deploy, drift, retrain)    │
-│  templates/scripts/     → deploy.sh, promote_model.sh, health_check      │
-│  templates/docs/        → ADR, runbook, service README                   │
-│  templates/monitoring/  → Grafana dashboard + Prometheus alerts          │
-│                                                                          │
-├──────────────────────────────────────────────────────────────────────────┤
-│                     TARGET PROJECT                                       │
-│                                                                          │
-│  {ServiceName}/                                                          │
-│  ├── app/           → FastAPI (1 worker, ThreadPoolExecutor)             │
-│  ├── src/{service}/                                                      │
-│  │   ├── training/  → train.py, features.py, model.py                    │
-│  │   ├── monitoring/→ drift_detection.py, business_kpis.py               │
-│  │   └── schemas.py → Pandera DataFrameModel                             │
-│  ├── tests/         → unit, integration, explainer, load                 │
-│  ├── k8s/base/      → manifests + kustomize base                         │
-│  ├── k8s/overlays/  → gcp-{dev,staging,prod}/ + aws-{dev,staging,prod}/  │
-│  ├── infra/         → terraform/gcp/ + terraform/aws/                    │
-│  ├── docs/decisions/→ ADRs with measured trade-offs                      │
-│  └── monitoring/    → Grafana + Prometheus per service                   │
-└──────────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## Technology Stack
-
-> **Note (`common_utils`)**: `templates/common_utils/` in this repository is the **canonical source**.
-> If you maintain a copy in another repo (e.g., the portfolio), reconcile differences before production use.
-
-| Layer | Technology | Notes |
-|-------|-----------|-------|
-| **ML Core** | scikit-learn, XGBoost, LightGBM, Optuna | Compatible release pinning (`~=`) |
-| **Serving** | FastAPI + uvicorn (1 worker) | `asyncio.run_in_executor()` for inference |
-| **Explainability** | SHAP KernelExplainer | Always in original feature space |
-| **Data Validation** | Pandera DataFrameModel | Training, API, and drift checkpoints |
-| **Drift Detection** | PSI (quantile bins) + Evidently | CronJob + Pushgateway + heartbeat alert |
-| **Experiment Tracking** | MLflow | Self-hosted on K8s |
-| **Containers** | Docker (multi-stage, non-root) | Model via Init Container, never baked in |
-| **Orchestration** | Kubernetes (GKE + EKS) | CPU-only HPA, Kustomize overlays |
-| **Infrastructure** | Terraform >= 1.7 | Remote state, tfsec + Checkov scanning |
-| **CI/CD** | GitHub Actions | Lint → Test → Build → Deploy → Drift → Retrain |
-| **Monitoring** | Prometheus + Grafana + AlertManager + Evidently | P1–P4 severity levels per service |
-| **Data Versioning** | DVC (GCS + S3 remotes) | Tracked in git, stored in cloud |
-| **Clouds** | GCP (primary) + AWS (parity) | Workload Identity / IRSA — no hardcoded creds |
-
----
-
-## Quick Start
-
-> For a more detailed guide, see **[QUICK_START.md](QUICK_START.md)**.
-
-### 1. Clone and scaffold
+### 2. Scaffold your own service
 
 ```bash
-git clone https://github.com/DuqueOM/ML-MLOps-Production-Template.git
-cd ML-MLOps-Production-Template
-
-# Scaffold a new service (copies all templates, replaces placeholders)
-./templates/scripts/new-service.sh ChurnPredictor churn_predictor
-
-# Or via Make:
-make new-service NAME=ChurnPredictor SLUG=churn_predictor
+./templates/scripts/new-service.sh FraudDetector fraud_detector
+cd FraudDetector
+pytest
 ```
 
-This creates `ChurnPredictor/` with the full service structure: FastAPI app, training pipeline, K8s manifests, Terraform, CI/CD, monitoring, tests, DVC pipeline, and documentation templates.
+### 3. Wire your environment
 
-### 2. Configure your features
+- configure cloud identity federation
+- configure remote Terraform state
+- configure secret stores
+- configure MLflow backend
+- configure observability backends
+- configure GitHub Environment protections
 
-```bash
-cd ChurnPredictor
-```
-
-Edit these files with your actual features:
-
-- `src/churn_predictor/schemas.py` — Pandera schema (data validation)
-- `src/churn_predictor/training/features.py` — Feature engineering
-- `src/churn_predictor/training/model.py` — Model pipeline
-- `app/schemas.py` — Pydantic request/response models
-
-### 3. Train and serve
-
-```bash
-pip install -r requirements.txt
-
-# Train
-make train DATA=data/raw/your-dataset.csv
-
-# Serve locally
-make serve
-
-# Test prediction
-curl -X POST http://localhost:8000/predict \
-  -H "Content-Type: application/json" \
-  -d '{"feature_a": 42.0, "feature_b": 50000.0, "feature_c": "category_A"}'
-```
-
-### 4. Deploy to production
-
-```bash
-# Build and push Docker image
-docker build -t churn_predictor:v1.0.0 .
-
-# Deploy to GKE (pick env: dev / staging / prod)
-kubectl apply -k k8s/overlays/gcp-prod/
-
-# Deploy to EKS
-kubectl apply -k k8s/overlays/aws-prod/
-```
-
-See the [Release Checklist](templates/docs/CHECKLIST_RELEASE.md) for the full pre-deployment checklist.
+Runbooks for the cloud-specific setup live under `docs/runbooks/`.
 
 ---
 
-## Repository Structure
+## Release and operate
 
-```
-ML-MLOps-Production-Template/
-│
-├── AGENTS.md                              # Agent architecture, invariants, anti-patterns
-├── CLAUDE.md                              # Claude Code project context
-├── README.md                              # This file
-├── QUICK_START.md                         # 10-minute setup guide (standalone)
-├── RUNBOOK.md                             # Template operations reference
-├── CHANGELOG.md                           # Semantic versioning changelog
-├── LICENSE                                # MIT License
-├── SECURITY.md                            # Vulnerability reporting policy
-├── CONTRIBUTING.md                        # Contribution guidelines
-├── CODE_OF_CONDUCT.md                     # Contributor Covenant v2.0
-├── Makefile                               # Contributor DX: validate-templates, lint-all, demo-minimal
-├── docker-compose.yml                     # Local dev: example API + MLflow (docker compose up)
-├── pyproject.toml                         # Root project config (pytest, coverage, black, isort)
-├── .pre-commit-config.yaml               # Contributor pre-commit hooks (black, isort, flake8, gitleaks)
-├── .gitleaks.toml                         # Secret detection config (shared root + templates/)
-├── .gitattributes                         # Git LFS + line ending config
-│
-├── releases/                              # GitHub Release notes (copy to Releases page)
-│   ├── v1.0.0.md
-│   ├── v1.1.0.md
-│   ├── v1.2.0.md
-│   └── v1.3.0.md
-│
-├── docs/                                  # Template-level decisions
-│   └── decisions/
-│       └── ADR-001-template-scope-boundaries.md  # Why LLM/multi-tenancy/Vault deferred
-│
-├── .github/                               # GitHub community health files
-│   ├── ISSUE_TEMPLATE/                    #   Bug report + feature request templates
-│   ├── pull_request_template.md           #   PR checklist with anti-pattern verification
-│   ├── dependabot.yml                     #   Automated dependency updates
-│   └── workflows/validate-templates.yml   #   CI: lint, K8s, TF, Dockerfile + e2e example
-│
-├── .claude/rules/                         # Claude Code context-aware rules (paths: globs)
-│   ├── 01-serving.md                      #   paths: **/app/*.py, **/api/*.py
-│   ├── 02-training.md                     #   paths: **/training/*.py, **/models/*.py
-│   ├── 03-kubernetes.md                   #   paths: k8s/**/*.yaml
-│   ├── 04-terraform.md                    #   paths: **/*.tf
-│   ├── 05-examples.md                     #   paths: examples/**/*
-│   ├── 06-data-eda.md                     #   paths: eda/**/*, **/notebooks/**/*.ipynb
-│   ├── 07-security-secrets.md             #   paths: **/* (always-applicable) — D-17/18/19
-│   └── 08-closed-loop.md                  #   paths: prediction_logger/ground_truth/performance_monitor — D-20/21/22
-│
-├── .cursor/rules/                         # Cursor IDE rules (globs: frontmatter)
-│   ├── 01-mlops-conventions.mdc           #   Session protocol, D-01→D-30, ADR-010 dynamic
-│   ├── 02-kubernetes.mdc                  #   K8s: 1 worker, CPU HPA, init container, PDB, PSS
-│   ├── 03-python-serving.mdc              #   Async inference, SHAP, Prometheus, warm-up
-│   ├── 04-python-training.mdc             #   Pipeline, quality gates, tests
-│   ├── 05-docker.mdc                      #   Multi-stage, non-root, no model
-│   ├── 06-data-eda.mdc                    #   globs: eda/**/*, **/notebooks/**/*.ipynb
-│   ├── 07-security-secrets.mdc            #   globs: **/* — D-17/D-18/D-19
-│   ├── 08-closed-loop.mdc                 #   globs: prediction_logger/ground_truth — D-20/21/22
-│   ├── 09-monitoring.mdc                  #   Metrics + alerts + dashboards — D-06/08/09/22
-│   ├── 10-data-validation.mdc             #   Pandera + DVC — D-14/15
-│   ├── 11-api-contracts.mdc               #   OpenAPI snapshot + semver — D-28
-│   └── 12-github-actions.mdc              #   Env promotion + SBOM signing — D-26/30
-│
-├── .windsurf/                             # Agentic system configuration (Windsurf Cascade)
-│   ├── rules/                             # 15 behavioral constraint files
-│   │   ├── 01-mlops-conventions.md        #   always_on — core stack + skill references
-│   │   ├── 02-kubernetes.md               #   glob: k8s/**/*.yaml
-│   │   ├── 03-terraform.md                #   glob: **/*.tf
-│   │   ├── 04a-python-serving.md          #   glob: **/app/*.py — async, SHAP, metrics
-│   │   ├── 04b-python-training.md         #   glob: **/training/*.py — pipeline, gates
-│   │   ├── 05-github-actions.md           #   glob: .github/workflows/*.yml
-│   │   ├── 06-documentation.md            #   glob: docs/**/*.md
-│   │   ├── 07-docker.md                   #   glob: **/Dockerfile*
-│   │   ├── 08-data-validation.md          #   glob: **/schemas.py
-│   │   ├── 09-monitoring.md               #   glob: monitoring/**/*
-│   │   ├── 10-examples.md                 #   glob: examples/**/*
-│   │   ├── 11-data-eda.md                 #   glob: eda/**/*, **/notebooks/**/*.ipynb
-│   │   ├── 12-security-secrets.md         #   always_on — D-17/D-18/D-19
-│   │   ├── 13-closed-loop-monitoring.md   #   glob: prediction_logger/ground_truth — D-20/21/22
-│   │   └── 14-api-contracts.md            #   OpenAPI snapshot + semver — D-28
-│   │
-│   ├── skills/                            # 16 multi-step operational procedures
-│   │   ├── debug-ml-inference/SKILL.md    #   Diagnose inference issues
-│   │   ├── deploy-gke/SKILL.md            #   Deploy to GCP GKE (dev=AUTO, staging=CONSULT, prod=STOP)
-│   │   ├── deploy-aws/SKILL.md            #   Deploy to AWS EKS (same auth modes)
-│   │   ├── drift-detection/SKILL.md       #   PSI data drift AND concept drift
-│   │   ├── concept-drift-analysis/SKILL.md#   RCA for sliced performance regressions
-│   │   ├── performance-degradation-rca/SKILL.md # End-to-end RCA for performance incidents
-│   │   ├── eda-analysis/SKILL.md          #   6-phase EDA with leakage gate
-│   │   ├── security-audit/SKILL.md        #   Pre-build/deploy: gitleaks + Trivy + Cosign
-│   │   ├── secret-breach-response/SKILL.md#   Incident response for leaked secrets
-│   │   ├── model-retrain/SKILL.md         #   Retrain with quality gates + C/C gate
-│   │   ├── batch-inference/SKILL.md       #   Scaffold scheduled batch scoring jobs
-│   │   ├── rollback/SKILL.md              #   STOP-class emergency revert (7-step)
-│   │   ├── rule-audit/SKILL.md            #   Automated D-01→D-30 compliance scan
-│   │   ├── release-checklist/SKILL.md     #   Multi-cloud release
-│   │   ├── new-service/SKILL.md           #   Scaffold a new ML service
-│   │   └── cost-audit/SKILL.md            #   Cloud cost review
-│   │
-│   └── workflows/                         # 12 prompt-triggered slash commands
-│       ├── release.md                     #   /release
-│       ├── retrain.md                     #   /retrain
-│       ├── load-test.md                   #   /load-test
-│       ├── new-adr.md                     #   /new-adr
-│       ├── incident.md                    #   /incident
-│       ├── drift-check.md                 #   /drift-check
-│       ├── eda.md                         #   /eda
-│       ├── performance-review.md          #   /performance-review
-│       ├── secret-breach.md               #   /secret-breach
-│       ├── rollback.md                    #   /rollback (STOP-class)
-│       ├── new-service.md                 #   /new-service
-│       └── cost-review.md                 #   /cost-review
-│
-├── examples/minimal/                      # Working fraud detection demo (5 min)
-│   ├── train.py                           #   Synthetic data + train + quality gates
-│   ├── serve.py                           #   FastAPI + async inference + SHAP + Prometheus
-│   ├── test_service.py                    #   Leakage, SHAP, latency, fairness tests
-│   ├── drift_check.py                     #   PSI drift detection demo
-│   ├── Dockerfile                         #   For docker-compose.yml demo
-│   └── requirements.txt                   #   Minimal dependencies
-│
-└── templates/                             # Production scaffolding templates
-    ├── service/                           # Complete ML service boilerplate
-    │   ├── app/                           #   FastAPI serving layer
-    │   │   ├── main.py                    #     Application entrypoint
-    │   │   ├── fastapi_app.py             #     Async inference + SHAP + metrics
-    │   │   └── schemas.py                 #     Pydantic request/response models
-    │   ├── src/{service}/                 #   Core ML logic
-    │   │   ├── training/                  #     train.py, features.py, model.py
-    │   │   ├── monitoring/                #     drift_detection.py, business_kpis.py
-    │   │   └── schemas.py                 #     Pandera DataFrameModel
-    │   ├── tests/                         #   test_training.py, test_api.py, test_explainer.py
-    │   ├── dvc.yaml                       #   DVC pipeline template (validate → featurize → train → evaluate)
-    │   ├── .dvc/config                    #   DVC remote config (GCS/S3)
-    │   ├── codecov.yml                    #   Codecov config template
-    │   ├── Dockerfile                     #   Multi-stage, non-root, HEALTHCHECK
-    │   ├── .dockerignore                  #   Excludes models, data, tests
-    │   ├── requirements.txt               #   Pinned with ~= (compatible release)
-    │   ├── pyproject.toml                 #   Modern Python project config
-    │   └── README.md                      #   Service-specific documentation
-    │
-    ├── common_utils/                      # Shared utility library
-    │   ├── __init__.py                    #   Package init with public exports
-    │   ├── seed.py                        #   Reproducibility (Python, NumPy, PyTorch, TF)
-    │   ├── logging.py                     #   JSON (prod) + human-readable (dev) logging
-    │   ├── model_persistence.py           #   joblib save/load with SHA256 integrity
-    │   └── telemetry.py                   #   OpenTelemetry tracing (optional)
-    │
-    ├── tests/                             # Test templates
-    │   ├── integration/                   #   Integration tests
-    │   │   ├── conftest.py                #     Service health wait + fixtures
-    │   │   └── test_service_integration.py #   Health, predict, SHAP, latency SLA
-    │   └── infra/policies/                #   OPA/Conftest policies
-    │       └── kubernetes.rego            #     Security + ML anti-pattern enforcement
-    │
-    ├── k8s/                               # Kubernetes manifest templates
-    │   ├── base/                          #   Kustomize base (all manifests here)
-    │   │   ├── kustomization.yaml         #     Base Kustomize config
-    │   │   ├── deployment.yaml            #     1-worker pod + init container for model
-    │   │   ├── hpa.yaml                   #     CPU-only autoscaling (never memory)
-    │   │   ├── service.yaml               #     ClusterIP service
-    │   │   ├── cronjob-drift.yaml         #     Daily drift detection CronJob
-    │   │   ├── serviceaccount.yaml        #     Workload Identity / IRSA annotations
-    │   │   ├── networkpolicy.yaml         #     Ingress/egress traffic restrictions
-    │   │   ├── rbac.yaml                  #     Role + RoleBinding (least privilege)
-    │   │   ├── slo-prometheusrule.yaml    #     SLO/SLA definitions (availability, latency, error budget)
-    │   │   └── argo-rollout.yaml          #     Canary deployment + AnalysisTemplate
-    │   └── overlays/                      #   Environment-specific patches (6 overlays)
-    │       ├── gcp-{dev,staging,prod}/    #     GKE: Artifact Registry + WI + PSS-labeled namespace
-    │       └── aws-{dev,staging,prod}/    #     EKS: ECR + IRSA + PSS-labeled namespace
-    │
-    ├── infra/                             # Infrastructure templates
-    │   ├── terraform/gcp/                 #   GKE cluster, GCS buckets, Artifact Registry
-    │   ├── terraform/aws/                 #   EKS cluster, OIDC, IAM roles
-    │   └── docker-compose.mlflow.yml      #   MLflow + PostgreSQL + MinIO (local tracking)
-    │
-    ├── cicd/                              # GitHub Actions workflow templates
-    │   ├── ci.yml                         #   Lint + Test + Build + Scan
-    │   ├── ci-infra.yml                   #   Terraform validate + tfsec + K8s validate
-    │   ├── deploy-gcp.yml                 #   Deploy to GKE on tag push
-    │   ├── deploy-aws.yml                 #   Deploy to EKS on tag push
-    │   ├── drift-detection.yml            #   Daily drift check + alert creation
-    │   └── retrain-service.yml            #   Manual/triggered retraining pipeline
-    │
-    ├── scripts/                           # Operational scripts
-    │   ├── new-service.sh                 #   Scaffold a new ML service from templates
-    │   ├── deploy.sh                      #   Build, push, deploy with context verification
-    │   ├── promote_model.sh               #   Quality gates → promote or reject
-    │   └── health_check.sh                #   Pod status + endpoint health
-    │
-    ├── docs/                              # Documentation templates
-    │   ├── decisions/adr-template.md      #   ADR with Options, Rationale, Revisit When
-    │   ├── runbooks/runbook-template.md   #   P1–P4 incident response procedures
-    │   ├── CHECKLIST_RELEASE.md           #   Pre-deployment release checklist
-    │   ├── mkdocs.yml                     #   MkDocs Material config template
-    │   ├── service-readme-template.md     #   Service README with measured data slots
-    │   ├── model-card-template.md         #   ML transparency model card
-    │   └── dependency-analysis-template.md#   Dependency conflict documentation
-    │
-    ├── monitoring/                        # Observability templates
-    │   ├── alertmanager-rules.yaml        #   P1–P4 alerts + drift heartbeat + resources
-    │   ├── prometheus/alerts-template.yaml #   P1–P4 alerts, drift heartbeat, resource alerts
-    │   ├── prometheus/prometheus-demo.yml  #   Prometheus config for demo stack
-    │   └── grafana/dashboard-template.json #   Request rate, latency, PSI, HPA, resources
-    │
-    ├── docker-compose.demo.yml            # Demo stack: service + MLflow + Pushgateway
-    ├── Makefile                           # Standard DX targets: train, test, serve, build
-    ├── .pre-commit-config.yaml            # black, isort, flake8, mypy, bandit, gitleaks
-    ├── .gitleaks.toml                     # Secret detection config
-    └── .env.example                       # Environment variable documentation
-```
+Typical flow:
+
+1. Build and test in CI.
+2. Scan dependencies and container image.
+3. Generate SBOM and sign by digest.
+4. Deploy to `dev`.
+5. Promote to `staging` with approval.
+6. Validate smoke tests, SLOs, and quality signals.
+7. Promote to `prod` through protected environments.
+8. Monitor closed-loop metrics, drift, and incident signals.
+9. Retrain only through the governed quality gate path.
+
+This template is designed so that deploy, incident, and retrain are all part of one operating model rather than separate ad-hoc scripts.
 
 ---
 
-## Agentic System
+## Scope boundaries
 
-This template supports **three AI coding assistants** out of the box:
+Included:
 
-| IDE / Agent | Config Location | Format |
-|-------------|----------------|--------|
-| **Windsurf Cascade** | `.windsurf/rules/`, `.windsurf/skills/`, `.windsurf/workflows/` | Markdown with glob triggers |
-| **Claude Code** | `CLAUDE.md`, `.claude/rules/` | Context-aware rules with `paths:` frontmatter |
-| **Cursor** | `.cursor/rules/*.mdc`, `.cursor/commands/`, `.cursor/skills/INDEX.md` | 12 MDC rules + 12 commands + 16-skill index |
+- single-service and small-to-medium team MLOps patterns
+- multi-cloud Kubernetes deployment
+- production CI/CD, security, monitoring, and retraining paths
+- agentic governance and bounded automation
 
-All three share the same invariants from `AGENTS.md` (canonical source). Full parity across IDEs as of v1.9.0:
+Not included by default:
 
-| Asset | .windsurf | .cursor | .claude |
-|-------|-----------|---------|---------|
-| **Rules** | 15 | 12 | 14 |
-| **Slash commands** | 12 | 12 | 12 |
-| **Skills** | 16 | 16 (via INDEX) | 16 (via INDEX) |
-| **Invariant coverage** | D-01→D-30 | D-01→D-30 | D-01→D-30 |
+- full workflow orchestration platforms
+- feature store platform ownership
+- multi-region active-active failover
+- complex canary meshes beyond the documented rollout boundary
+- compliance programs that require dedicated legal or regulated tooling
 
-Windsurf holds the canonical long-form skills (16 × ~200 lines each);
-Claude and Cursor reference them via `INDEX.md` pointers. Slash
-commands in `.claude/commands/` and `.cursor/commands/` are 30-60 line
-pointers to the canonical `.windsurf/workflows/`. This prevents 48-way
-drift while giving each IDE native invocation. See
-[`docs/ide-parity-audit.md`](docs/ide-parity-audit.md) for the full
-coverage matrix.
-
-#### Claude Code (`.claude/rules/` + `.claude/commands/` + `.claude/skills/INDEX.md`)
-
-14 context-aware rules using `paths:` frontmatter + 12 slash commands + 16-skill index. Claude Code activates rules automatically when you open matching files:
-
-| File | Paths Trigger | Covers |
-|------|--------------|--------|
-| `01-serving.md` | `**/app/*.py`, `**/api/*.py` | Async inference, SHAP, Prometheus, warm-up, probe split, D-01/03/04/23/24/25/28 |
-| `02-training.md` | `**/training/*.py`, `**/models/*.py` | Pipeline, quality gates, fairness, D-05/D-06/D-07 |
-| `03-kubernetes.md` | `k8s/**/*.yaml` | 1-worker, CPU HPA, init container, PDB, PSS, probes, D-01/02/11/23/25/27/29/30 |
-| `04-terraform.md` | `**/*.tf` | Remote state, no secrets, lifecycle, D-10 |
-| `05-examples.md` | `examples/**/*` | Simplified patterns, self-contained demos |
-| `06-data-eda.md` | `eda/**/*`, `**/notebooks/**/*.ipynb` | 6-phase EDA, baseline distributions, leakage gate, D-13/D-14/D-15/D-16 |
-| `07-security-secrets.md` | `**/*` (always-applicable) | Secrets hygiene, IRSA/WI, supply chain, D-17/D-18/D-19 |
-| `08-closed-loop.md` | `**/prediction_logger.py`, `**/ground_truth.py`, `**/performance_monitor.py`, ... | Prediction logging, ground truth, sliced performance, champion/challenger (D-20→D-22) |
-| `09-mlops-conventions.md` | `**/*` (always on) | Core invariants + both Behavior Protocols, stack, ADRs |
-| `10-docker.md` | `**/Dockerfile` | Multi-stage, non-root, PSS, SBOM, D-11/19/29/30 |
-| `11-monitoring.md` | `**/monitoring/*.py`, `**/grafana/**` | Metrics catalog, alerts, dashboards |
-| `12-data-validation.md` | `**/schemas.py`, `**/dvc*.yaml` | Pandera + DVC lifecycle, D-14/D-15 |
-| `13-api-contracts.md` | `**/app/*.py`, `**/tests/contract/**` | OpenAPI snapshot + semver, D-28 |
-| `14-github-actions.md` | `.github/workflows/*.yml`, `**/cicd/*.yml` | Env promotion + SBOM signing, D-26/D-30 |
-
-Root context: `CLAUDE.md` provides project-wide context (stack, invariants, file structure) loaded at session start.
-
-#### Cursor (`.cursor/rules/` + `.cursor/commands/` + `.cursor/skills/INDEX.md`)
-
-12 MDC rules with `globs:` frontmatter + 12 slash commands + 16-skill index. Cursor activates rules based on glob patterns:
-
-| File | Globs Trigger | Covers |
-|------|--------------|--------|
-| `01-mlops-conventions.mdc` | `**/*` (always on) | Session protocol, D-01→D-30, Behavior Protocol + ADR-010 dynamic escalation, stack, ADRs |
-| `09-monitoring.mdc` | `**/monitoring/*.py`, `**/prometheus*.yaml`, `**/grafana/**` | Mandatory metrics, alerts, dashboards, D-06/08/09/22 |
-| `10-data-validation.mdc` | `**/schemas.py`, `**/validation*.py`, `**/dvc*.yaml` | Pandera schemas + DVC, D-14/D-15 |
-| `11-api-contracts.mdc` | `**/app/*.py`, `**/tests/contract/**` | OpenAPI snapshot + semver gate, D-28 |
-| `12-github-actions.mdc` | `.github/workflows/*.yml`, `**/cicd/*.yml` | Env promotion + SBOM signing, D-26/D-30 |
-| `02-kubernetes.mdc` | `k8s/**/*.yaml`, `helm/**/*.yaml` | HPA, init container, probes, RBAC |
-| `03-python-serving.mdc` | `**/app/*.py` | Async, ThreadPoolExecutor, SHAP, metrics |
-| `04-python-training.mdc` | `**/training/*.py` | Pipeline, gates, fairness, DVC |
-| `05-docker.mdc` | `**/Dockerfile*` | Multi-stage, non-root, HEALTHCHECK, no model in image |
-| `06-data-eda.mdc` | `eda/**/*`, `**/notebooks/**/*.ipynb` | EDA structure, baseline distributions, leakage gate (D-13→D-16) |
-| `07-security-secrets.mdc` | `**/*` (always-applicable) | Secrets, IRSA/WI, Cosign/SBOM, always-applicable (D-17→D-19) |
-| `08-closed-loop.mdc` | `**/prediction_logger.py`, `**/ground_truth.py`, `**/performance_monitor.py`, ... | Prediction logging, ground truth, sliced performance, champion/challenger (D-20→D-22) |
-
-#### Windsurf Cascade (`.windsurf/`)
-
-15 context-aware rules + 16 skills + 12 workflows, plus **two** behavior protocols: the static **Agent Behavior Protocol** (AUTO/CONSULT/STOP mapping in AGENTS.md) and the **Dynamic Behavior Protocol** (ADR-010 — escalates AUTO→CONSULT→STOP based on live risk signals). Typed inter-agent handoffs via `common_utils/agent_context.py` (frozen dataclasses that refuse invalid constructions, e.g. `DeploymentRequest` rejects `env=production` + `audit.passed=False`). Canonical source for the other IDEs:
-
-### Rules (Behavioral Constraints)
-
-Rules activate based on file context. When you edit a Kubernetes YAML, `02-kubernetes.md` activates and enforces single-worker pods, CPU-only HPA, init containers, etc. When you edit serving code, `04a-python-serving.md` activates with async inference and SHAP rules. Training code gets `04b-python-training.md` instead — reducing unnecessary context.
-
-| Rule | Trigger | Enforces |
-|------|---------|----------|
-| `01-mlops-conventions` | Always on | Stack, pinning, ADRs, calibration |
-| `02-kubernetes` | `k8s/**/*.yaml` | 1 worker, CPU HPA, init containers |
-| `03-terraform` | `**/*.tf` | Remote state, no secrets, lifecycle rules |
-| `04a-python-serving` | `**/app/*.py` | Async inference, SHAP, Prometheus |
-| `04b-python-training` | `**/training/*.py` | Pipeline structure, quality gates, fairness |
-| `05-github-actions` | `.github/workflows/*.yml` | Workflow org, required secrets |
-| `06-documentation` | `docs/**/*.md` | ADR structure, measured data |
-| `07-docker` | `**/Dockerfile*` | Multi-stage, non-root, no model |
-| `08-data-validation` | `**/schemas.py` | Pandera at 3 validation points |
-| `09-monitoring` | `monitoring/**/*` | Mandatory metrics, PSI, heartbeat |
-| `10-examples` | `examples/**/*` | Simplified, self-contained demos |
-
-### Skills (Operational Procedures)
-
-Skills are step-by-step guides the agent follows when performing complex operations. Each skill uses structured frontmatter (inspired by Claude Code's skill architecture) with:
-
-- **`allowed-tools`** — Restricts which tools the agent can use during the skill
-- **`when_to_use`** — Natural language examples that trigger the skill
-- **`argument-hint`** — Template showing expected arguments
-- **Per-step `Success criteria`** — Measurable conditions for each step
-
-| Skill | Purpose |
-|-------|---------|
-| `debug-ml-inference` | Diagnose latency, blocking, SHAP, and resource issues |
-| `deploy-gke` | Pre-flight → build → push → apply → smoke test → verify |
-| `deploy-aws` | Same as GKE but with ECR + IRSA verification |
-| `drift-detection` | Run PSI analysis, push metrics, trigger retraining |
-| `model-retrain` | Validate data → train → quality gates → promote/reject |
-| `release-checklist` | Multi-cloud release with rollback plan |
-| `new-service` | End-to-end scaffolding of a new ML service |
-| `cost-audit` | Collect GCP/AWS costs, check FinOps rules |
-
-### Workflows (Slash Commands)
-
-Workflows are triggered by typing a slash command in the AI assistant:
-
-| Command | Description |
-|---------|-------------|
-| `/release` | Full multi-cloud release process |
-| `/retrain` | Model retraining with quality gates |
-| `/load-test` | Locust load tests against ML services |
-| `/new-adr` | Create a new Architecture Decision Record |
-| `/incident` | ML service incident response |
-| `/drift-check` | Run PSI drift analysis |
-| `/new-service` | Create a complete new ML service from template |
-| `/cost-review` | Monthly cloud cost review |
+If you outgrow the template, the documented invariants and ADRs are still meant to survive that transition.
 
 ---
 
-## Critical Patterns (Invariants)
+## Real-world origin
 
-These are **non-negotiable rules** encoded in `AGENTS.md` and enforced across all templates:
+This template was extracted from [ML-MLOps-Portfolio](https://github.com/DuqueOM/ML-MLOps-Portfolio), where the patterns were exercised across multiple ML services, ADRs, tests, and cloud deployments.
 
-### ML Serving
-
-- **1 uvicorn worker per pod** — K8s HPA manages horizontal scaling. Multiple workers cause CPU thrashing under pod limits.
-- **`asyncio.run_in_executor()`** for all CPU-bound inference — never call `model.predict()` directly in an async endpoint.
-- **SHAP KernelExplainer** for ensemble/pipeline models — TreeExplainer produces wrong feature names with ColumnTransformer.
-- **Model via Init Container** (`emptyDir` volume) — never bake models into Docker images.
-
-### Infrastructure
-
-- **Workload Identity (GCP) / IRSA (AWS)** — no hardcoded credentials.
-- **Remote Terraform state** — GCS for GCP, S3 + DynamoDB for AWS.
-- **Immutable image tags** — never overwrite an existing tag.
-
-### Model Quality
-
-- **Quality gates before every promotion** — primary metric, secondary metric, fairness (DIR >= 0.80).
-- **Data leakage detection** — suspiciously high metrics trigger investigation.
-- **SHAP in original feature space** — never in the post-ColumnTransformer space.
-
-### Monitoring
-
-- **CPU-only HPA** — memory is constant for ML models (loaded model = fixed RAM).
-- **PSI with quantile-based bins** — uniform bins produce unreliable drift scores.
-- **Drift heartbeat alert** — fires if CronJob hasn't run in 48h.
+The goal of this repo is not to mirror that portfolio one-to-one. The goal is to package the stable, reusable operating patterns into a template that other teams can adopt.
 
 ---
 
-## Anti-Pattern Detection
+## Documentation
 
-The agentic system automatically detects and corrects **30 known production failure modes** grouped by domain:
-
-- **D-01→D-05**: Runtime & serving (FastAPI async, ThreadPoolExecutor, SHAP, pinning)
-- **D-06→D-09**: Training & monitoring (leakage, SHAP bg, PSI bins, heartbeat)
-- **D-10→D-12**: Infrastructure & governance (TF state, init container, quality gates)
-- **D-13→D-16**: EDA & data (sandbox, observed ranges, baseline, feature rationale)
-- **D-17→D-19**: Security & supply chain (secrets, IRSA/WI, signed images + SBOM)
-- **D-20→D-22**: Closed-loop monitoring (prediction_id/entity_id, fire-and-forget logging, observability failure isolation)
-- **D-23→D-25**: Serving lifecycle (warm-up + probe split, SHAP explainer cache, graceful shutdown)
-- **D-26→D-28**: Delivery (env promotion gates, PodDisruptionBudget, API contract semver)
-- **D-29→D-30**: Hardening (Pod Security Standards labels, SBOM attestation via Cosign)
-
-| ID | Anti-Pattern | Corrective Action |
-|----|-------------|-------------------|
-| D-01 | `uvicorn --workers N` in K8s | Change to 1 worker + ThreadPoolExecutor |
-| D-02 | Memory metric in HPA | Remove, keep CPU only |
-| D-03 | `model.predict()` in async endpoint | Wrap in `run_in_executor` |
-| D-04 | `shap.TreeExplainer` with pipeline | Change to KernelExplainer |
-| D-05 | `==` pinning for ML packages | Change to `~=` (compatible release) |
-| D-06 | Unrealistically high metric | Investigate data leakage |
-| D-07 | Single-class SHAP background | Replace with representative sample |
-| D-08 | PSI with uniform bins | Refactor to quantile bins |
-| D-09 | No drift heartbeat alert | Add AlertManager alert |
-| D-10 | `terraform.tfstate` in git | Move to remote state |
-| D-11 | Model baked in Docker image | Implement init container pattern |
-| D-12 | No quality gates | Add all gates before deploy |
-| D-13 | EDA on production data | Sandbox `data/raw/` copy; EDA never writes to prod paths |
-| D-14 | Pandera schema without observed ranges | `Check.in_range(min, max)` from EDA phase 1 |
-| D-15 | Baseline distributions not persisted | Save `02_baseline_distributions.pkl` (drift CronJob input) |
-| D-16 | Feature engineering without rationale | `05_feature_proposals.yaml` with justification |
-| D-17 | Hardcoded credentials / `os.environ` for secrets | Use `common_utils.secrets.get_secret` |
-| D-18 | Static AWS keys or GCP JSON keys in production | IRSA (AWS) / Workload Identity (GCP) |
-| D-19 | Unsigned images or missing SBOM in production | Cosign keyless + Syft SBOM + Kyverno admission |
-| D-20 | Prediction log missing `prediction_id` / `entity_id` | `PredictionEvent` frozen dataclass enforces at construction |
-| D-21 | Prediction logging blocking the async event loop | Buffered logger + `run_in_executor(None, ...)` background flush |
-| D-22 | Observability backend failure reaching HTTP response | Swallow + counter `prediction_log_errors_total`; serving never breaks |
-| D-23 | Same path for liveness + readiness | Split `/health` vs `/ready` + `startupProbe` (warm-up gates traffic) |
-| D-24 | SHAP explainer rebuilt per request | Build in warm-up, cache on app state |
-| D-25 | Pod killed mid-request | `terminationGracePeriodSeconds` > `uvicorn --timeout-graceful-shutdown` |
-| D-26 | Deploys bypass staging | 4-job chain + GitHub Environment Protection (ADR-011) |
-| D-27 | Deployment without PodDisruptionBudget | `minAvailable: 1` + HPA `minReplicas: 2` |
-| D-28 | Breaking API change without snapshot + version bump | `scripts/refresh_contract.py` + bump `app.version` |
-| D-29 | Namespace without Pod Security Standards labels | prod `enforce: restricted`; dev/staging `baseline` + `warn: restricted` |
-| D-30 | Production image without SBOM attestation | `cosign attest --type cyclonedx` after `cosign sign` |
-
----
-
-## Engineering Calibration
-
-Every component is **sized to match the actual scale of the problem**:
-
-| Scale | Correct Tool | Over-Engineered Alternative |
-|-------|-------------|---------------------------|
-| 2–3 models | CronJob + GitHub Actions | Airflow / Prefect |
-| In-memory DataFrames | Pandera | Great Expectations |
-| Simple drift monitoring | PSI with quantile bins | Full feature store |
-| Small team docs | README + ADRs | Confluence + Notion + Backstage |
-
-This principle is documented in the **Engineering Calibration Principle** section of `AGENTS.md` and is evaluated for every new component.
-
----
-
-## Templates Detail
-
-### Service Template (`templates/service/`)
-
-A complete, production-ready ML service with:
-
-- **FastAPI app** with async inference via ThreadPoolExecutor
-- **SHAP KernelExplainer** with consistency check (base_value + SHAP ≈ prediction)
-- **Prometheus metrics** (predictions counter, latency histogram, score distribution)
-- **Pandera validation** at training, API, and drift detection
-- **Optuna hyperparameter tuning** with configurable number of trials
-- **Quality gates** (primary metric, secondary metric, fairness DIR)
-- **MLflow integration** for experiment tracking and model registry
-- **Tests** for data leakage, quality gates, API endpoints, SHAP consistency, latency SLA
-- **Load tests** with Locust (100 concurrent users, < 1% error rate)
-- **`pyproject.toml`** for modern Python tooling (alternative to `requirements.txt`)
-- **DVC pipeline** (`dvc.yaml`) with validate → featurize → train → evaluate stages
-- **DVC config** (`.dvc/config`) with GCS/S3 remote storage setup
-
-### Common Utils (`templates/common_utils/`)
-
-Reusable shared library for all ML services:
-
-- **`seed.py`** — Reproducibility across Python, NumPy, PyTorch, TensorFlow with env var override
-- **`logging.py`** — JSON formatter for K8s log aggregation (prod), colored output (dev)
-- **`model_persistence.py`** — Optimized joblib save/load with SHA256 integrity validation
-- **`telemetry.py`** — OpenTelemetry tracing with graceful no-op fallback
-
-### K8s Templates (`templates/k8s/`)
-
-- **Deployment** with init container model download, health probes, rolling update (zero downtime)
-- **HPA** with CPU-only autoscaling, asymmetric scale-up/down behavior
-- **CronJob** for daily drift detection with Pushgateway integration
-- **ServiceAccount** with Workload Identity / IRSA annotation placeholders
-- **Kustomize base** with namespace, common labels, and resource list
-- **NetworkPolicy** restricting ingress (nginx + Prometheus) and egress (DNS, MLflow, cloud storage)
-- **RBAC** Role + RoleBinding with least-privilege access (read ConfigMaps/Secrets only)
-- **Kustomize overlays** for GCP (Artifact Registry, Workload Identity) and AWS (ECR, IRSA)
-- **SLO/SLA PrometheusRule** — availability (99.5%), latency P95, error budget burn rate alerts
-- **Argo Rollouts** canary deployment with Prometheus-based analysis (error rate, P95 latency)
-
-### Scripts (`templates/scripts/`)
-
-- **`deploy.sh`** — Build, push, deploy with kubectl context verification and image tag immutability check
-- **`promote_model.sh`** — Run quality gates (metric threshold, fairness, leakage, integrity) before promotion
-- **`health_check.sh`** — Quick pod status and /health + /model/info endpoint check
-
-### Integration Tests (`templates/tests/integration/`)
-
-- **`conftest.py`** — Service health wait fixture, auto-skip if service unavailable
-- **`test_service_integration.py`** — Full service validation: health, predictions, SHAP, latency SLA, metrics
-
-### OPA/Conftest Policies (`templates/tests/infra/policies/`)
-
-- **`kubernetes.rego`** — 12 policy rules: non-root, resource limits/requests, health probes, no `:latest`, namespace, app label, HPA scaleDown + ML-specific D-01 (no multi-worker) and D-02 (no memory HPA) enforcement
-
-### Terraform & Infrastructure (`templates/infra/`)
-
-- **GCP**: GKE cluster with Workload Identity, node pool autoscaling, GCS buckets (models, data, MLflow, logs), Artifact Registry
-- **AWS**: EKS cluster with OIDC for IRSA, managed node group, IAM roles and policies
-- **`docker-compose.mlflow.yml`** — Production-like MLflow with PostgreSQL + MinIO (S3-compatible) for local development
-
-### CI/CD Templates (`templates/cicd/`)
-
-- **CI**: flake8 + black + isort + mypy → pytest (90% coverage) → Docker build + Trivy scan
-- **Infrastructure CI**: terraform fmt/init/validate + tfsec + Checkov + kubeconform
-- **Deploy GCP/AWS**: Tag-triggered deploy with cluster verification and smoke tests
-- **Drift Detection**: Daily scheduled + manual trigger, auto-creates GitHub issue on alert
-- **Retraining**: Manual trigger with data validation, training, quality gates, and artifact upload
-
-### Documentation Templates (`templates/docs/`)
-
-- **ADR template**: Context, Options, Decision, Rationale, Consequences, Revisit When
-- **Runbook template**: P1–P4 severity procedures with `kubectl` commands
-- **Service README**: Measured latency tables, drift thresholds, cost breakdown, resource profile
-- **Model card**: ML transparency document (intended use, metrics, fairness, limitations)
-- **Release checklist**: Pre-deployment verification (quality gates, Docker, K8s, infra, monitoring)
-- **MkDocs config**: MkDocs Material template with navigation, plugins, and theme ready to use
-- **Dependency analysis**: Known conflicts, resolution strategies, CVE tracking
-
-### Monitoring Templates (`templates/monitoring/`)
-
-- **Prometheus alerts**: Error rate, service down, drift heartbeat, latency, resource usage, pod restarts
-- **Grafana dashboard**: Request rate, error rate, latency percentiles, PSI scores, prediction distribution, HPA replicas, CPU/memory usage
-
-### Developer Experience (`templates/`)
-
-- **`Makefile`** — Standard targets: `make train`, `make test`, `make serve`, `make build`, `make demo-up`, `make lint`, `make clean`
-- **`docker-compose.demo.yml`** — Local demo stack: ML service + MLflow + Pushgateway + Prometheus + Grafana
-- **`.pre-commit-config.yaml`** — Pre-commit hooks: black, isort, flake8, mypy, bandit, gitleaks
-- **`.gitleaks.toml`** — Secret detection config with allowlist for common false positives
-- **`.env.example`** — Documented environment variables (MLflow, logging, API, DVC)
-
----
-
-## What's Different From Other Templates
-
-| Feature | This Template | cookiecutter-datascience | MLflow Templates | Kubeflow Pipelines |
-|---------|:---:|:---:|:---:|:---:|
-| **Async inference** (ThreadPoolExecutor) | Yes | No | No | No |
-| **SHAP in original feature space** | Yes | No | No | No |
-| **Encoded anti-patterns** (22 detectors) | Yes | No | No | No |
-| **AI agent rules** (Windsurf/Claude/Cursor) | Yes | No | No | No |
-| **Multi-cloud K8s** (GKE + EKS) | Yes | No | No | GKE only |
-| **Init container model loading** | Yes | No | No | Yes |
-| **PSI drift detection** (quantile bins) | Yes | No | No | Partial |
-| **Quality gates** (metric + fairness + leakage) | Yes | No | No | Partial |
-| **Heartbeat alerts** (CronJob health) | Yes | No | No | No |
-| **Working example** (5 min demo) | Yes | No | No | No |
-| **CPU-only HPA** (with reasoning) | Yes | No | No | No |
-| **ADR-driven decisions** | Yes | No | No | No |
-
-**In short**: cookiecutter-datascience stops at project structure. MLflow templates stop at experiment tracking.
-Kubeflow focuses on pipeline orchestration. This template covers the **full production lifecycle** from
-training through deployment, monitoring, drift detection, and retraining — with encoded invariants that
-prevent the most common production failures.
-
----
-
-## Documentation at Scale (MkDocs)
-
-For larger teams, move long-form documentation into a versioned docs site:
-
-- **Template**: [`templates/docs/mkdocs.yml`](templates/docs/mkdocs.yml) — MkDocs Material config ready to use
-- **Setup**: `pip install mkdocs-material mkdocstrings[python] mkdocs-mermaid2-plugin`
-- **Reference**: see `mkdocs.yml` in the [portfolio repo](https://github.com/DuqueOM/ML-MLOps-Portfolio) for a working example with 17 ADRs
-
----
-
-## Security
-
-See [SECURITY.md](SECURITY.md) for vulnerability reporting guidelines, supported versions, and response timelines.
-
----
-
-## MCP Integrations
-
-MCPs extend what agents can **do** (execute commands, read live data) vs. just generate text.
-
-| MCP | Skill/Workflow enhanced | Agent capability unlocked |
-|-----|------------------------|--------------------------|
-| **`mcp-github`** | All CI workflows | Reads CI logs and PR status directly — no copy-paste into chat |
-| **`mcp-kubernetes`** | `deploy-gke`, `deploy-aws`, `/release` | Executes `kubectl apply/get/logs` and verifies pod status |
-| **`mcp-terraform`** | `/release`, `release-checklist` | Runs `terraform plan/validate` and reads infra state |
-| **`mcp-prometheus`** | `drift-detection`, `/incident` | Queries live metrics instead of hypothetical examples |
-
-MCPs installed = agents **execute**. MCPs absent = agents **instruct**. Same invariants apply either way.
-
-> Full setup instructions and rationale: [`AGENTS.md § MCP Integrations`](AGENTS.md#mcp-integrations)
+- [QUICK_START.md](QUICK_START.md)
+- [RUNBOOK.md](RUNBOOK.md)
+- [AGENTS.md](AGENTS.md)
+- [SECURITY.md](SECURITY.md)
+- [CHANGELOG.md](CHANGELOG.md)
+- [docs/decisions/](docs/decisions/)
+- [docs/runbooks/](docs/runbooks/)
 
 ---
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for full guidelines. Quick summary:
+This project uses the Developer Certificate of Origin (DCO).
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request using the [PR template](.github/pull_request_template.md)
+By contributing, you certify that:
 
-When adding new templates or rules, ensure they follow the **Engineering Calibration Principle** — sized to the actual problem, not the theoretical maximum.
+- you have the right to submit your contribution
+- you agree to license your work under the Apache License 2.0
 
-This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md).
+All commits must be signed off:
 
-See [CHANGELOG.md](CHANGELOG.md) for release history.
+```bash
+git commit -s -m "your message"
+```
+
+This adds the required `Signed-off-by` line to your commit.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full contribution process.
 
 ---
 
 ## License
 
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+This project is licensed under the Apache License 2.0. See the [LICENSE](LICENSE) file for details.
 
 ---
 
-## AI Transparency
+## Legal
 
-This template uses AI-assisted coding agents for code generation and boilerplate. All architectural decisions, system design, trade-off analysis, and ADR documentation require human engineering judgment. AI tools accelerate throughput — they don't replace the engineer's responsibility to calibrate solutions to the right scale.
+All contributions are accepted under the Apache License 2.0.
+
+- No Contributor License Agreement (CLA) is required.
+- By submitting a contribution, you agree to the terms defined in the DCO.
 
 ---
 
-<p align="center">
-  <b>If this template saved you time, please give it a ⭐</b>
-</p>
+## AI transparency
+
+This repository is intentionally designed for human-governed AI-assisted engineering.
+
+- Agents accelerate repetitive work.
+- Policies, tests, reviews, and audit logs constrain agent autonomy.
+- Architecture, risk acceptance, and production accountability remain human responsibilities.
+
+That is the point of this template: safer automation, not ungoverned automation.
