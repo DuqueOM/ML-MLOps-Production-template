@@ -37,8 +37,10 @@ resource "aws_eks_cluster" "eks" {
   version  = var.k8s_version
 
   # Always-on private endpoint; public is opt-in and CIDR-gated.
+  # subnet_ids resolved by network.tf: managed-mode private subnets or
+  # caller-provided subnet_ids depending on var.network_mode.
   vpc_config {
-    subnet_ids              = var.subnet_ids
+    subnet_ids              = local.eks_subnet_ids
     endpoint_private_access = true
     endpoint_public_access  = var.allow_public_endpoint
     public_access_cidrs     = var.allow_public_endpoint ? var.public_endpoint_access_cidrs : []
@@ -96,7 +98,7 @@ resource "aws_eks_node_group" "nodes" {
   cluster_name    = aws_eks_cluster.eks.name
   node_group_name = "${var.project_name}-nodes"
   node_role_arn   = aws_iam_role.eks_node.arn
-  subnet_ids      = var.subnet_ids
+  subnet_ids      = local.eks_subnet_ids
   instance_types  = [var.instance_type]
 
   scaling_config {

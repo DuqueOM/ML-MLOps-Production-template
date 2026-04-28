@@ -46,8 +46,9 @@ variable "max_node_count" {
 }
 
 variable "subnet_ids" {
-  description = "List of subnet IDs for EKS"
+  description = "List of subnet IDs for EKS (required when network_mode='existing'; ignored when 'managed')"
   type        = list(string)
+  default     = []
 }
 
 # -----------------------------------------------------------------------------
@@ -148,4 +149,47 @@ variable "service_names" {
   EOT
   type        = list(string)
   default     = ["fraud-detector"]
+}
+
+# ----------------------------------------------------------------------
+# Network mode (ADR-017 / PR-A1)
+# ----------------------------------------------------------------------
+# 'managed':  template creates VPC + 3 private + 3 public subnets + NAT
+# 'existing': caller provides subnet_ids (current default — backwards-compat)
+# ----------------------------------------------------------------------
+variable "network_mode" {
+  description = "Network topology mode: 'managed' (template creates VPC) or 'existing' (use provided subnet_ids)"
+  type        = string
+  default     = "existing"
+
+  validation {
+    condition     = contains(["managed", "existing"], var.network_mode)
+    error_message = "network_mode must be 'managed' or 'existing'"
+  }
+}
+
+variable "vpc_cidr" {
+  description = "VPC CIDR block (managed mode only)"
+  type        = string
+  default     = "10.0.0.0/16"
+}
+
+variable "availability_zones" {
+  description = "AZ list for managed-mode VPC. Defaults to 3 AZs in us-east-1."
+  type        = list(string)
+  default     = ["us-east-1a", "us-east-1b", "us-east-1c"]
+}
+
+# ----------------------------------------------------------------------
+# GitHub OIDC (ADR-017 / PR-A1)
+# ----------------------------------------------------------------------
+# Required for the CI + Deploy roles' trust policies. Format:
+#   "owner/repo" e.g. "DuqueOM/ML-MLOps-Production-Template"
+# Empty string skips creation of CI/Deploy roles (callers using
+# long-lived AWS keys instead).
+# ----------------------------------------------------------------------
+variable "github_repo" {
+  description = "GitHub repo (owner/name) allowed to assume CI + Deploy roles via OIDC. Empty = skip."
+  type        = string
+  default     = ""
 }

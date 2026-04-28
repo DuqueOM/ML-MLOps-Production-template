@@ -148,12 +148,12 @@ Add `templates/infra/terraform/tests/test_iam_least_privilege.py`:
 
 ## Status Tracking
 
-- [ ] Network mode variable added (GCP + AWS)
-- [ ] VPC creation conditional on `network_mode=managed` (GCP)
-- [ ] VPC creation conditional on `network_mode=managed` (AWS)
-- [ ] 5 IAM identities created (GCP)
-- [ ] 5 IAM identities created (AWS)
-- [ ] Contract test added
-- [ ] Documentation updated
-- [ ] Golden path E2E passes
+- [x] Network mode variable added (GCP + AWS)
+- [x] VPC creation conditional on `network_mode=managed` (GCP — `network.tf`)
+- [x] VPC creation conditional on `network_mode=managed` (AWS — `network.tf`)
+- [x] 5 IAM identities created (GCP — `iam.tf`)
+- [x] 5 IAM identities created (AWS — `iam.tf` per-service + `iam-roles-split.tf` ci/deploy/drift/retrain)
+- [ ] Contract test added (`test_iam_least_privilege.py`)
+- [ ] Documentation updated (READMEs + AGENTS.md D-28)
+- [ ] Golden path E2E passes with managed mode
 - [ ] ADR-015 updated
