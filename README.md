@@ -15,12 +15,25 @@ Opinionated, production-grade template for building and operating ML systems on 
 [![Agentic](https://img.shields.io/badge/agentic-Windsurf_%7C_Claude_Code_%7C_Cursor-blueviolet.svg)](#agentic-system)
 
 ```bash
+# scaffold a new ML service in under a minute
 git clone https://github.com/DuqueOM/ML-MLOps-Production-Template.git
 cd ML-MLOps-Production-Template
 ./templates/scripts/new-service.sh ChurnPredictor churn_predictor
 ```
 
 **Start here:** [QUICK_START.md](QUICK_START.md) | [RUNBOOK.md](RUNBOOK.md) | [AGENTS.md](AGENTS.md) | [CONTRIBUTING.md](CONTRIBUTING.md)
+
+---
+
+## Who this is for
+
+This template is designed for ML engineers and platform teams that are past the experimentation phase and ready to operate models with production discipline. It fits:
+
+- a **team shipping its first production ML service** that wants strong defaults without building a platform from scratch
+- a **platform team** standardizing how ML services are built, deployed, monitored, and governed across multiple squads
+- a **solo engineer or tech lead** who needs a reference implementation to anchor technical decisions and ADRs
+
+It is not designed for data science notebooks, batch-only pipelines, or teams that have already adopted a full ML platform such as Vertex AI Pipelines or SageMaker Pipelines end-to-end.
 
 ---
 
@@ -32,18 +45,18 @@ It ships:
 
 - Async ML serving patterns that avoid common Kubernetes and FastAPI failure modes.
 - Multi-cloud Kubernetes and Terraform scaffolding for GCP and AWS.
-- Environment promotion from `dev -> staging -> prod` with audit trail, approvals, digest-based deploys, signing, and attestations.
+- Environment promotion from `dev → staging → prod` with audit trail, approvals, digest-based deploys, signing, and attestations.
 - Closed-loop monitoring with prediction logging, delayed ground truth, sliced performance, champion/challenger evaluation, and retraining hooks.
 - Security controls for secrets, identity federation, SBOM generation, image signing, admission policy, and pod hardening.
 - Agentic governance through `AUTO / CONSULT / STOP`, plus dynamic risk escalation based on live signals.
 - Safe CI self-healing for low-risk failures, with bounded blast radius and mandatory verification.
-- An optional Operational Memory Plane that helps agents retrieve prior incidents, decisions, deploy regressions, and successful remediations.
+- Optional Operational Memory Plane that helps agents retrieve prior incidents, decisions, deploy regressions, and successful remediations.
 
-This is not a generic "starter repo". It is a production template with encoded operating constraints.
+This is not a generic starter repo. It is a production template with encoded operating constraints.
 
 ---
 
-## What is production-ready here
+## Production-ready scope
 
 The template is positioned as a hardened open-source baseline for enterprise ML services. After scaffold and environment wiring, the following areas are treated as production-ready:
 
@@ -58,7 +71,7 @@ The template is positioned as a hardened open-source baseline for enterprise ML 
 | Agentic controls | Production-ready | Static operation modes, dynamic risk escalation, typed handoffs, and auditable decisions are all encoded. |
 | Operational Memory Plane | Optional companion | Recommended for larger teams or repos with frequent incident/release cycles. It augments decisions; it is not a required dependency for serving. |
 
-External dependencies still remain your responsibility: cloud accounts, Kubernetes clusters, MLflow backend, secret stores, and observability backends must exist before the template can operate in a real environment.
+External dependencies remain your responsibility: cloud accounts, Kubernetes clusters, MLflow backend, secret stores, and observability backends must exist before the template can operate in a real environment.
 
 ---
 
@@ -71,7 +84,7 @@ External dependencies still remain your responsibility: cloud accounts, Kubernet
 | Review deployment and rollback flow | [RUNBOOK.md](RUNBOOK.md) | `templates/cicd/` and `templates/k8s/` |
 | Evaluate security posture | [SECURITY.md](SECURITY.md) | `templates/infra/`, `templates/k8s/`, `templates/cicd/` |
 | Extend agentic behavior | [AGENTS.md](AGENTS.md) | `.windsurf/`, `.cursor/`, `.claude/` |
-| Contribute to the template | [CONTRIBUTING.md](CONTRIBUTING.md) | This README's license and governance sections |
+| Contribute to the template | [CONTRIBUTING.md](CONTRIBUTING.md) | License and governance sections below |
 
 ---
 
@@ -82,7 +95,7 @@ flowchart TD
     A["Source + Data"] --> B["Training + Validation"]
     B --> C["Model Registry / Artifacts"]
     C --> D["Docker Build + Sign + Attest"]
-    D --> E["Dev -> Staging -> Prod Promotion"]
+    D --> E["Dev → Staging → Prod Promotion"]
     E --> F["Kubernetes Serving"]
     F --> G["Metrics / Logs / Alerts"]
     F --> H["Prediction Logging"]
@@ -129,17 +142,17 @@ flowchart TD
 
 ### CI/CD and controlled automation
 
-- Build -> scan -> sign -> attest -> deploy -> smoke-test promotion chain.
+- Build → scan → sign → attest → deploy → smoke-test promotion chain.
 - Drift detection and retraining workflows as first-class operational paths.
 - Audit trail written to JSONL and surfaced in GitHub Actions summaries.
-- Controlled CI self-healing for minor failures with policy-based limits.
+- Controlled CI self-healing for low-risk failures with policy-based limits.
 
 ### Data validation and ML quality
 
 - Pandera-based contracts for data validation.
 - Leakage checks, baseline distributions, reproducibility hooks, and configurable quality gates.
 - Fairness checks, champion/challenger evaluation, and retraining evidence packages.
-- Versioned artifacts and model promotion rules that are meant to fail closed.
+- Versioned artifacts and model promotion rules that are designed to fail closed.
 
 ### Observability and closed-loop monitoring
 
@@ -157,18 +170,16 @@ flowchart TD
 
 ### Technology stack
 
-This is the concrete stack behind the template. These are also the terms most teams search for when evaluating whether a template fits their environment.
-
-| Layer | Primary technologies | What they cover |
-|-------|----------------------|-----------------|
+| Layer | Technologies | Coverage |
+|-------|-------------|----------|
 | ML and training | Python 3.11+, scikit-learn, XGBoost, LightGBM, Optuna | baseline models, ensembles, hyperparameter tuning |
-| Serving and API | FastAPI, Uvicorn, Pydantic | async inference API, contract validation, structured responses |
+| Serving and API | FastAPI, Uvicorn, Pydantic | async inference, contract validation, structured responses |
 | Explainability | SHAP | feature attribution in original feature space |
-| Data validation and pipelines | Pandera, pandas, DVC | schema checks, dataset versioning, reproducible pipelines |
-| Model registry and artifacts | MLflow, joblib | experiment tracking, model registry, serialized artifacts |
-| Containers and packaging | Docker, multi-stage builds | image build, non-root runtime, init-container model loading |
-| Kubernetes runtime | Kubernetes, Kustomize, HPA, PodDisruptionBudget, NetworkPolicy | deployment, autoscaling, resilience, network isolation |
-| Infrastructure as code | Terraform, GKE, EKS, GCS, S3, Artifact Registry, ECR | cloud provisioning, remote state, multi-cloud separation |
+| Data validation | Pandera, pandas, DVC | schema contracts, dataset versioning, reproducible pipelines |
+| Model registry | MLflow, joblib | experiment tracking, model registry, serialized artifacts |
+| Containers | Docker, multi-stage builds | image build, non-root runtime, init-container model loading |
+| Kubernetes runtime | Kubernetes, Kustomize, HPA, PDB, NetworkPolicy | deployment, autoscaling, resilience, network isolation |
+| Infrastructure | Terraform, GKE, EKS, GCS, S3, Artifact Registry, ECR | cloud provisioning, remote state, multi-cloud environment separation |
 | Observability | Prometheus, Grafana, Alertmanager, Evidently | metrics, dashboards, alerting, drift and performance monitoring |
 | CI/CD and security | GitHub Actions, Trivy, Syft, Cosign, Kyverno, gitleaks | build, scan, sign, attest, policy enforcement, secret detection |
 
@@ -176,7 +187,7 @@ This is the concrete stack behind the template. These are also the terms most te
 
 ## Agentic system
 
-The template treats agent behavior as an engineering surface, not a prompt trick.
+The template treats agent behavior as an engineering surface, not a prompt configuration.
 
 ### Static decision protocol
 
@@ -190,7 +201,7 @@ Every operation maps to one of three modes:
 
 ### Dynamic escalation
 
-The template also supports live escalation based on risk signals such as:
+The template supports live escalation based on risk signals including:
 
 - severe drift
 - active incident
@@ -214,7 +225,7 @@ See [AGENTS.md](AGENTS.md) for the canonical operation matrix and invariant cata
 
 ## Operational Memory Plane
 
-The Operational Memory Plane is an optional companion capability for repos that want agents to learn from prior work without introducing hidden behavior.
+The Operational Memory Plane is an optional companion capability for repos that want agents to draw on prior work without introducing hidden behavior.
 
 ### What it is
 
@@ -268,7 +279,7 @@ This lane is designed to keep CI moving without allowing agent autonomy to leak 
 
 ## Model routing policy
 
-The template assumes model usage should be cost-aware, task-aware, and vendor-agnostic.
+The template treats model selection as a routing problem, not a brand decision.
 
 ### Routing roles
 
@@ -286,7 +297,7 @@ The template assumes model usage should be cost-aware, task-aware, and vendor-ag
 - Frontier models should be reserved for escalation paths, hard RCA, or advisory benchmarking.
 - Preview models should not be used on protected branches or governance-critical workflows.
 
-The important part is not the brand. It is the routing policy, verification layer, and operation mode boundaries.
+The important part is not the provider. It is the routing policy, verification layer, and operation mode boundaries.
 
 ---
 
@@ -300,16 +311,16 @@ The template encodes and audits 30 production anti-patterns across serving, trai
 | D-02 | Memory as an HPA metric for ML pods | Use CPU-only HPA so scale-down remains meaningful. |
 | D-03 | `model.predict()` called directly in an async endpoint | Wrap inference with `run_in_executor`. |
 | D-04 | `shap.TreeExplainer` with ensemble or pipeline models | Use `KernelExplainer` with a stable prediction wrapper. |
-| D-05 | Exact `==` version pinning for ML dependencies | Use compatible release pinning such as `~=`. |
+| D-05 | Exact `==` version pinning for ML dependencies | Use compatible release pinning (`~=`) and automate updates through Dependabot. |
 | D-06 | Unrealistically high primary metric | Treat as a leakage investigation, not as a promotion win. |
 | D-07 | SHAP background sample contains only one class | Replace with a representative background sample. |
 | D-08 | PSI computed with uniform bins | Use quantile-based bins derived from the reference distribution. |
 | D-09 | Drift detection without heartbeat alerting | Add heartbeat alerting for broken or stalled CronJobs. |
-| D-10 | `terraform.tfstate` committed to Git | Move state to remote storage and rotate exposed credentials. |
+| D-10 | `terraform.tfstate` committed to Git | Move state to remote storage and rotate exposed credentials immediately. |
 | D-11 | Model artifacts baked into the Docker image | Download models at runtime through init containers and shared volumes. |
 | D-12 | No quality gates before promotion | Enforce metrics, fairness, leakage, and integrity gates before deploy. |
 | D-13 | EDA executed directly on production data | Work from an isolated copy under `data/raw/` and keep EDA out of prod paths. |
-| D-14 | Pandera schema without observed bounds from EDA | Add observed ranges and constraints from exploratory analysis. |
+| D-14 | Pandera schema without observed bounds from EDA | Add observed ranges and constraints derived from exploratory analysis. |
 | D-15 | Baseline distributions not persisted for drift | Save and version baseline distributions for drift consumers. |
 | D-16 | Feature engineering without rationale | Document feature proposals and tie them to EDA evidence. |
 | D-17 | Hardcoded credentials in code or config | Use secret manager integrations through shared utilities. |
@@ -320,14 +331,14 @@ The template encodes and audits 30 production anti-patterns across serving, trai
 | D-22 | Logging backend failure leaks into the HTTP response path | Swallow logging failures and surface them as observability counters. |
 | D-23 | Shared liveness and readiness endpoint | Split `/health`, `/ready`, and startup gating for warm-up correctness. |
 | D-24 | SHAP explainer rebuilt on every request | Build once during warm-up and reuse from application state. |
-| D-25 | Pod can be terminated mid-request | Keep `terminationGracePeriodSeconds` above graceful shutdown timeout. |
-| D-26 | Deploys bypass staging validation | Enforce dev -> staging -> prod promotion with environment approvals. |
+| D-25 | Pod can be terminated mid-request | Keep `terminationGracePeriodSeconds` above the graceful shutdown timeout. |
+| D-26 | Deploys bypass staging validation | Enforce dev → staging → prod promotion with environment approvals. |
 | D-27 | Deployment ships without a PodDisruptionBudget | Require a PDB and sane minimum replica assumptions. |
-| D-28 | Breaking API change without version bump and snapshot refresh | Refresh OpenAPI snapshot and apply semantic version discipline. |
+| D-28 | Breaking API change without version bump and snapshot refresh | Refresh the OpenAPI snapshot and apply semantic version discipline. |
 | D-29 | Namespace missing Pod Security Standards labels | Label namespaces and enforce the correct pod security level by environment. |
-| D-30 | Production image lacks SBOM attestation | Attach CycloneDX SBOM attestation as part of the signed release chain. |
+| D-30 | Production image lacks SBOM attestation | Attach a CycloneDX SBOM attestation as part of the signed release chain. |
 
-The full invariant text and operating rules live in [AGENTS.md](AGENTS.md), but this table is the fast scan most adopters want before they clone the repo.
+The full invariant text and operating rules live in [AGENTS.md](AGENTS.md).
 
 ---
 
@@ -345,10 +356,12 @@ templates/
   monitoring/         Grafana and Prometheus templates
 
 examples/
-  minimal/            local end-to-end demo
+  minimal/            local end-to-end demo (train, serve, drift check)
 
 docs/
   decisions/          template-level ADRs
+  runbooks/           cloud-specific setup and incident runbooks
+  incidents/          incident record templates
 
 .windsurf/
 .cursor/
@@ -472,13 +485,14 @@ make bootstrap
 make demo-minimal
 ```
 
-Or run the minimal example manually:
+Or run the minimal example step by step:
 
 ```bash
 cd examples/minimal
 pip install -r requirements.txt
-python train.py
-uvicorn serve:app --host 0.0.0.0 --port 8000
+python train.py          # train and register the model artifact
+uvicorn serve:app --host 0.0.0.0 --port 8000 &   # serve predictions
+python drift_check.py    # verify drift detection baseline
 ```
 
 ### 2. Scaffold your own service
@@ -491,14 +505,14 @@ pytest
 
 ### 3. Wire your environment
 
-- configure cloud identity federation
-- configure remote Terraform state
-- configure secret stores
-- configure MLflow backend
-- configure observability backends
-- configure GitHub Environment protections
+Before deploying to a cloud environment, configure the following. Runbooks for each step live under `docs/runbooks/`.
 
-Runbooks for the cloud-specific setup live under `docs/runbooks/`.
+- cloud identity federation (Workload Identity or IRSA)
+- remote Terraform state backend
+- secret store integrations
+- MLflow tracking and registry backend
+- observability backends (Prometheus, Grafana, Alertmanager)
+- GitHub Environment protections and required reviewers
 
 ---
 
@@ -516,48 +530,36 @@ Typical flow:
 8. Monitor closed-loop metrics, drift, and incident signals.
 9. Retrain only through the governed quality gate path.
 
-This template is designed so that deploy, incident, and retrain are all part of one operating model rather than separate ad-hoc scripts.
+Deploy, incident, and retrain are part of one operating model, not separate ad-hoc scripts.
 
 ---
 
 ## Scope boundaries
 
-Included:
+**Included:**
 
 - single-service and small-to-medium team MLOps patterns
-- multi-cloud Kubernetes deployment
-- production CI/CD, security, monitoring, and retraining paths
-- agentic governance and bounded automation
+- multi-cloud Kubernetes deployment (GKE and EKS)
+- production CI/CD, supply-chain security, monitoring, and retraining paths
+- agentic governance and bounded automation for Windsurf, Cursor, and Claude Code
 
-Not included by default:
+**Not included by default:**
 
-- full workflow orchestration platforms
+- full workflow orchestration platforms (Airflow, Prefect, Kubeflow Pipelines)
 - feature store platform ownership
 - multi-region active-active failover
 - complex canary meshes beyond the documented rollout boundary
 - compliance programs that require dedicated legal or regulated tooling
 
-If you outgrow the template, the documented invariants and ADRs are still meant to survive that transition.
+If you outgrow the template, the documented invariants and ADRs are designed to survive that transition.
 
 ---
 
 ## Real-world origin
 
-This template was extracted from [ML-MLOps-Portfolio](https://github.com/DuqueOM/ML-MLOps-Portfolio), where the patterns were exercised across multiple ML services, ADRs, tests, and cloud deployments.
+This template was extracted from [ML-MLOps-Portfolio](https://github.com/DuqueOM/ML-MLOps-Portfolio), where the patterns were developed and validated across multiple ML services, ADRs, tests, and cloud deployments.
 
-The goal of this repo is not to mirror that portfolio one-to-one. The goal is to package the stable, reusable operating patterns into a template that other teams can adopt.
-
----
-
-## Documentation
-
-- [QUICK_START.md](QUICK_START.md)
-- [RUNBOOK.md](RUNBOOK.md)
-- [AGENTS.md](AGENTS.md)
-- [SECURITY.md](SECURITY.md)
-- [CHANGELOG.md](CHANGELOG.md)
-- [docs/decisions/](docs/decisions/)
-- [docs/runbooks/](docs/runbooks/)
+The goal is not to mirror that portfolio one-to-one. The goal is to package the stable, reusable operating patterns into a template that other teams can adopt without starting from scratch.
 
 ---
 
@@ -576,9 +578,11 @@ All commits must be signed off:
 git commit -s -m "your message"
 ```
 
-This adds the required `Signed-off-by` line to your commit.
+This adds the required `Signed-off-by` line to your commit. No CLA is required.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the full contribution process.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full contribution process, issue templates, and ADR conventions.
+
+Questions and discussion: open a [GitHub Discussion](https://github.com/DuqueOM/ML-MLOps-Production-Template/discussions) or file an issue.
 
 ---
 
@@ -588,21 +592,12 @@ This project is licensed under the Apache License 2.0. See the [LICENSE](LICENSE
 
 ---
 
-## Legal
-
-All contributions are accepted under the Apache License 2.0.
-
-- No Contributor License Agreement (CLA) is required.
-- By submitting a contribution, you agree to the terms defined in the DCO.
-
----
-
 ## AI transparency
 
-This repository is intentionally designed for human-governed AI-assisted engineering.
+This repository is intentionally designed for human-governed, AI-assisted engineering.
 
 - Agents accelerate repetitive work.
 - Policies, tests, reviews, and audit logs constrain agent autonomy.
 - Architecture, risk acceptance, and production accountability remain human responsibilities.
 
-That is the point of this template: safer automation, not ungoverned automation.
+The goal of this template is safer automation, not ungoverned automation.
