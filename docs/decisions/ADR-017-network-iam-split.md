@@ -153,7 +153,8 @@ Add `templates/infra/terraform/tests/test_iam_least_privilege.py`:
 - [x] VPC creation conditional on `network_mode=managed` (AWS — `network.tf`)
 - [x] 5 IAM identities created (GCP — `iam.tf`)
 - [x] 5 IAM identities created (AWS — `iam.tf` per-service + `iam-roles-split.tf` ci/deploy/drift/retrain)
-- [ ] Contract test added (`test_iam_least_privilege.py`)
-- [ ] Documentation updated (READMEs + AGENTS.md D-28)
-- [ ] Golden path E2E passes with managed mode
-- [ ] ADR-015 updated
+- [x] Contract test added (`templates/service/tests/test_iam_least_privilege.py` — 11 cases pass)
+- [x] AGENTS.md D-31 anti-pattern codified (monolithic IAM identity)
+- [x] ADR-015 sub-tracking updated (A1 marked shipped)
+- [ ] Per-cloud README updates (network mode usage + migration guide)
+- [ ] Golden path E2E re-run with managed mode (deferred; existing-mode default preserves CI green)
