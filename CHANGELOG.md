@@ -6,6 +6,52 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
 
 ---
 
+## [1.12.0] - 2026-04-29
+
+Closes 4 external-audit Round-3 findings and hardens pre-commit as the first filter. Root cause of the R3 findings: contributor clones shipped without actually installing git hooks, so black / flake8 drift, a closed-loop workflow with a payload that didn't match the live schema, and a kebab-vs-snake path bug in the drift CronJob all reached CI as the last line of defense. This release makes the first filter non-optional.
+
+### HIGH — closed (pre-commit + audit R3)
+
+- **HIGH-1 (PR-R2-9)** Stage 1 of `golden-path-extended.yml` was posting `feature_1/2/3` against a live schema that required `entity_id` + `feature_a/b/c` — every "valid" request was 422'd. The metric fallback `requests_total{endpoint="/predict"}` matched NOTHING because the counter only has a `status` label (see `fastapi_app.py:176`). Fixed: payload uses the canonical schema fields including `slice_values`; fallback awk pattern matches against `status="2xx|4xx"` which actually exists. NEW `test_closed_loop_workflow_contract.py` (3 tests) parses both sides and fails LOUD if workflow and schema drift.
+- **HIGH-2 (D-32)** Drift `CronJob` referenced `src/{service-name}/monitoring/drift_detection.py` (kebab) but the scaffolder renames `src/{service}` → `src/<snake_slug>`. Manifest applied cleanly, then exploded at runtime with `ModuleNotFoundError: fraud-detector is not a valid Python package name`. Fixed: manifest now uses `{service}` (snake). NEW **D-32** entry in `AGENTS.md` formalizes the rule with inline rationale. NEW `test_d32_drift_cronjob_python_path` regression test (placeholder leak guard + snake-case check + on-disk directory existence + `drift_detection.py` existence).
+
+### Pre-commit as mandatory first filter
+
+Discovered this clone had ZERO hooks in `.git/hooks/` — which is why this session shipped 5 commits with black drift and F541 caught ONLY by CI. The fix makes hooks non-optional.
+
+- `default_install_hook_types: [pre-commit, pre-push]` in `.pre-commit-config.yaml` so a single `pre-commit install` covers both stages (previously `--hook-type pre-push` had to be passed separately and almost nobody did — the scaffold-smoke pre-push hook silently never ran).
+- NEW `scripts/dev-setup.sh` — idempotent bootstrap: installs pre-commit if missing, validates config, installs both stages with `--overwrite`, verifies hooks actually landed in `.git/hooks/`, runs `pre-commit run --all-files` as sanity check. Fails LOUD with the fix command.
+- NEW `make verify-hooks` target — fails non-zero if either hook is missing or doesn't reference the pre-commit framework.
+- NEW hooks (ported from the portfolio): **mypy 1.13** narrowed to `common_utils/` + `examples/` + `scripts/` (template service territory is placeholder land and explodes mypy), **bandit 1.7.10** with `-ll -i` threshold.
+- NEW LOCAL hooks: **validate-agentic** (runs `scripts/validate_agentic.py --strict` when AGENTS.md or agent runtime config changes) and **ci-autofix-policy-contract** (runs the 10-invariant contract test from ADR-019 when policy YAMLs change). These are the project's OWN gates; contributors no longer wait for CI to discover drift.
+
+Result: **14 hooks** (was 9), all 14 green on `main`.
+
+### LOW — release hygiene
+
+- `releases/v.1.11.0.md` → `releases/v1.11.0.md` (`git mv` preserves history). The previous filename broke alphabetical sorting between v1.10 and v1.11.
+
+### MEDIUM — catalog reconciliation
+
+- README said "30 production anti-patterns" while AGENTS table ended at D-31 and code/tests already referenced D-32 without a canonical definition. Fixed: `D-01..D-32` across `README.md`, `AGENTS.md` (4 callsites reconciled), and D-32 formalized in the anti-pattern table.
+
+### CI hardening
+
+- **CI parity for local hooks**: the two new local hooks need pytest/pyyaml/jsonschema in the lint lane. Added to the `python-quality` job so CI matches the same set of hooks as local pre-commit.
+- **ci-autofix-policy-contract** uses `--noconftest --rootdir=.` so pytest doesn't pick up the service's numpy-heavy conftest (unnecessary for a self-contained contract test). Fast + self-contained is the whole point.
+- **mypy fix** in `risk_context.py:301`: removed a redundant `ctx: RiskContext` annotation that re-declared a cache-unpacked variable. `[no-redef]` was the only mypy error blocking the new hook from going green on the existing tree.
+- **bandit fix** in `risk_context.py:215`: explicit `# nosec B310` on the Prometheus urlopen with a 3-line comment explaining the URL comes from deployment config, not request input.
+
+### Known follow-ons (scoped, not regressions)
+
+- MEDIUM `require_eda_artifacts=true` default for new services (touches `train.py` + scaffolder — needs a migration plan for existing services).
+- MEDIUM Windows CI matrix for `validate_agentic.py` (new lane; script currently works on Linux/WSL/macOS).
+- MEDIUM NetworkPolicy egress allowlist by cloud (per-overlay work).
+- MEDIUM `load_test.py` schema sync to `feature_a/b/c` (low-risk but clean review as separate PR).
+- ADR-018/019 runtime implementation remains explicit Phase 0 / policy only — status already accurate in CHANGELOG and ADRs.
+
+---
+
 ## [1.11.0] - 2026-04-28
 
 Closes the ADR-016 external-audit R2 remediation backlog (7-day, 30-day, and 90-day windows all materially shipped) and lays the policy foundation for two new agent capabilities (Operational Memory Plane, Agentic CI Self-Healing). Also closes the OSS-packaging gap (NOTICE, DCO, CODEOWNERS) and tightens cloud parity through an additional 33 contract tests.
