@@ -194,8 +194,14 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install pre-commit
-        run: pip install pre-commit
+      - name: Install pre-commit + local-hook deps
+        # The pre-commit framework itself + the deps the LOCAL hooks
+        # need (validate-agentic, ci-autofix-policy-contract). Remote
+        # hooks (black/isort/flake8/mypy/bandit/gitleaks) bring their
+        # own envs via pre-commit; only locals share this Python.
+        run: |
+          pip install pre-commit
+          pip install pytest pyyaml jsonschema
 
       - name: Run pre-commit hooks (black, isort, flake8, gitleaks)
         # Single source of truth for versions: .pre-commit-config.yaml.
