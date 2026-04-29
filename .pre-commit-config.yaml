@@ -184,7 +184,11 @@ repos:
           The two governance YAMLs in templates/config/ have a
           contract test (10 invariants). Run it locally on every
           commit that touches them so policy drift never reaches CI.
-        entry: python -m pytest templates/service/tests/test_ci_autofix_policy_contract.py -q -o addopts=""
+        # --noconftest: the sibling conftest.py imports numpy (needed
+        # for the service test suite but not for this contract test).
+        # --rootdir: avoids pytest walking up to the repo pyproject.toml
+        # which applies coverage plugins this hook doesn't need.
+        entry: python -m pytest templates/service/tests/test_ci_autofix_policy_contract.py -q -o addopts="" --noconftest --rootdir=.
         language: system
         pass_filenames: false
         files: ^(templates/config/(ci_autofix_policy|model_routing_policy)\.yaml|templates/service/tests/test_ci_autofix_policy_contract\.py)$
