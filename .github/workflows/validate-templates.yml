@@ -81,7 +81,7 @@ jobs:
 
       # 4. Checkov — broader IaC checks (Terraform + K8s + Dockerfile).
       - name: Checkov (IaC + K8s + Dockerfile)
-        uses: bridgecrewio/checkov-action@v12.2752.0
+        uses: bridgecrewio/checkov-action@v12.3101.0
         with:
           directory: templates/
           framework: terraform,kubernetes,dockerfile
