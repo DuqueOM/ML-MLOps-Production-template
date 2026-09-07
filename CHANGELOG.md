@@ -57,6 +57,52 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
   comment has no such distinction**, so a removed path must be described
   rather than spelled. The alternative, a per-line opt-out marker, would be a
   bigger hole than the one it closes.
+### Fixed — the LOW triage: seven of eight were real
+
+- The previous review left LOW unenforced on the grounds that *"an unenforced
+  threshold is honest about untriaged findings in a way a suppressed one is
+  not"*. True, and still an evasion: **"we have not looked" is a description,
+  not a decision.**
+- **`GCP-0066` ×4 — live buckets without customer-managed encryption.** The
+  bootstrap *state* bucket has had CMEK since ADR-015 while `models`, `data`,
+  `mlflow_artifacts` and `logs` held Google-managed keys. The asymmetry was
+  backwards: the state file was better protected than the models and training
+  data it describes. Fixed with a `storage` key on the existing ring, plus
+  the GCS service-agent grant that CMEK requires.
+- **`GCP-0054` ×2 — node image type not pinned.** COS is GKE's current
+  default, which is exactly why it is pinned: a default is not a decision,
+  and inheriting it means a future change lands a different node OS with a
+  different attack surface without anyone choosing it.
+- **`GCP-0051` — cluster without resource labels.** Every bucket, key and
+  service account carries them; the cluster did not, so cost attribution had
+  a hole precisely where the spend is.
+- **`AWS-0089` — bootstrap state bucket without access logging.** Versioned,
+  encrypted, public-access-blocked, and nothing recorded *who read it* — the
+  interesting question for a Terraform state file. Implemented rather than
+  accepted: the module has no CloudTrail, so there was no compensating
+  control to point at, and pointing at one that does not exist is the failure
+  this repo has now found three times.
+
+### Changed — the IaC gate reaches the floor, after the triage rather than before it
+
+- `CRITICAL,HIGH,MEDIUM,LOW`. The threshold walked up as each severity was
+  triaged, never ahead of it.
+- **Of the 13 findings that sat below a threshold across the two reviews, 10
+  were real defects.** "Below the threshold" predicted nothing about whether
+  a finding mattered — the argument against selective gates, and why this one
+  is now exhaustive.
+- Recorded plainly in `docs/audit/baseline-review.md`: **fixing a finding is
+  not free of findings.** Adding the access-log bucket introduced three new
+  ones, one of them HIGH (`AWS-0132`, SSE-S3 rather than a customer key —
+  fixed with the existing bootstrap CMK and S3 Bucket Keys). A new resource
+  inherits every check for its type; "close the finding" and "reduce the
+  count" are different operations and the second is the wrong goal.
+- The four residual findings are all log-sink buckets (versioning,
+  self-logging), accepted with dated justifications. Those entries now state
+  a limitation the earlier ones did not: the plain ignore format suppresses a
+  check id **repo-wide**, not per resource, so each carries a review question
+  about *which* buckets the check fires on rather than whether the prose
+  still reads well.
 
 ### Fixed — GKE nodes ran as the default Compute Engine service account (D-31 in the module that defines D-31)
 

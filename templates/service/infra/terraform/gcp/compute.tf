@@ -72,6 +72,15 @@ resource "google_container_cluster" "gke" {
     channel = "REGULAR"
   }
 
+  # Trivy GCP-0051. Every bucket, key and service account in this module
+  # carries these; the cluster did not, so cost attribution and ownership
+  # queries had a hole exactly where the spend is.
+  resource_labels = {
+    environment = var.environment
+    managed-by  = "terraform"
+    component   = "gke"
+  }
+
   lifecycle {
     # The invariant the old suppression's justification claimed was "enforced
     # by the variable validation rule in variables.tf". No such rule existed.
@@ -143,6 +152,13 @@ resource "google_container_node_pool" "system" {
     # through Workload Identity. It covers node-level operations only.
     service_account = google_service_account.nodes.email
 
+    # Container-Optimized OS with containerd (Trivy GCP-0054). COS is GKE's
+    # current default, which is precisely why it is pinned: a default is not
+    # a decision, and inheriting it silently means a future change to the
+    # default — or an override elsewhere — lands a different node OS with a
+    # different attack surface without anyone choosing it.
+    image_type = "COS_CONTAINERD"
+
     workload_metadata_config {
       mode = "GKE_METADATA"
     }
@@ -194,6 +210,13 @@ resource "google_container_node_pool" "workload" {
     # Pods do not use this identity; they impersonate runtime/drift/retrain
     # through Workload Identity. It covers node-level operations only.
     service_account = google_service_account.nodes.email
+
+    # Container-Optimized OS with containerd (Trivy GCP-0054). COS is GKE's
+    # current default, which is precisely why it is pinned: a default is not
+    # a decision, and inheriting it silently means a future change to the
+    # default — or an override elsewhere — lands a different node OS with a
+    # different attack surface without anyone choosing it.
+    image_type = "COS_CONTAINERD"
 
     workload_metadata_config {
       mode = "GKE_METADATA"

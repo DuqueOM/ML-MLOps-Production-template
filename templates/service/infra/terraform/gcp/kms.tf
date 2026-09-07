@@ -82,3 +82,42 @@ output "logs_kms_key_id" {
   description = "KMS key encrypting Cloud Logging buckets."
   value       = google_kms_crypto_key.logs.id
 }
+
+# ---------------------------------------------------------------------------
+# Storage key — customer-managed encryption for the four live buckets
+# ---------------------------------------------------------------------------
+# Trivy GCP-0051..GCP-0066 triage (2026-09-05): all four live buckets held
+# Google-managed keys only, while the bootstrap tfstate bucket has had CMEK
+# since ADR-015. For an ML platform the live buckets are the crown jewels —
+# `models` and `data` hold the trained artefacts and the training set — so
+# the asymmetry was backwards: the state file was better protected than the
+# thing the state describes.
+#
+# One key for all four rather than one each: they share a lifecycle, a
+# rotation cadence and a blast radius, and four keys would be four rotation
+# schedules to keep in step for no separation gain.
+resource "google_kms_crypto_key" "storage" {
+  name     = "storage"
+  key_ring = google_kms_key_ring.workload.id
+
+  rotation_period = "7776000s" # 90 days
+
+  destroy_scheduled_duration = "2592000s" # 30 days
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+# GCS encrypts with a per-project service agent, not with the caller's
+# identity, so the agent needs the key. Without this the bucket creation
+# fails at apply with a permission error rather than at plan.
+data "google_storage_project_service_account" "gcs" {
+  project = var.project_id
+}
+
+resource "google_kms_crypto_key_iam_member" "gcs_storage_kms" {
+  crypto_key_id = google_kms_crypto_key.storage.id
+  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+  member        = "serviceAccount:${data.google_storage_project_service_account.gcs.email_address}"
+}

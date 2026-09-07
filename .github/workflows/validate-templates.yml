@@ -151,16 +151,23 @@ jobs:
         with:
           scan-type: config
           scan-ref: templates/service/infra/terraform
-          # Raised from CRITICAL,HIGH on 2026-09-05. At HIGH the five MEDIUM
-          # findings were visible in the log and enforced by nothing, which is
-          # the same as not looking: two of them were a GKE node pool running
-          # as the default Compute Engine service account (roles/editor
-          # project-wide) and a project-wide serviceAccountUser grant. Both
-          # were fixed rather than accepted; the two that remain are baselined
-          # with a dated justification. LOW stays out — 8 findings whose
-          # triage has not been done, and an unenforced threshold is honest
-          # about that in a way a suppressed one is not.
-          severity: CRITICAL,HIGH,MEDIUM
+          # Every severity is enforced. The threshold walked up as the triage
+          # was done, not before it:
+          #
+          #   HIGH    -> MEDIUM  once the 5 MEDIUM were triaged. Three were
+          #                      real (default node service account ×2, a
+          #                      project-wide serviceAccountUser grant).
+          #   MEDIUM  -> LOW     once the 8 LOW were triaged. Seven were real
+          #                      (4 buckets without CMEK, 2 unpinned node
+          #                      images, an unlabelled cluster) and are fixed;
+          #                      the state bucket gained access logging.
+          #
+          # "Below the threshold" turned out to predict nothing about whether
+          # a finding mattered: 10 of the 13 sub-threshold findings were real
+          # defects. What remains is baselined with a dated justification, so
+          # the gate is now exhaustive rather than selective — anything new,
+          # at any severity, blocks until someone decides about it.
+          severity: CRITICAL,HIGH,MEDIUM,LOW
           exit-code: "1"
           trivyignores: .security-baselines/trivy-config.trivyignore
           format: table
