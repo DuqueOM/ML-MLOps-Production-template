@@ -46,9 +46,10 @@ def test_canonical_directory_exists(relpath: str) -> None:
     """Every directory listed in `docs/data-paths.md` must exist."""
     target = REPO_ROOT / relpath
     assert target.is_dir(), (
-        f"missing canonical directory `{relpath}` — check that "
-        f"`templates/scripts/new-service.sh` mkdir-s it AND that the "
-        f"`docs/data-paths.md` table is in sync."
+        f"missing canonical directory `{relpath}` — the layout is shipped as "
+        f"a `.gitkeep` placeholder in the template, and `.gitignore` keeps it "
+        f"while ignoring the payloads. Check the placeholder still exists and "
+        f"that the `docs/data-paths.md` table is in sync."
     )
 
 

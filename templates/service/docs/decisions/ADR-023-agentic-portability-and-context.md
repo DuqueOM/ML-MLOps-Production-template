@@ -228,7 +228,7 @@ that omit the canonical source or the `AGENTS.md` authority chain.
 - `templates/config/mcp_registry.yaml`, `surface_capabilities.yaml`
 - `scripts/mcp_doctor.py` — read-only diagnostics + docs renderer
 - `docs/agentic/mcp-portability.md`
-- Contract: `templates/service/tests/test_mcp_registry_contract.py`
+- Contract: `templates/tests/governance/test_mcp_registry_contract.py`
 
 ### F5 — Codex adapter (shipped)
 
@@ -237,14 +237,14 @@ that omit the canonical source or the `AGENTS.md` authority chain.
 - Full parity with 15 canonical rule files, 16 skills, and 12 workflows
   through generated pointer files.
 - Skills are pointer-files referencing canonical Windsurf SKILL.md
-- Contract: `templates/service/tests/test_codex_adapter_contract.py`
+- Contract: `templates/tests/governance/test_codex_adapter_contract.py`
 
 ### F6 — Reports v1 typed contract (shipped)
 
 - `templates/config/report_schema.json`,
   `templates/common_utils/reports.py`, `scripts/generate_report.py`
 - `docs/agentic/reports.md`
-- Contract: `templates/service/tests/test_reports_contract.py`
+- Contract: `templates/tests/governance/test_reports_contract.py`
 
 ### F7 — Runtime monitoring companion (shipped, docs-only)
 
@@ -253,7 +253,7 @@ that omit the canonical source or the `AGENTS.md` authority chain.
   MCPs by existing skills (`debug-ml-inference`, `incident`,
   `performance-degradation-rca`). No new skill or workflow introduced.
 - Manifest entry: `companions[].id == runtime-monitoring`.
-- Contract: `templates/service/tests/test_companions_contract.py`.
+- Contract: `templates/tests/governance/test_companions_contract.py`.
 
 ### F8 — GCP Gemini Enterprise / Vertex AI Agent Builder companion (shipped, docs-only)
 

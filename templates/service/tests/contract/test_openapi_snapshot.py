@@ -17,6 +17,7 @@ version bump — see .github/workflows/ci.yml `Validate API contract`.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -31,8 +32,24 @@ except Exception:  # pragma: no cover - template placeholder
 
 SNAP = Path(__file__).parent / "openapi.snapshot.json"
 
-# The snapshot is generated on first setup of a scaffolded service
-# (scripts/refresh_contract.py); it does not exist in the template repo.
+# `CI` is set by GitHub Actions and every other mainstream runner.
+_IN_CI = os.environ.get("CI", "").lower() in {"1", "true", "yes"}
+
+# The snapshot is the service's API contract, and it does not exist in the
+# template repo — there is no service to snapshot until one is rendered.
+#
+# It used to be an instruction: run `scripts/refresh_contract.py` on first
+# setup. Nothing enforced that, so an adopter's very first `pytest` was two
+# hard failures about a file they had never been told about at that moment,
+# and until someone read the message the D-28 contract was simply not being
+# checked. The service's own `ci.yml` only compares the snapshot when it
+# *changes*, so a missing one is invisible there too.
+#
+# So: locally, the first run writes the baseline from the live app and skips,
+# saying to commit it — the standard snapshot-test bootstrap, and from the
+# second run onward the comparison is real. In CI a missing baseline stays a
+# failure, because a machine must never invent the contract it is supposed to
+# be guarding.
 pytestmark = pytest.mark.scaffold_context
 
 
@@ -41,13 +58,28 @@ def openapi_current() -> dict:
     return TestClient(app).get("/openapi.json").json()
 
 
-def test_snapshot_file_exists():
-    assert SNAP.exists(), (
-        f"{SNAP.name} missing. Run `python scripts/refresh_contract.py` to generate it on first setup."
+def test_snapshot_file_exists(openapi_current):
+    if SNAP.exists():
+        return
+    if _IN_CI:
+        pytest.fail(
+            f"{SNAP.name} is missing. The API contract (D-28) is unenforced without it, "
+            f"and CI will not create one: run `python scripts/refresh_contract.py` "
+            f"locally and commit the result."
+        )
+    SNAP.write_text(json.dumps(openapi_current, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    pytest.skip(
+        f"{SNAP.name} did not exist; wrote the baseline from the running app. "
+        f"Review it and commit it — from the next run this test compares against it."
     )
 
 
 def test_openapi_snapshot_unchanged(openapi_current):
+    if not SNAP.exists():
+        # Only reachable when the bootstrap above skipped; comparing the live
+        # app against a file just written from the live app would pass while
+        # checking nothing.
+        pytest.skip(f"{SNAP.name} was created in this run — commit it, then this compares.")
     expected = json.loads(SNAP.read_text())
     if openapi_current != expected:
         # Emit a compact hint — full diffs are huge

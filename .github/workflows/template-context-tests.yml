@@ -66,6 +66,13 @@ jobs:
         # anyio/TestClient lifespans (hang in epoll, not a failure —
         # the worst CI failure mode). Collection of load_test.py is
         # separately blocked by `collect_ignore` in tests/conftest.py.
+        # templates/tests/governance holds the tests that guard THIS repository
+        # — its README wording, its workflows, its config. They used to sit in
+        # templates/service/tests, which is the Copier payload, so every
+        # generated service shipped 15 test files that asserted about
+        # `templates/...` paths it does not have: 147 failures out of the box.
+        # They are listed here so moving them out of the payload did not move
+        # them out of CI.
         # monitoring/tests + eda/tests are included explicitly: no lane ran
         # them before, so the alertmanager-routing module sat uncollectable
         # (stale parents[3] path) for weeks with zero CI signal (AUDIT R8).
@@ -74,6 +81,7 @@ jobs:
         run: |
           python -m pytest \
             templates/service/tests \
+            templates/tests/governance \
             templates/service/monitoring/tests \
             templates/service/eda/tests \
             -p no:locust \

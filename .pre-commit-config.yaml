@@ -318,6 +318,20 @@ repos:
         language: system
         pass_filenames: false
         files: ^(templates/service/docs/decisions/|scripts/check_service_adr_references\.py)
+      - id: payload-test-scope
+        name: payload tests are about the generated service
+        description: |
+          templates/service/tests/ is the Copier payload: an adopter gets
+          every file in it. Tests that bind their only root above the
+          service root are about THIS repository, and in a service they
+          resolve to whatever sits two directories above the adopter's
+          checkout. Measured before this gate: 147 of 764 tests failed on
+          a freshly scaffolded service. Repository tests belong in
+          templates/tests/governance/, where the depth is unchanged.
+        entry: python3 scripts/check_payload_test_scope.py
+        language: system
+        pass_filenames: false
+        files: ^(templates/service/tests/|scripts/check_payload_test_scope\.py)
       - id: template-render-safety
         name: render root parses as Copier templates
         description: |

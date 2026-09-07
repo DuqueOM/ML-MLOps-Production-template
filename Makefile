@@ -183,6 +183,7 @@ GATES := \
 	check_adopter_scaffold_ref \
 	check_service_adr_references \
 	check_template_render_safety \
+	check_payload_test_scope \
 	check_test_clock_isolation \
 	validate_agentic
 

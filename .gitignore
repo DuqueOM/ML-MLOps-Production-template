@@ -53,6 +53,12 @@ ENV/
 
 # ─── ML artifacts (never commit models or data) ──────
 models/
+# …except the payload's layout placeholder. `templates/service/` is what
+# Copier ships; a directory that is not tracked here cannot be rendered
+# into an adopter's service, and the service's own .gitignore already
+# promises this layout via its `!models/.gitkeep` negation.
+!templates/service/models/
+!templates/service/models/.gitkeep
 *.joblib
 *.pkl
 *.pickle
@@ -106,6 +112,8 @@ aws-credentials
 logs/
 *.log
 reports/
+!templates/service/reports/
+!templates/service/reports/.gitkeep
 *.csv.gz
 
 # Reports v1 (ADR-023 F6) — track the canonical directory layout

@@ -45,6 +45,23 @@ def _find_repo_root() -> Path | None:
 REPO_ROOT = _find_repo_root()
 
 
+def _payload(*parts: str) -> Path | None:
+    """Resolve a path that lives at the service root, from either perspective.
+
+    In this repository the payload sits under ``templates/service/``; in a
+    generated service the same file is at the root. Returning ``None`` when
+    neither resolves keeps "not found" distinguishable from "found nothing to
+    check" at the call site.
+    """
+    if REPO_ROOT is None:
+        return None
+    for candidate in (REPO_ROOT / "templates" / "service", REPO_ROOT):
+        target = candidate.joinpath(*parts)
+        if target.exists():
+            return target
+    return None
+
+
 def _tf_files(cloud: str) -> str:
     if REPO_ROOT is None:
         pytest.skip("Repo root not found")
@@ -204,9 +221,8 @@ def test_deny_default_networkpolicy_exists() -> None:
     """Namespace baseline NetworkPolicy denies all traffic by default."""
     if REPO_ROOT is None:
         pytest.skip("Repo root not found")
-    base = REPO_ROOT / "templates" / "service" / "k8s" / "base"
-    if not base.is_dir():
-        pytest.skip("k8s base not in this layout")
+    base = _payload("k8s", "base")
+    assert base is not None and base.is_dir(), "k8s/base is missing from this service"
 
     deny_default = base / "networkpolicy-deny-default.yaml"
     assert deny_default.is_file(), "templates/service/k8s/base/networkpolicy-deny-default.yaml missing (PR-A3)"
@@ -231,9 +247,10 @@ def test_deny_default_is_in_kustomization() -> None:
     """The deny-default policy is included in the base kustomization."""
     if REPO_ROOT is None:
         pytest.skip("Repo root not found")
-    kustomization = REPO_ROOT / "templates" / "service" / "k8s" / "base" / "kustomization.yaml"
-    if not kustomization.is_file():
-        pytest.skip("kustomization not in this layout")
+    kustomization = _payload("k8s", "base", "kustomization.yaml")
+    assert kustomization is not None and kustomization.is_file(), (
+        "k8s/base/kustomization.yaml is missing from this service"
+    )
 
     content = kustomization.read_text()
     assert "networkpolicy-deny-default.yaml" in content, (
@@ -250,9 +267,10 @@ def test_base_deployment_has_workload_toleration() -> None:
     """Without the toleration, ML pods are unschedulable on the tainted workload pool."""
     if REPO_ROOT is None:
         pytest.skip("Repo root not found")
-    deployment_yaml = REPO_ROOT / "templates" / "service" / "k8s" / "base" / "deployment.yaml"
-    if not deployment_yaml.is_file():
-        pytest.skip("deployment.yaml not in this layout")
+    deployment_yaml = _payload("k8s", "base", "deployment.yaml")
+    assert deployment_yaml is not None and deployment_yaml.is_file(), (
+        "k8s/base/deployment.yaml is missing from this service"
+    )
 
     import yaml
 

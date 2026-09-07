@@ -13,7 +13,7 @@ is substituted at scaffold time by `templates/scripts/new-service.sh`;
 
 This document is regenerated (manually) whenever a new dashboard is
 added. The contract test
-[`test_dashboards_inventory.py`](../../templates/service/tests/test_dashboards_inventory.py)
+[`test_dashboards_inventory.py`](../../templates/tests/governance/test_dashboards_inventory.py)
 fails if a JSON dashboard exists under `templates/service/monitoring/grafana/`
 without a row in the table below, or if a listed dashboard references
 a file that no longer exists.
@@ -179,7 +179,7 @@ contract (an edge component correctly wired in) currently holds.
 2. Append a row to the "Dashboards shipped" table above (file, title, purpose, tags).
 3. Add a per-dashboard "panels" subsection documenting each panel's type, title, and purpose. Keep it terse — the
    canonical source is the JSON.
-4. Run `python -m pytest templates/service/tests/test_dashboards_inventory.py` to confirm the contract test still passes.
+4. Run `python -m pytest templates/tests/governance/test_dashboards_inventory.py` to confirm the contract test still passes.
 5. Open a PR. The PR evidence policy (ADR-020 §S1-2) applies because the dashboard file lives in the allow-listed
    `templates/service/monitoring/` surface.
 

@@ -15,6 +15,67 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
 
 ## [Unreleased]
 
+### Fixed — a generated service shipped 19 test files about the template repository
+
+- Measured on a freshly scaffolded service before this change:
+  **116 failed, 567 passed, 56 skipped, 31 errors** — **147 of 764 tests**
+  failing on the adopter's very first `pytest`. After: **517 passed, 30
+  skipped, 0 failed, 0 errors.**
+- Root cause: `templates/service/tests/` is the **Copier payload**, and it was
+  also where the tests that guard *this repository* lived — its README
+  wording, its own workflows, `templates/config/*.yaml`, its release notes.
+  Nothing separated them. They were told apart only by
+  `Path(__file__).resolve().parents[3]` versus `parents[1]`, which is
+  invisible at a glance.
+- 19 files moved to `templates/tests/governance/`. The move is **depth-neutral**
+  — `parents[3]` resolves to the repository root from there too — so it needed
+  no code change, and the suite passes unmodified from its new home.
+- **`scripts/check_payload_test_scope.py`** holds the boundary. The safe depth
+  is computed per file rather than fixed, because a file under
+  `tests/integration/` legitimately needs one level more than one directly
+  under `tests/`. Dual-perspective candidate lists — try the service root,
+  fall back to the template layout — are explicitly allowed; that is the idiom
+  `check_doc_path_refs.py` already uses.
+
+### Fixed — three quieter versions of the same defect, found while fixing the loud one
+
+- **The canonical data layout was never created.** `templates/service/.gitignore`
+  carried `!data/raw/.gitkeep` negations and a comment promising "a fresh clone
+  has the expected layout" — **the `.gitkeep` files did not exist**, so a
+  generated service had no `data/raw`, `data/processed`, `data/reference`,
+  `data/production`, `data/validated`, `models` or `reports`. A comment
+  asserting a control that was never built, on the layout every training and
+  drift path writes to. Two of the seven additionally needed a negation in the
+  *repository's own* `.gitignore`: git does not descend into an excluded
+  directory, so re-including the file requires re-including the directory
+  first.
+- **`test_context_files_hygiene` fell back to `parents[2]`** when it found no
+  `.git` — two directories above the service. A freshly scaffolded service has
+  no repository yet (Copier's own closing message lists "Initialize git" as
+  step 3), so the fallback fired every time. The fallback is now the service
+  root, and the two git-dependent checks state their precondition instead of
+  dying with "not a git repository" about a directory the adopter never named.
+- **`test_cluster_defaults_contract` skipped three checks inside a service.**
+  Its root resolver is dual-perspective, but three assertions then hardcoded
+  `REPO_ROOT / "templates" / "service" / "k8s"` with no fallback — so the
+  deny-default NetworkPolicy contract was disarmed in the very service it
+  protects, reporting green. Now 12 pass in both perspectives instead of 9
+  passing and 3 skipping.
+
+### Changed — the OpenAPI snapshot bootstraps instead of failing
+
+- `tests/contract/openapi.snapshot.json` does not exist in the template — there
+  is no service to snapshot until one is rendered — and the instruction to run
+  `scripts/refresh_contract.py` was enforced by nothing. An adopter's first
+  `pytest` was two hard failures, and until someone read the message the D-28
+  contract was simply not checked; the service's own `ci.yml` only compares the
+  snapshot when it *changes*, so a missing one is invisible there too.
+- The first local run now writes the baseline from the running app and skips,
+  saying to commit it. **In CI a missing baseline stays a failure** — a machine
+  must not invent the contract it is guarding. Verified in all four states:
+  bootstrap creates it, the second run really compares, injected drift fails
+  with the removed path named, and `CI=true` with no snapshot fails.
+
 ### Added — a gate that the render root still parses as Copier templates
 
 - `copier.yml` sets `_templates_suffix: ""`, so **every** file under
