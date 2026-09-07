@@ -773,6 +773,12 @@ jobs:
           python-version: "3.11"
       - name: Check documentation path references resolve
         run: python3 scripts/check_doc_path_refs.py
+      - name: Check "Enforced by" claims are traceable
+        # A comment asserting a control cannot be verified; this checks the
+        # half that is decidable. Three times in one review cycle a comment
+        # named a control that was absent — see the script docstring.
+        run: python3 scripts/check_control_claims.py
+
       - name: Check the ADR index is current
         # docs/COMPLIANCE_MAPPING.md cites this index as EU AI Act Art. 11
         # evidence. A stale index is a falsifiable compliance claim.

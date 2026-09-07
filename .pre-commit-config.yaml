@@ -285,6 +285,16 @@ repos:
         language: system
         pass_filenames: false
         files: \.(md|txt|py|ya?ml|sh)$|(^|/)Makefile$|^\.doc-path-baseline\.yml$
+      - id: control-claims
+        name: '"Enforced by" claims are traceable'
+        description: |
+          Each D-NN row in AGENTS.md names the test or script that enforces
+          it. The named file must exist AND mention the D-NN, so the link is
+          bidirectional and refactoring one side fails loudly.
+        entry: python3 scripts/check_control_claims.py
+        language: system
+        pass_filenames: false
+        files: ^(AGENTS\.md|scripts/|templates/service/tests/|templates/service/scripts/)
       - id: adr-index
         name: ADR index is current
         description: |

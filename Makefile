@@ -202,6 +202,12 @@ verify: ## Run every fast CI gate locally (the pre-push contract). Slow E2E live
 		printf '  %-34s FAIL\n' "adapter-sync"; \
 		failed="$$failed sync_agentic_adapters"; \
 	fi; \
+	if python3 scripts/check_control_claims.py >/tmp/control_claims.out 2>&1; then \
+		printf '  %-34s PASS\n' "control-claims"; \
+	else \
+		printf '  %-34s FAIL\n' "control-claims"; \
+		failed="$$failed check_control_claims"; \
+	fi; \
 	if python3 scripts/generate_adr_index.py --check >/tmp/adr_index.out 2>&1; then \
 		printf '  %-34s PASS\n' "adr-index"; \
 	else \
