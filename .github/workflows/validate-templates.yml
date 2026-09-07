@@ -67,7 +67,13 @@ jobs:
         run: python3 scripts/check_service_adr_references.py
 
       - name: Render root parses as Copier templates
-        run: python3 scripts/check_template_render_safety.py
+        # jinja2 is installed explicitly: the gate exits 2 when its parser is
+        # missing rather than skipping, so a job that lacks it fails loudly
+        # instead of reporting a pass it never earned.
+        run: |
+          set -euo pipefail
+          pip install --quiet jinja2 pyyaml
+          python3 scripts/check_template_render_safety.py
 
       - name: gitleaks (D-17)
         env:
@@ -306,7 +312,12 @@ jobs:
         # own envs via pre-commit; only locals share this Python.
         run: |
           pip install pre-commit
-          pip install pytest pyyaml jsonschema
+          # jinja2 is for template-render-safety, which parses the Copier
+          # render root with Copier's own delimiters. It refuses to run
+          # without it (exit 2) rather than skipping, so the dependency has
+          # to be here — a gate that passes when its parser is missing is
+          # the failure mode it exists to catch.
+          pip install pytest pyyaml jsonschema jinja2
 
       - name: Run pre-commit hooks (ruff, mypy, bandit, gitleaks)
         # Single source of truth for versions: .pre-commit-config.yaml.
