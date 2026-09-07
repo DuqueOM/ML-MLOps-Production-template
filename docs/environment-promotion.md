@@ -11,7 +11,7 @@ enforced at the GitHub level, not just at the agent layer.
 
 ## Promotion chain
 
-```
+```text
   push / tag
        │
    [build]          ← produces signed images once
@@ -33,7 +33,7 @@ environments manually once per repo (or via `gh api`).
 ### gcp-dev / aws-dev
 
 | Setting | Value |
-|---|---|
+| --- | --- |
 | Required reviewers | none |
 | Wait timer | 0 |
 | Deployment branches | All branches |
@@ -41,7 +41,7 @@ environments manually once per repo (or via `gh api`).
 ### gcp-staging / aws-staging
 
 | Setting | Value |
-|---|---|
+| --- | --- |
 | Required reviewers | 1 (a team member with `@MLTechLeads` or equivalent) |
 | Wait timer | 0 |
 | Deployment branches | `main` + version tags |
@@ -49,7 +49,7 @@ environments manually once per repo (or via `gh api`).
 ### gcp-production / aws-production
 
 | Setting | Value |
-|---|---|
+| --- | --- |
 | Required reviewers | 2 (must include `@PlatformEngineer` or equivalent) |
 | Wait timer | 5 minutes |
 | Deployment branches | Version tags ONLY: `v*` |
@@ -113,7 +113,7 @@ This prevents a misconfigured environment (e.g., someone removed the
 Each environment has its own Kustomize overlay so resource sizing and
 namespaces differ:
 
-```
+```text
 k8s/
 ├── base/                    # Deployment, Service, HPA, PDB, etc.
 └── overlays/
@@ -130,7 +130,7 @@ k8s/
 The workflow's structure enforces AGENTS.md invariants at CI time:
 
 | Env | GitHub Protection | Agent mode | Why |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | dev | none | AUTO | Low blast radius; reversible |
 | staging | 1 reviewer | CONSULT | Validates pre-prod; single sign-off sufficient |
 | prod | 2 reviewers + wait_timer | STOP | Customer-facing; requires deliberation + branch gate |

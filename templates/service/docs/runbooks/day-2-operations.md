@@ -7,12 +7,13 @@
 This runbook is **single-source for both clouds**. Per-cloud commands
 are tagged with **GCP** / **AWS** badges in the same table; ADR-015 PR-A4
 deliberately rejected the two-runbook split (`CHECKLIST_DAY2_GCP.md`
+
 + `CHECKLIST_DAY2_AWS.md`) as harder to maintain.
 
 ## Audience and cadence
 
 | Procedure | Cadence | Owner |
-|-----------|---------|-------|
+| ----------- | --------- | ------- |
 | Scale up/down | On demand | Service owner |
 | Drain a node | Maintenance window | Platform |
 | Rotate certificate | Quarterly (cert-manager auto) | Platform |
@@ -61,7 +62,7 @@ otherwise drain blocks indefinitely.
 ## Procedure: drain a node
 
 | Cloud | Node label discovery |
-|-------|----------------------|
+| ------- | ---------------------- |
 | **GCP** | `kubectl get nodes -L cloud.google.com/gke-nodepool` |
 | **AWS** | `kubectl get nodes -L eks.amazonaws.com/nodegroup` |
 
@@ -122,7 +123,7 @@ kubectl describe challenge <name> -n {@ service_kebab @}-prod
 > human authorization.
 
 | Cloud | Where the secret lives |
-|-------|------------------------|
+| ------- | ------------------------ |
 | **GCP** | Secret Manager — `gcloud secrets versions add ...` |
 | **AWS** | AWS Secrets Manager — `aws secretsmanager update-secret ...` |
 
@@ -159,16 +160,17 @@ kubectl describe hpa {@ service_kebab @}-hpa -n {@ service_kebab @}-prod | tail 
 ```
 
 | Cloud | Cost API |
-|-------|----------|
+| ------- | ---------- |
 | **GCP** | `gcloud billing accounts list` + Cost Explorer console |
 | **AWS** | `aws ce get-cost-and-usage --time-period Start=...,End=...` |
 
 **Common causes**:
-- HPA pegged at `maxReplicas` due to traffic spike → raise bound or
+
++ HPA pegged at `maxReplicas` due to traffic spike → raise bound or
   investigate if traffic is malicious.
-- Prediction-log backend writing to GCS/S3 with `Standard` storage
++ Prediction-log backend writing to GCS/S3 with `Standard` storage
   class instead of `Nearline`/`Standard-IA` → see ADR-016 §3.2.
-- Forgotten dev cluster → `terraform destroy` per env after work.
++ Forgotten dev cluster → `terraform destroy` per env after work.
 
 For deeper analysis run the `/cost-review` workflow (monthly cadence).
 
@@ -182,15 +184,16 @@ posts a summary to GitHub Actions, and FAILS if the plan is non-empty
 Manual run:
 
 | Cloud | Command |
-|-------|---------|
+| ------- | --------- |
 | **GCP** | `(cd infra/terraform/gcp && terraform init && terraform plan -no-color)` |
 | **AWS** | `(cd infra/terraform/aws && terraform init && terraform plan -no-color)` |
 
 **On non-empty plan**:
+
 1. Inspect the plan output. Distinguish:
-   - **Authored drift** (someone changed config but didn't run apply)
+   + **Authored drift** (someone changed config but didn't run apply)
      → run `terraform apply` per the change-management process.
-   - **Unauthored drift** (state shows resources someone hand-edited
+   + **Unauthored drift** (state shows resources someone hand-edited
      in the cloud console) → reconcile by either reverting the
      console change OR updating the TF code to match.
 2. `terraform apply` is **CONSULT** in staging and **STOP** in prod
@@ -237,21 +240,21 @@ becomes an MLflow tag (PR-B4 contract).
 
 ## Cross-references
 
-- **Incident response** (P1–P4): `runbook-template.md`
-- **Drills** (drift, deploy-degraded): `drills/README.md`
-- **Secret breach** workflow: `/secret-breach`
-- **Rollback** workflow: `/rollback`
-- **Cost review** workflow: `/cost-review`
-- **Architecture decisions**: `docs/decisions/`
-- **AGENTS.md** invariants: D-01 to D-29
++ **Incident response** (P1–P4): `runbook-template.md`
++ **Drills** (drift, deploy-degraded): `drills/README.md`
++ **Secret breach** workflow: `/secret-breach`
++ **Rollback** workflow: `/rollback`
++ **Cost review** workflow: `/cost-review`
++ **Architecture decisions**: `docs/decisions/`
++ **AGENTS.md** invariants: D-01 to D-29
 
 ## What this runbook does NOT cover
 
-- **Disaster recovery** (multi-region failover): out of scope per
++ **Disaster recovery** (multi-region failover): out of scope per
   ADR-001 calibration for 2-5 service single-team templates.
-- **Multi-cluster federation**: not in template; see Cluster API
++ **Multi-cluster federation**: not in template; see Cluster API
   if/when needed.
-- **Compliance evidence collection** (SOC2, HIPAA): organizational,
++ **Compliance evidence collection** (SOC2, HIPAA): organizational,
   not template.
-- **Performance tuning beyond HPA bounds**: see `/load-test`
++ **Performance tuning beyond HPA bounds**: see `/load-test`
   workflow for capacity tests.

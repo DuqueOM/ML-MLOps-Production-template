@@ -15,11 +15,13 @@ when it warns: _"image refs not pinned by digest"_.
 ## Prerequisites
 
 - `crane` (≥ 0.16) **OR** Docker installed locally.
+
   ```bash
   go install github.com/google/go-containerregistry/cmd/crane@latest
   # or
   brew install crane
   ```
+
 - `gcloud auth configure-docker` (GCP) or `aws ecr get-login-password`
   (AWS) if either registry requires auth from your workstation.
 
@@ -28,12 +30,14 @@ when it warns: _"image refs not pinned by digest"_.
 ### 1. Resolve the current digest
 
 GCP cloud SDK image:
+
 ```bash
 crane digest gcr.io/google.com/cloudsdktool/google-cloud-cli:slim
 # Outputs: sha256:abc123…
 ```
 
 AWS CLI image:
+
 ```bash
 crane digest public.ecr.aws/aws-cli/aws-cli:2
 # Outputs: sha256:def456…

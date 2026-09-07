@@ -84,7 +84,7 @@ kubectl -n "<service>-prod" delete pod -l app=<service>,rollouts-pod-template-ha
 ## Verification (≤ 5 min — must all pass before declaring rollback complete)
 
 | Check | Command | Expected |
-|-------|---------|----------|
+| ------- | --------- | ---------- |
 | Pods Ready | `kubectl -n "<service>-prod" get pods -l app=<service>` | All `1/1 Running`, AGE ≥ 2 min |
 | `/ready` returns 200 | `curl -sf https://<service>.<env>.example.com/ready -o /dev/null -w '%{http_code}'` | `200` |
 | `/predict` returns 200 | (see Path A step 3) | HTTP 200 + valid `prediction_score` |

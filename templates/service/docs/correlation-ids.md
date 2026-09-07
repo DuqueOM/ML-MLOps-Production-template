@@ -7,7 +7,7 @@ instead of fuzzy-matched. ADR-015 PR-C1 codifies the contract.
 ## The ID family
 
 | ID | Where minted | Where it lands | Joins to |
-|----|--------------|----------------|----------|
+| ---- | -------------- | ---------------- | ---------- |
 | `request_id` | `RequestIDMiddleware` (FastAPI) | `X-Request-ID` response header; structured log lines; error envelope | One HTTP request lifecycle |
 | `prediction_id` | `_sync_predict` (`uuid4().hex` per inference) | `PredictionResponse.prediction_id`; `PredictionEvent.prediction_id` | Inference ↔ ground-truth label JOIN (D-20) |
 | `model_version` | `train.py` → MLflow tag → pod env `MODEL_VERSION` | `PredictionEvent.model_version`; `*_predictions_total{model_version}` Counter label | Which model produced this prediction |
@@ -35,7 +35,7 @@ without a JOIN.
 
 ## End-to-end flow (deploy → prediction → drift)
 
-```
+```text
 GitHub Actions run #12345 attempt 1 (deploy-common.yml)
 │
 ├── Generates AUDIT_ID = "production-12345-1"

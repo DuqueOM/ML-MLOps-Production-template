@@ -17,7 +17,7 @@ A handful of the template's own decision records ship with the generated
 service because runtime code and agentic rules reference them directly:
 
 | File | What it governs |
-|---|---|
+| --- | --- |
 | `ADR-010-dynamic-behavior-protocol.md` | AUTO / CONSULT / STOP modes + dynamic risk escalation |
 | `ADR-014-gap-remediation-plan.md` | Remediation programme the invariants came from |
 | `ADR-018-operational-memory-plane.md` | Operational Memory Plane contracts |

@@ -11,7 +11,7 @@ Authority: ADR-011 (environment promotion gates), invariants D-10
 There are now **two equivalent ways** to provision the state backend:
 
 | Path | When to use | How |
-|------|-------------|-----|
+| ------ | ------------- | ----- |
 | **Terraform bootstrap** (recommended) | New projects, reproducibility matters | `cd templates/service/infra/terraform/{gcp,aws}/bootstrap && terraform apply` per env |
 | **CLI bootstrap** (legacy, below) | Existing deployments, manual control | `gcloud` / `aws` commands in §GCP / §AWS sections |
 

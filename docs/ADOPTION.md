@@ -25,7 +25,7 @@ Each capability is rated **per environment**. Definitions:
 ### Compute & networking
 
 | Capability | dev | staging | prod | Notes |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | GKE cluster + node pool split (system / workload) | ready | ready | ready | PR-A3 cluster defaults; workload taint enforced |
 | EKS cluster + node group split (system / workload) | ready | ready | ready | Mirrors GCP; same taint contract |
 | VPC networking (custom-mode + private subnets) | ready | ready | ready | `network_mode = "managed" \| "existing"` |
@@ -37,7 +37,7 @@ Each capability is rated **per environment**. Definitions:
 ### Container & supply chain
 
 | Capability | dev | staging | prod | Notes |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | Multi-stage Dockerfile (slim runtime) | ready | ready | ready | Base image pinned by digest in staging/prod overlays |
 | Init-container model fetch (D-11) | ready | ready | ready | Models never in the image |
 | Cosign keyless signing | ready | ready | ready | OIDC via GitHub Actions |
@@ -49,7 +49,7 @@ Each capability is rated **per environment**. Definitions:
 ### Secrets & IAM
 
 | Capability | dev | staging | prod | Notes |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | Secrets via cloud manager (GSM/ASM) | ready | ready | ready | Per-service IAM binding only |
 | `common_utils.secrets.get_secret()` loader | ready | ready | ready | D-17 enforced by policy test |
 | Secret rotation procedure | ready | ready | ready | `/secret-breach` workflow + skill |
@@ -59,7 +59,7 @@ Each capability is rated **per environment**. Definitions:
 ### ML quality & observability
 
 | Capability | dev | staging | prod | Notes |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | Pandera schema validation in serving + drift | ready | ready | ready | PR-R2-4; second validation wall |
 | MLflow tracking + model registry | ready | ready | ready | Self-hosted on K8s; CMEK-backed |
 | Quality gates on promotion (DIR ≥ 0.80, primary metric, latency) | ready | ready | ready | PR-B1; per-service `quality_gates.yaml` |
@@ -74,7 +74,7 @@ Each capability is rated **per environment**. Definitions:
 ### Delivery
 
 | Capability | dev | staging | prod | Notes |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | 4-job deploy chain (build → dev → staging → prod) | ready | ready | ready | D-26 enforced; GitHub Environment Protection |
 | `terraform plan` nightly drift detection | ready | ready | ready | PR-A4; opens dedup'd `infra-drift` issue |
 | Argo Rollouts canary template | partial | partial | partial | AnalysisTemplate scaffolded; metric thresholds per service |
@@ -84,7 +84,7 @@ Each capability is rated **per environment**. Definitions:
 ### Scaffolding & local-first
 
 | Capability | dev | staging | prod | Notes |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | Copier-based scaffolding (`copier copy`) | ready | ready | ready | ADR-030; `new-service.sh` is a thin wrapper |
 | `copier update` for template upgrades | ready | ready | ready | ADR-030; `/scaffold-update` workflow |
 | Local-first profile (`--profile local`) | ready | — | — | ADR-033; no Docker/K8s/TF/cloud creds (D-35) |
@@ -98,7 +98,7 @@ Each capability is rated **per environment**. Definitions:
 ### Governance
 
 | Capability | dev | staging | prod | Notes |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | ADRs for non-trivial decisions | ready | ready | ready | 35 ADRs cover all design choices |
 | Audit trail (append-only `ops/audit.jsonl`) | ready | ready | ready | ADR-014; CLI `scripts/audit_record.py` |
 | Anti-pattern policy tests on scaffolded output | ready | ready | ready | PR-R2-11; D-01..D-35 enforced |
@@ -120,7 +120,7 @@ inheriting the agentic surface.
 ### Workflow → make-target / runbook map
 
 | Slash workflow | Make equivalent | Runbook reference |
-|---|---|---|
+| --- | --- | --- |
 | `/new-service` | `make new-service NAME=<PascalCase> SLUG=<snake_case>` | `templates/scripts/new-service.sh --help` |
 | `/scaffold-update` | `copier update` (manual) | `agentic/workflows/scaffold-update.md` |
 | `/eda` | `make eda` (runs the 6-phase pipeline) | `eda/README.md` |
@@ -149,7 +149,7 @@ Skills are agent reasoning bundles, so their non-agentic equivalent is the
 underlying CLI tool plus the corresponding human runbook:
 
 | Skill | CLI / runbook |
-|---|---|
+| --- | --- |
 | `new-service` | `templates/scripts/new-service.sh` |
 | `scaffold-update` | `copier update` (manual; see `agentic/workflows/scaffold-update.md`) |
 | `deploy-gke` / `deploy-aws` | `templates/service/scripts/deploy.sh` + `docs/runbooks/deploy-{gke,aws}.md` |
@@ -233,7 +233,7 @@ architect if the swap cost is legible in advance. This matrix answers
 "I want X instead — what do I touch, what stays the same?"
 
 | Dimension | Default | Swap to | What you touch | What stays the same |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | Cloud | GCP (primary) + AWS parity | AWS-only, or GCP-only | Keep only one `infra/terraform/{gcp,aws}/` tree and the matching `k8s/overlays/{gcp,aws}/*`; drop the unused cloud's CI deploy job | Serving code, quality gates, monitoring stack, agentic surface — none of them import a cloud SDK directly |
 | Tracking / registry | Self-hosted MLflow on K8s | Managed registry (Databricks, SageMaker, Vertex Model Registry) | `common_utils/model_persistence.py` load/save calls; `MLFLOW_TRACKING_URI`; the `mlflow.log_model` call sites in training | Quality-gate shape (metric + fairness DIR + leakage), promotion governance workflow |
 | Serving backend | FastAPI + `ThreadPoolExecutor` (hand-rolled) | BentoML | Nothing shipped yet — ADR-032 is Phase 0 (invariant contract only); a `serving_backend` Copier choice is the documented Phase 1 seam | D-01/D-23/D-25 — the contract any backend must satisfy is written down in advance, not discovered by trial and error |
@@ -274,7 +274,7 @@ Authority: R4 audit M4, ADR-020 §S2-2.
 ### 6.1 GDPR (Regulation (EU) 2016/679)
 
 | Control area | Coverage | Evidence in template | Adopter responsibility |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Article 5(1)(a) lawful processing | Out of scope | None | Define lawful basis per service domain |
 | Article 5(1)(c) data minimization | Partial | Pandera schema + `templates/service/eda/` baseline minimization heuristic | Per-service field selection review |
 | Article 5(1)(f) integrity / confidentiality | Covered | Cosign signing + Kyverno admission + IRSA / WI + secret manager | Cluster posture + key rotation cadence |
@@ -286,7 +286,7 @@ Authority: R4 audit M4, ADR-020 §S2-2.
 ### 6.2 SOC 2 Type II (AICPA Trust Services Criteria)
 
 | Control area | Coverage | Evidence in template | Adopter responsibility |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | CC6.1 logical access controls | Covered | IRSA / WI per-purpose identities (D-31); RBAC manifests | IdP integration + access reviews |
 | CC6.6 environmental controls | Covered | PSS labels per environment (D-29); deny-default NetworkPolicy | Cluster-level firewall + WAF |
 | CC7.1 system monitoring | Covered | Prometheus + Grafana + AlertManager wiring | 24/7 oncall rotation + escalation matrix |
@@ -298,7 +298,7 @@ Authority: R4 audit M4, ADR-020 §S2-2.
 ### 6.3 ISO/IEC 27001:2022
 
 | Control area | Coverage | Evidence in template | Adopter responsibility |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | A.5.7 threat intelligence | Out of scope | None | Org-level threat intel feed |
 | A.5.30 ICT readiness for business continuity | Partial | `docs/runbooks/` cover deploy + rollback; backups out of scope | DR drills + RPO / RTO targets |
 | A.8.3 information access restriction | Covered | RBAC + NetworkPolicy + IRSA / WI | IdP federation |
@@ -311,7 +311,7 @@ Authority: R4 audit M4, ADR-020 §S2-2.
 ### 6.4 HIPAA Security Rule (45 CFR §164.302–.318)
 
 | Safeguard | Coverage | Evidence in template | Adopter responsibility |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | §164.308 administrative safeguards | Out of scope | None | Workforce training + risk analysis program |
 | §164.310 physical safeguards | N/A — cloud-managed | Cluster runs in cloud-provider physical secure facilities | Cloud BAA negotiation |
 | §164.312(a) access control | Covered | Per-purpose IRSA / WI identities, RBAC, audit trail | IdP federation + role assignment |

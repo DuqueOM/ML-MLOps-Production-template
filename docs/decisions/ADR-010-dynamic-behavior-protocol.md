@@ -37,7 +37,7 @@ as a core MCP in the template's recommended setup.**
 
 ### Architecture
 
-```
+```text
     Static baseline (AGENTS.md) : op_type → base_mode
                         │
                         ▼
@@ -77,7 +77,7 @@ If `mcp-prometheus` is not configured OR Prometheus is unreachable, the
 agent MUST fall back to the **static** baseline (AGENTS.md table) and
 emit a warning in the audit entry:
 
-```
+```text
 [AGENT MODE: CONSULT]
 risk_signals: UNAVAILABLE (mcp-prometheus not configured)
 fallback: static
@@ -100,7 +100,7 @@ are green. This is deliberate: the conservative floor is set by the
 static mapping.
 
 **Why not just alert the human separately?**  
-Alert fatigue. The agent already sees the mode before any operation; 
+Alert fatigue. The agent already sees the mode before any operation;
 attaching risk context to that existing checkpoint costs less cognitive
 load than a separate Slack ping.
 

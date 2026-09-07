@@ -2,6 +2,7 @@
 
 **Authority**: `docs/decisions/ADR-023-agentic-portability-and-context.md` §F6
 **Sources**:
+
 - `templates/config/report_schema.json` — JSON Schema (draft 2020-12)
 - `templates/service/common_utils/reports.py` — typed dataclasses + serializer
 - `scripts/generate_report.py` — read-only CLI (`validate`, `example`)
@@ -25,13 +26,14 @@ is a new report file, never a mutation of an old one.
 ## Four canonical types
 
 | Type | Producer workflow | Mode | Required environment |
-|------|-------------------|------|----------------------|
+| ------ | ------------------- | ------ | ---------------------- |
 | `release` | `/release` | CONSULT (staging) / STOP (prod) | yes |
 | `drift` | `/drift-check`, `drift-detection` | AUTO | optional |
 | `training` | `/retrain`, `model-retrain` skill | AUTO | optional |
 | `incident` | `/incident` | CONSULT during, AUTO post-mortem | yes |
 
 The four-type cap is intentional. Adding a fifth type requires:
+
 1. An ADR documenting why an existing type is insufficient.
 2. A new entry in the `report_type` enum of the schema.
 3. A new payload class + dataclass in `common_utils/reports.py`.
@@ -46,7 +48,7 @@ contract.
 Every report carries the same outer keys:
 
 | Key | Required | Notes |
-|-----|----------|-------|
+| ----- | ---------- | ------- |
 | `schema_version` | yes | Currently `1`; bump = ADR. |
 | `report_type` | yes | Enum from the four canonical types. |
 | `report_id` | yes | Stable id. Convention: `<type>-<service>-<UTCstamp>[-suffix]`. |
@@ -63,7 +65,7 @@ Every report carries the same outer keys:
 
 Reports live under `ops/reports/<type>/<report_id>.json`:
 
-```
+```text
 ops/
 └── reports/
     ├── release/
@@ -129,21 +131,21 @@ entry are separate artefacts with separate retention rules.
 
 ## Validation
 
-* **At write time** — `ReportEnvelope.__post_init__` enforces the
+- **At write time** — `ReportEnvelope.__post_init__` enforces the
   envelope; each `*Payload` dataclass enforces its own constraints.
-* **At read time** — `validate_report_dict()` does a lightweight pass
+- **At read time** — `validate_report_dict()` does a lightweight pass
   with no third-party deps.
-* **In CI** — `scripts/generate_report.py validate` adds an optional
+- **In CI** — `scripts/generate_report.py validate` adds an optional
   `jsonschema` round-trip when the package is installed; this is the
   authoritative gate.
-* **Contract test** — `test_reports_contract.py` verifies the schema
+- **Contract test** — `test_reports_contract.py` verifies the schema
   parses, the four examples round-trip, and the negative paths
   (missing approver in CONSULT, mismatched payload type, malformed
   service slug) raise.
 
 ## Authority chain
 
-```
+```text
 ADR-023 §F6
   └─ templates/config/report_schema.json   (canonical contract)
        └─ templates/service/common_utils/reports.py (Python implementation)

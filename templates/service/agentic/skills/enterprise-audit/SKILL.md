@@ -55,7 +55,7 @@ fix under CONSULT, then continue.
 ### 2. Domain sweep (evidence per domain, `file:line` or command+output)
 
 | # | Domain | Primary probes |
-|---|--------|----------------|
+| --- | -------- | ---------------- |
 | 1 | Governance | `CODEOWNERS`, `docs/governance/branch-protection.md` vs ADR-026; bus-factor disclosure current? |
 | 2 | Traceability | sample 20 commits: issue/PR linkage, Conventional Commits |
 | 3 | Code quality | lint/type gates present and unweakened (Q-05) |
@@ -119,7 +119,7 @@ raw evidence per domain, and an explicit limitations section.
 
 Findings fixed during the audit are changes like any other:
 
-```
+```text
 /document-changes
 ```
 

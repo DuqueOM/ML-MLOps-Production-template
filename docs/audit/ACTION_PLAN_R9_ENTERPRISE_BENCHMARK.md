@@ -57,7 +57,7 @@ These 7 dimensions structure §2 (template) and §3 (agent-local).
 ### 2.1 Reference Implementations Evaluated and What Each Represents
 
 | Reference | Market position | Strength to respect |
-|---|---|---|
+| --- | --- | --- |
 | **Cookiecutter Data Science (CCDS)** | The profession's default layout | Instant recognizability; zero friction |
 | **Kedro** (LF AI & Data) | Opinionated pipeline framework, adopted in banking/consulting | Data catalog, composable pipelines, plugin ecosystem |
 | **ZenML** | Stack-agnostic orchestration, local→cloud gradient | Stack profiles; integrations (80+); cloud parity |
@@ -134,7 +134,7 @@ repo."
 ### 2.3 Against MATURITY MODELS (what a company uses to evaluate its own process)
 
 | Framework | Level the template implements out of the box |
-|---|---|
+| --- | --- |
 | **Google MLOps levels (0/1/2)** | Nearly full **Level 2**: pipeline CI/CD, CT (retrain triggers), closed-loop monitoring. Only the org part (teams) is missing, which a template can't provide |
 | **Microsoft MLOps maturity (0-4)** | **Technical Level 3-4**: automated training+deployment, A/B (champion/challenger), observability. Full Level 4 requires the adopter's business telemetry |
 | **NIST AI RMF** | MEASURE and MANAGE strong (gates, drift, incident); GOVERN partial (roles/ROLES.md yes; org policy no — correct for a template); MAP partial (model card + EDA) |
@@ -152,7 +152,7 @@ compliance mapping (legible compliance), swap matrix (legible agnosticism).
 ### 3.1 Reference Implementations
 
 | Reference | 2026 position | Strength to respect |
-|---|---|---|
+| --- | --- | --- |
 | **LangGraph** (+LangSmith) | The production default at startups | State graphs, checkpointing, ecosystem, SaaS evals |
 | **OpenAI Agents SDK** | The OpenAI ecosystem default | Handoffs, guardrails, integrated tracing, simplicity |
 | **Google ADK** (+A2A, managed MCP) | The GCP enterprise stack ("data agents" 2026 guidance) | Fully managed, eval service, Agent Engine, gallery |
@@ -280,7 +280,7 @@ enterprise pattern (GitHub branch protection + environments) does exactly
 this:
 
 | Verb | Mode | Reason |
-|---|---|---|
+| --- | --- | --- |
 | **Verify** check status (`gh run list/view`) | **AUTO** | Read-only; an agent should always be able to look |
 | **Block-if-red** inside /release, /deploy, /retrain-promote | **Workflow invariant** (not a mode: the step is refused) | Same as branch protection: the system refuses, it doesn't ask |
 | **Re-run** a flaky job | **CONSULT** | An action with effects, scoped and reversible |
@@ -300,7 +300,7 @@ gate will enforce it automatically).
 ## 5. R9 Gap Registry (All Legibility/Governance; Zero Architecture)
 
 | ID | Repo | Gap | Reference that exposes it | Enterprise severity |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | R9-01 | template | No OpenSSF Scorecard workflow/badge | Frontier OSS practice | MEDIUM |
 | R9-02 | template | Actions pinned by tag, not by SHA | Scorecard/tj-actions incident | MEDIUM |
 | R9-03 | template | No NIST AI RMF / ISO 42001 / AI Act mapping of the artifacts it ALREADY produces | Market gap-assessment phase (Annex III → 2027-12) | **HIGH** (docs ROI) |
@@ -317,6 +317,7 @@ gate will enforce it automatically).
 ## 6. Execution Plan (AFTER sign-off) — maps to items 4-8 of the request
 
 ### Wave A — template (R9-01..04 + R9-05)
+
 1. `.github/workflows/scorecard.yml` (OpenSSF, badge in README) — R9-01.
 2. SHA-pin all actions in `.github/workflows/*.yml` (+ `# vX.Y.Z` comment
    for readability; dependabot already exists and keeps them current) —
@@ -333,40 +334,44 @@ gate will enforce it automatically).
 6. CHANGELOG + (if warranted) release notes; green doc-coherence.
 
 ### Wave B — agent-local (R9-06..10)
-7. **Releases**: create GitHub Releases for ALL existing tags (body sourced
+
+1. **Releases**: create GitHub Releases for ALL existing tags (body sourced
    from CHANGELOG/`releases/`); add `release-on-tag.yml` (minimal port from
    the template); extend `scripts/check_coherence.py` with a C5 check for
    tag↔release parity (via `gh api`, only when a token is present; skip on
    a clean local checkout) — R9-06. *(Note from the request: "that error
    shouldn't happen with our documentation agent" — C5 + the workflow make
    it structural.)*
-8. `docs/SECURITY_MODEL.md` (OWASP LLM Top-10 control-by-control mapping +
+2. `docs/SECURITY_MODEL.md` (OWASP LLM Top-10 control-by-control mapping +
    honest limits) — R9-07.
-9. `usecases/tienda/evals/sets/07_injection.jsonl` + containment tests
+3. `usecases/tienda/evals/sets/07_injection.jsonl` + containment tests
    (policy/router) — R9-08.
-10. CI: `pytest --cov` report-without-threshold step + coverage policy in
+4. CI: `pytest --cov` report-without-threshold step + coverage policy in
     CONTRIBUTING (Annex B) — R9-09.
-11. **ADR-010 — MCP/A2A interop: Rejected (with revisit triggers)** (Annex A)
-    + index + README — R9-10.
-12. CHANGELOG v0.7.0 + `releases/v0.7.0.md` + tag + Release; green
+5. **ADR-010 — MCP/A2A interop: Rejected (with revisit triggers)** (Annex A) +
+    index + README — R9-10.
+6. CHANGELOG v0.7.0 + `releases/v0.7.0.md` + tag + Release; green
     coherence.
 
 ### Wave C — derived planes (items 7-8 of the request)
-13. **Private pedagogical companion notes**: new deep-dives (agent-local
+
+ 1. **Private pedagogical companion notes**: new deep-dives (agent-local
     ADR-009, ADR-010; template ADR-038), updates to affected chapters
     (agent-loop chapters — wired-in reflection; security/OWASP chapter;
     governance chapter — compliance mapping; CI/CD chapter —
     verify-AUTO/override-STOP pattern), counts in the ADR hubs.
-14. **ML-MLOps-Portfolio (Pages)**: template chapter (Scorecard badge,
+ 2. **ML-MLOps-Portfolio (Pages)**: template chapter (Scorecard badge,
     compliance-mapping bullet) + agent-local chapter 3 (v0.6.0/v0.7.0:
     enforcement gates, security model, adversarial evals).
 
 ### Wave D — closeout (items 5-6 of the request)
-15. Atomic commits per wave, push, **green CI verification on both repos
+
+ 1. Atomic commits per wave, push, **green CI verification on both repos
     using the new `ci-green-verify` skill itself** (dogfooding), published
     Releases, final report with evidence.
 
 ### Explicitly OUT OF SCOPE (and why)
+
 - Implementing MCP/A2A (Annex A — the NO is recorded).
 - A thresholded coverage gate (Annex B — measured, not gated).
 - OTLP export in agent-local (semconv already aligned; deferred with

@@ -23,6 +23,7 @@ Per [`ADR-001`](../decisions/ADR-001-template-scope-boundaries.md):
 > compliance programs.
 
 This file does NOT:
+
 - Constitute legal or compliance advice.
 - Map every shipped control to every applicable regulation.
 - Replace a SOC 2 Type II audit, a HIPAA gap assessment, or a GDPR
@@ -45,7 +46,7 @@ ADR-001).
 ### Identity & access
 
 | Control category | Shipped artifact | SOC 2 | GDPR | HIPAA |
-|------------------|------------------|-------|------|-------|
+| ------------------ | ------------------ | ------- | ------ | ------- |
 | Workload identity (no static keys) | `templates/service/k8s/base/serviceaccount.yaml` + IRSA / Workload Identity (D-18) | CC6.1, CC6.6 | Art 32 | §164.312(a)(1) |
 | RBAC least-privilege per service | `templates/service/k8s/base/rbac.yaml` | CC6.3 | Art 32 | §164.312(a)(1) |
 | Network segmentation | `networkpolicy-deny-default.yaml` + per-overlay allowances | CC6.6 | Art 32 | §164.312(e)(1) |
@@ -54,7 +55,7 @@ ADR-001).
 ### Secrets handling
 
 | Control category | Shipped artifact | SOC 2 | GDPR | HIPAA |
-|------------------|------------------|-------|------|-------|
+| ------------------ | ------------------ | ------- | ------ | ------- |
 | No hardcoded credentials | `common_utils/secrets.py` (D-17) + gitleaks pre-commit | CC6.1 | Art 32 | §164.312(c)(1) |
 | Cloud-native secret store | AWS Secrets Manager / GCP Secret Manager via IRSA / WI | CC6.1, CC7.1 | Art 32 | §164.312(a)(2)(iv) |
 | Secret rotation runbook | `agentic/skills/secret-breach-response/` + `/secret-breach` workflow | CC7.4, CC9.2 | Art 33 | §164.308(a)(6) |
@@ -63,7 +64,7 @@ ADR-001).
 ### Supply chain
 
 | Control category | Shipped artifact | SOC 2 | GDPR | HIPAA |
-|------------------|------------------|-------|------|-------|
+| ------------------ | ------------------ | ------- | ------ | ------- |
 | Image signing (Cosign keyless) | `deploy-{gcp,aws}.yml` cosign sign step | CC8.1 | — | §164.308(a)(5)(ii)(B) |
 | Image digest pinning enforced | `kyverno-image-verification.yaml` `require-image-digest` policy + `kyverno-smoke.yml` CI gate | CC8.1 | — | §164.312(c)(1) |
 | SBOM per image | Cosign attest CycloneDX in deploy workflows | CC8.1, CC9.2 | — | §164.308(a)(8) |
@@ -72,7 +73,7 @@ ADR-001).
 ### Audit & accountability
 
 | Control category | Shipped artifact | SOC 2 | GDPR | HIPAA |
-|------------------|------------------|-------|------|-------|
+| ------------------ | ------------------ | ------- | ------ | ------- |
 | Append-only audit trail | `ops/audit.jsonl` + `scripts/audit_record.py` | CC4.1, CC7.3 | Art 30 | §164.312(b) |
 | Per-deploy audit entry | `templates/service/.github/workflows/deploy-common.yml` records `if: always()` | CC7.3 | Art 30 | §164.308(a)(1)(ii)(D) |
 | Risk-mode escalation logged | `risk_context.RiskContext` recorded per audit entry | CC4.1 | — | §164.312(b) |
@@ -81,7 +82,7 @@ ADR-001).
 ### Availability & continuity
 
 | Control category | Shipped artifact | SOC 2 | GDPR | HIPAA |
-|------------------|------------------|-------|------|-------|
+| ------------------ | ------------------ | ------- | ------ | ------- |
 | SLO + multi-window burn-rate alerts | `slo-prometheusrule.yaml` (CRIT-1) | A1.1 | — | §164.308(a)(7)(ii)(B) |
 | HPA per service | `hpa.yaml` | A1.1 | — | §164.308(a)(7)(ii)(B) |
 | Pod disruption budget | `pdb.yaml` | A1.1 | — | §164.308(a)(7)(ii)(B) |
@@ -91,7 +92,7 @@ ADR-001).
 ### Data protection
 
 | Control category | Shipped artifact | SOC 2 | GDPR | HIPAA |
-|------------------|------------------|-------|------|-------|
+| ------------------ | ------------------ | ------- | ------ | ------- |
 | Schema validation at ingest | Pandera `DataFrameModel` + 3 validation points | CC8.1 | Art 5(1)(d) | §164.312(c)(1) |
 | Prediction logger as transport (no redaction) | `prediction_logger.py` — adopter MUST drop PII upstream | CC8.1 | Art 5(1)(c) | §164.312(a)(2)(iii) |
 | TLS/Auth on Prometheus | `risk_context.py` Bearer + CA bundle (HIGH-9) | CC6.7 | Art 32 | §164.312(e)(1) |

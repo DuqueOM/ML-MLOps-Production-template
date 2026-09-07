@@ -51,6 +51,7 @@ Each skill's YAML frontmatter now declares `authorization_mode` per environment
 or operation, and the skill body includes an "Authorization Protocol" section.
 
 **Escalation triggers** automatically force STOP mode even from AUTO/CONSULT:
+
 - Primary metric > 0.99 without explanation (D-06 suspicion)
 - Fairness DIR in marginal range [0.80, 0.85]
 - Drift PSI > 2× threshold
@@ -65,6 +66,7 @@ in conversation — the only path through is the governed GitHub Actions flow.
 ### System 2: Supply Chain Security (Cosign + SBOM + Kyverno)
 
 CI now includes:
+
 - `gitleaks` secret scanning on every PR (D-17)
 - Hardcoded credential pattern grep (AWS keys, GCP keys, GitHub PATs) (D-17)
 - IRSA/Workload Identity enforcement check on staging/prod K8s manifests (D-18)
@@ -100,6 +102,7 @@ in staging/production — all images must be pinned by `@sha256:...`.
 ### Why three modes, not two (execute vs ask)
 
 A binary "execute / ask" model conflates two very different operations:
+
 - "Ask but I'll probably say yes" (staging deploy, model to Staging)
 - "Do not even propose executing this" (prod terraform apply, silent secret rotation)
 
@@ -111,6 +114,7 @@ governed path (PR + required_reviewers).
 
 Keyless signing uses GitHub OIDC as the identity — the signing cert's subject is
 the workflow path, issuer is `token.actions.githubusercontent.com`. Benefits:
+
 - No private key to manage, rotate, or leak (eliminates an entire D-17 attack surface)
 - Identity is provable via Rekor transparency log
 - Aligns with Sigstore's "trust model moved from keys to identity" direction
@@ -122,6 +126,7 @@ but not the template default).
 ### Why Kyverno over OPA Gatekeeper
 
 Both work. Kyverno was chosen because:
+
 - Policy syntax is YAML-native (readable by ML engineers, not only security SREs)
 - Better image verification tooling via `verifyImages`
 - Smaller install footprint (single controller)
@@ -134,10 +139,12 @@ policies (Terraform, API, etc.), reconsider Gatekeeper for consistency.
 
 In local dev, `os.environ` is convenient and acceptable. In prod, any secret in
 `os.environ` implies either:
+
 - A static credential injected at pod start (violates IRSA/WI)
 - A credential read once and cached in RAM (fine, but how did it get there?)
 
 Forcing production paths through `common_utils.secrets.get_secret` means:
+
 - Rotation is observable (secret manager logs)
 - The credential never lives in a process env readable by debug endpoints
 - Migrating from static creds to IRSA/WI is a one-line change
@@ -145,6 +152,7 @@ Forcing production paths through `common_utils.secrets.get_secret` means:
 ### Why not adopt HashiCorp Vault now
 
 ADR-001 explicitly deferred Vault. Revisit triggers:
+
 - IRSA/WI insufficient (e.g., need dynamic secrets for databases)
 - Multi-cloud secret federation required
 - Compliance regime requires FIPS-validated secret backend
@@ -156,6 +164,7 @@ enough and cheaper.
 
 A single deploy touches many agentic operations (build, scan, sign, apply). Opening
 a GitHub issue per operation would create issue spam. Instead:
+
 - Every operation → `ops/audit.jsonl` (append-only, diffable in PRs)
 - Every operation → GitHub Actions step summary (ephemeral but browsable)
 - CONSULT/STOP operations → additional GitHub issue (meaningful artifact)
@@ -167,6 +176,7 @@ The JSONL file is small, git-tracked, and easily queryable (`jq`).
 
 Equivalent contract, 10× less code. Python dataclasses with `__post_init__`
 validation:
+
 - Fail fast at construction time
 - Are directly usable in Python (no deserialize step)
 - Are self-documenting via type hints
@@ -263,4 +273,5 @@ once in AGENTS.md.
 - `templates/k8s/policies/kyverno-image-verification.yaml`
 - `templates/cicd/ci.yml` (security-audit job, SBOM + Cosign steps)
 - Anti-patterns: D-17, D-18, D-19
-- External: [Sigstore Cosign](https://docs.sigstore.dev/cosign/), [Syft SBOM](https://github.com/anchore/syft), [Kyverno](https://kyverno.io/), [SLSA](https://slsa.dev/)
+- External: [Sigstore Cosign](https://docs.sigstore.dev/cosign/), [Syft SBOM](https://github.com/anchore/syft),
+  [Kyverno](https://kyverno.io/), [SLSA](https://slsa.dev/)

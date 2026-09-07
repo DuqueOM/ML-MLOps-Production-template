@@ -91,6 +91,7 @@ jsonschema.validate(data, schema)
 print('Service spec valid')
 "
 ```
+
 If validation fails → **STOP** with the schema error.
 
 ### Step 4 — Report and hand off (AUTO)

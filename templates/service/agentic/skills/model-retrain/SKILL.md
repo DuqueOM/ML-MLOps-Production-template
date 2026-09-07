@@ -30,7 +30,7 @@ authorization_mode:
 This skill spans three authorization layers, aligned with the Agent Behavior Protocol (AGENTS.md):
 
 | Phase | Mode | What happens |
-|-------|------|--------------|
+| ------- | ------ | -------------- |
 | Training (MLflow run) | AUTO | Agent may run training, log to MLflow, produce artifacts |
 | Transition to `Staging` | CONSULT | Agent presents metrics + quality gates + drift diff; human approves via MLflow UI or `/promote-model` PR |
 | Transition to `Production` | **STOP** | Never transitions directly. Opens PR, waits for Tech Lead approval via GitHub Environment `production` |
@@ -38,13 +38,15 @@ This skill spans three authorization layers, aligned with the Agent Behavior Pro
 ### Automatic STOP escalation
 
 Even in AUTO phase, escalate to STOP if the new model exhibits any of:
+
 - Primary metric > 0.99 without explanation (D-06 — investigate leakage)
 - Fairness DIR in `[0.80, 0.85]` (marginal — human judgment required)
 - Metric regression > 5% vs current production
 - Any quality gate fails
 
 Emit structured signal:
-```
+
+```text
 [AGENT MODE: STOP]
 Operation: Model retraining for {service}
 Reason: Fairness DIR = 0.82 (marginal, requires human review)
@@ -54,6 +56,7 @@ Waiting for: Engineer inspection + either ADR documenting decision OR retraining
 ## Step 1: Validate Retraining Trigger
 
 Before retraining, confirm the trigger:
+
 - **Drift alert**: PSI ≥ threshold on critical feature (check Prometheus/Grafana)
 - **Metric degradation**: Rolling metric below quality gate (check monitoring)
 - **Scheduled**: Periodic retraining per policy
@@ -94,6 +97,7 @@ python src/{service}/training/train.py \
 ```
 
 This executes the full pipeline:
+
 1. Load + validate data
 2. Feature engineering
 3. Train/val/test split (temporal if dates exist)
@@ -135,12 +139,13 @@ echo "exit_code=$?"
 Three possible exit codes and their meanings:
 
 | Exit | Decision | Action |
-|------|----------|--------|
+| ------ | ---------- | -------- |
 | 0 | promote | McNemar p < alpha AND ΔAUC > superiority margin → proceed to Step 6a |
-| 1 | keep    | ΔAUC not statistically significant → keep champion, document in CHANGELOG |
-| 2 | block   | Challenger CI lower bound < -non_inferiority margin → open incident issue |
+| 1 | keep | ΔAUC not statistically significant → keep champion, document in CHANGELOG |
+| 2 | block | Challenger CI lower bound < -non_inferiority margin → open incident issue |
 
 Read `reports/champion_challenger.json` fields:
+
 - `mcnemar.p_value`                    — H0: equal error rates
 - `bootstrap.delta_auc_point`          — point estimate of ΔAUC
 - `bootstrap.delta_auc_ci_lower/upper` — 95% CI (the ACTUAL decision driver)

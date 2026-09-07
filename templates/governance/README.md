@@ -6,6 +6,7 @@ This module **does not conflict with ADR-001** — it's optional and adds no new
 ## When to enable this module
 
 Enable when any of these apply:
+
 - More than 1 person can promote models to production
 - Regulatory or internal audit requires sign-off on model changes
 - You've had a production incident caused by unreviewed model promotion
@@ -22,7 +23,7 @@ Enable when any of these apply:
 
 ## Architecture
 
-```
+```text
 ┌──────────┐    quality     ┌──────────┐   Tech Lead   ┌────────────┐
 │  dev     │─── gates ────> │ staging  │── approval ─> │ production │
 │          │    (auto)      │          │   (manual)    │            │
@@ -36,7 +37,7 @@ MLflow stage:            MLflow stage:                MLflow stage:
 ### Promotion gates
 
 | Stage | Trigger | Gates | Approver |
-|-------|---------|-------|----------|
+| ------- | --------- | ------- | ---------- |
 | `None → Staging` | Merge to `main` | All quality gates (`promote_model.sh`) | Automatic (CI) |
 | `Staging → Production` | Manual dispatch | Staging soaked ≥24h + approval | Tech Lead |
 | `Production → Archived` | New prod deploy | — | Automatic |
@@ -44,7 +45,7 @@ MLflow stage:            MLflow stage:                MLflow stage:
 ## Files in this module
 
 | File | Purpose |
-|------|---------|
+| ------ | --------- |
 | `README.md` | This file — overview |
 | `ROLES.md` | Who can do what (ML Engineer / Tech Lead / Platform) |
 | `github-environments.yml` | GitHub Environments configuration (reference) |
@@ -65,10 +66,12 @@ In your GitHub repo, go to **Settings → Environments → New environment**.
 Create two environments:
 
 **Environment: `staging`**
+
 - Deployment branches: `main` only
 - Required reviewers: none (automatic on quality gates)
 
 **Environment: `production`**
+
 - Deployment branches: `main` only
 - Required reviewers: 1+ team member (Tech Lead or Platform Engineer)
 - Wait timer: 24 hours (optional, enforces staging soak)
@@ -85,6 +88,7 @@ chmod +x scripts/promote_to_stage.sh
 ## Usage
 
 ### Automatic: merge to `main`
+
 CI runs `promote_model.sh` (all quality gates). If gates pass, the model is
 transitioned to MLflow stage `Staging` and deployed to the staging K8s namespace.
 

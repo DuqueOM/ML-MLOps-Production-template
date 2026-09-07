@@ -9,7 +9,9 @@
 
 ## Why this runbook exists
 
-R4 finding **H7** flagged that Kyverno admission policies under `templates/k8s/policies/` were never validated against a real cluster — i.e., we had never observed the webhook reject an unsigned image or a pod without an SBOM attestation. The YAML looked correct; that was the entirety of the assurance.
+R4 finding **H7** flagged that Kyverno admission policies under `templates/k8s/policies/` were never validated against a
+real cluster — i.e., we had never observed the webhook reject an unsigned image or a pod without an SBOM attestation.
+The YAML looked correct; that was the entirety of the assurance.
 
 This runbook produces evidence in three forms:
 

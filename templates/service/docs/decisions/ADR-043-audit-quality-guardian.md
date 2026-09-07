@@ -79,6 +79,7 @@ inside other workflows (release, doc-coherence) or not at all.
 ## 3. Consequences
 
 **Positive**
+
 - The 23-domain bar becomes recurring and owned instead of a one-off
   report; drift between audits gets caught by the always-on rule.
 - Documentation of changes becomes an invocable verb. Other workflows can
@@ -86,6 +87,7 @@ inside other workflows (release, doc-coherence) or not at all.
 - The Q-namespace can grow without triggering the D-count cascade.
 
 **Negative / accepted costs**
+
 - Two anti-pattern namespaces to learn (`D-` runtime, `Q-` audit). The
   rule header states the boundary; the alternative (one namespace) costs
   a 4-document renumber per addition.
@@ -96,6 +98,7 @@ inside other workflows (release, doc-coherence) or not at all.
   reproducibility).
 
 **Revisit triggers**
+
 - A second maintainer joins → move M-1 (0-reviewer merges, unsigned
   commits requirement) from "disclosed limitation" to enforced ruleset,
   and update `docs/governance/branch-protection.md` + ADR-026 together.

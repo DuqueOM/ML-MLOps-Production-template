@@ -51,13 +51,25 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
+      - name: Config must exist and declare a scope
+        # Without `.markdownlint-cli2.jsonc` the action runs with no globs,
+        # finds no files, reports "0 issues in 0 files" and exits 0. A gate
+        # that passes because it checked nothing is the failure this repo
+        # keeps finding, so the config's existence is itself checked.
+        run: |
+          set -euo pipefail
+          test -f .markdownlint-cli2.jsonc
+          grep -q '"globs"' .markdownlint-cli2.jsonc
+
       - name: Run markdownlint-cli2
+        # Blocking. It ran `continue-on-error: true` from the day it was added
+        # ("warn-only first run; flip to false after triage"), with no config
+        # file at all, reporting 8,584 issues in 474 files on every run and
+        # blocking nothing. That triage is done: the rule set is declared in
+        # `.markdownlint-cli2.jsonc` with a reason beside every disabled rule,
+        # and the repository is at zero findings.
+        #
+        # No `globs:` here on purpose. The action's input would override the
+        # config file's `globs`, and the two would drift — a local run and CI
+        # would then check different files. The config is the single source.
         uses: DavidAnson/markdownlint-cli2-action@21c1be1b93ad9ed58fa840aacc3f279cde2a72ff # v24.2.0
-        with:
-          globs: |
-            **/*.md
-            !node_modules
-            !.git
-            !templates/service/eda/notebooks/**
-            !releases/**
-        continue-on-error: true   # warn-only first run; flip to false after triage

@@ -8,7 +8,7 @@ dashboard MUST appear here with audience, panel summary, source data,
 and the runbook that consumes it.
 
 | Dashboard | File | Audience | Source data | Runbook |
-|-----------|------|----------|-------------|---------|
+| ----------- | ------ | ---------- | ------------- | --------- |
 | ML service overview | `dashboard-template.json` | On-call SRE / ML engineer | Prometheus `<service>_*` metrics emitted by FastAPI app | `docs/runbooks/incident-response.md` |
 | Closed-loop monitoring | `dashboard-closed-loop.json` | ML engineer / data scientist | Prediction logger + drift CronJob output | `docs/runbooks/closed-loop-sla.md`, `docs/decisions/ADR-008-champion-challenger-statistical-gate.md` |
 | DORA delivery metrics | `dashboard-dora.json` | Engineering manager / Staff+ | `dora_*` Prometheus series (see Pipeline below) | `/performance-review` workflow |

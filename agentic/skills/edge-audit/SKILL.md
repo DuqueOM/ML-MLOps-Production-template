@@ -77,6 +77,7 @@ kubectl kustomize k8s/overlays/<overlay>/ | \
 ```
 
 Confirm:
+
 - `metadata.annotations["edge-protection.mlops-template.io/implementation"]`
   is present and one of `cloud-armor` / `aws-waf` / `cloudflare`. Missing
   or unrecognized → **FAIL** (rule `17-edge-protection.md`: "the
@@ -134,7 +135,7 @@ without cloud credentials and a SKIP must not read as "unprotected."
 
 ## Step 5 — Produce summary (AUTO, 30s)
 
-```
+```text
 # Edge Audit — {service-name} — {date}
 
 Summary: 2 PASS / 1 FAIL / 1 WARN / 0 SKIPPED

@@ -61,6 +61,7 @@ finding, not a silent skip.
 ## 2. Pass A — Standards (AUTO, independent)
 
 Check the diff against, in order:
+
 1. `AGENTS.md` anti-patterns D-01..D-37 (the same rubric `rule-audit`
    uses, scoped to just the changed lines/files).
 2. The relevant `agentic/rules/*.md` for any touched path (e.g. a
@@ -76,6 +77,7 @@ Produce a list: `file:line — violation — which rule/anti-pattern`. Do
 
 Re-read the spec artifact (ADR/issue) and check, ignoring code style
 entirely:
+
 1. Does the diff implement every acceptance criterion the spec states?
 2. Does it implement *only* those — flag scope creep (new abstractions,
    unrelated refactors) the same way as a missing criterion.

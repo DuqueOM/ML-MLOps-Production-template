@@ -16,6 +16,7 @@ engineer shipping models need **approval gates between environments** and a
 **minimal audit trail** of who promoted what, when, and why.
 
 The questions were:
+
 1. Is promotion governance the same thing as compliance/multi-tenancy?
 2. Should it be baked into the template, or kept as an opt-in module?
 3. What's the minimum viable implementation that doesn't violate ADR-001?
@@ -23,6 +24,7 @@ The questions were:
 ## Decision
 
 **Add governance as an opt-in module** (`templates/governance/`) that:
+
 - Uses **GitHub Environments** for approval gates (no new infrastructure)
 - Uses **MLflow Model Registry stages** for state transitions (already in stack)
 - Provides a **roles document** (`ROLES.md`) instead of code-enforced RBAC
@@ -36,7 +38,7 @@ does not copy it. Users opt in explicitly per `templates/governance/README.md`.
 ### Governance ≠ compliance
 
 | Compliance (ADR-001 defers) | Governance (this ADR adds) |
-|---|---|
+| --- | --- |
 | SOC2/GDPR/HIPAA audit programs | Approval gate between staging and production |
 | Legal review requirements | Who can promote a model to prod |
 | Immutable audit log infrastructure | Model version metadata (who, when, why) |
@@ -49,7 +51,7 @@ should) encode it.
 ### Why this respects ADR-001
 
 | ADR-001 concern | How this module preserves it |
-|---|---|
+| --- | --- |
 | No new infrastructure | Uses GitHub Environments + MLflow (already required) |
 | Template stays learnable | Module is optional, clearly marked opt-in |
 | No dead code | Users who don't enable it see only a directory in `templates/` |

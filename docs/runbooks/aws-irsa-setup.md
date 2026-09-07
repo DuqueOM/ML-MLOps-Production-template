@@ -163,7 +163,7 @@ Go to: `https://github.com/$GH_OWNER/$GH_REPO/settings/variables/actions`
 Add **repository variables** (NOT secrets — these are not sensitive):
 
 | Variable | Value |
-|----------|-------|
+| ---------- | ------- |
 | `AWS_ROLE_ARN` | `arn:aws:iam::${ACCOUNT_ID}:role/${CI_ROLE_NAME}` |
 | `AWS_REGION` | e.g. `us-east-1` |
 | `AWS_ACCOUNT_ID` | `${ACCOUNT_ID}` |
@@ -276,7 +276,7 @@ the pipeline if it is missing (D-18 invariant).
 Trigger any workflow that authenticates to AWS (e.g. `deploy-aws.yml`
 via `workflow_dispatch`). The auth step should print:
 
-```
+```text
 Successfully assumed role arn:aws:iam::...:role/github-actions-ci-deployer
 Caller identity: arn:aws:sts::...:assumed-role/...
 ```

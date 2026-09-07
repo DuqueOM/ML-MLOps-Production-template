@@ -50,15 +50,16 @@ implementing a dual-test comparison:
 The decision function combines both tests into a tri-state outcome:
 
 | Decision | Conditions |
-|----------|-----------|
-| `block`    | CI lower bound < `-non_inferiority_margin` (challenger meaningfully worse) |
-| `promote`  | Point ΔAUC > `superiority_margin` AND McNemar p < `alpha` |
-| `keep`     | Improvement not statistically significant, but not worse either |
+| ---------- | ----------- |
+| `block` | CI lower bound < `-non_inferiority_margin` (challenger meaningfully worse) |
+| `promote` | Point ΔAUC > `superiority_margin` AND McNemar p < `alpha` |
+| `keep` | Improvement not statistically significant, but not worse either |
 
 Configurable via `configs/champion_challenger.yaml` with default
 `alpha=0.05`, `non_inferiority_margin=0.005`, `superiority_margin=0.005`.
 
 Integration:
+
 - New CI step in `cicd/retrain-service.yml` gates promotion on the C/C exit
   code (0 = promote, 1 = keep, 2 = block)
 - The statistical report is posted to the GitHub Actions step summary for

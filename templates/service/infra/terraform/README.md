@@ -2,7 +2,7 @@
 
 Two layers per cloud, applied in order:
 
-```
+```text
 infra/terraform/
 ├── gcp/
 │   ├── bootstrap/    ← run ONCE per (project, env)
@@ -17,7 +17,7 @@ infra/terraform/
 ## Why two layers
 
 | Concern | Bootstrap | Live |
-|---------|-----------|------|
+| --------- | ----------- | ------ |
 | Cadence | Once per env (yearly) | Every PR |
 | State | LOCAL (chicken-and-egg) | Remote (created by bootstrap) |
 | Privilege | `roles/owner` / AdministratorAccess | Least-privilege CI identity |

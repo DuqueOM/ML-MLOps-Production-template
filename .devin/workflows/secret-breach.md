@@ -19,26 +19,33 @@ and wait for human confirmation before proceeding with rotation.
 ## Workflow phases (enforced order)
 
 ### Phase 1 — Halt & Classify (AUTO)
+
 Agent emits STOP signal and classifies the secret type per the skill's table.
 Produces `incidents/secret-breach-<timestamp>.md`.
 
 ### Phase 2 — Revoke (STOP, requires human)
+
 Agent proposes the exact revocation command. Human executes.
 
 ### Phase 3 — Audit (AUTO)
+
 Agent runs CloudTrail / Cloud Audit Logs / GitHub audit log queries and produces
 the access-audit artifact.
 
 ### Phase 4 — Rotate (STOP, requires human)
+
 Agent proposes the rotation + rollout plan. Human executes.
 
 ### Phase 5 — Clean git history (STOP — destructive)
+
 Only if secret was in git and history rewrite is authorized. Otherwise skip.
 
 ### Phase 6 — Notify (AUTO)
+
 Agent drafts notifications per org policy. Human sends.
 
 ### Phase 7 — Post-mortem (AUTO, 48h SLA)
+
 Agent drafts the post-mortem issue with timeline, root cause, and controls.
 
 ## Anti-patterns during incident response

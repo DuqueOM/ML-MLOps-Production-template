@@ -39,9 +39,11 @@ The access-log line closes that gap.
 2. Open Grafana at `http://localhost:3000` (admin/admin). Prometheus
    and Loki are pre-provisioned as datasources — no manual setup.
 3. Explore → Loki → query:
+
    ```logql
    {container="ml-service-api"} | json | request_id="<the id you have>"
    ```
+
    Promtail's pipeline (`monitoring/promtail/promtail-config.yml`)
    parses each JSON log line and extracts `request_id`/`trace_id`/`level`
    so they're queryable directly, not buried in an opaque text blob.
@@ -63,7 +65,7 @@ empty `url` — fill in the search-by-trace-ID URL pattern for whichever
 backend you actually run:
 
 | Backend | URL pattern shape |
-|---|---|
+| --- | --- |
 | Jaeger | `http://jaeger:16686/trace/${__value.raw}` |
 | Grafana Tempo | use Tempo as a linked datasource (`datasourceUid`), not a raw URL |
 | GCP Cloud Trace | `https://console.cloud.google.com/traces/list?tid=${__value.raw}` (project-scoped) |

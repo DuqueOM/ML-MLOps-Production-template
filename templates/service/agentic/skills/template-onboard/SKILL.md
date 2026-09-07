@@ -73,8 +73,10 @@ Ask the following questions. Each answer is written to
 the field is left as `null` (never guessed).
 
 **Questions**:
+
 1. **Cloud provider**: `gcp`, `aws`, or `local`?
-2. **Container registry**: URL (e.g. `gcr.io/my-org/`, `123456.dkr.ecr.us-east-1.amazonaws.com/`). Leave `null` if using local profile.
+2. **Container registry**: URL (e.g. `gcr.io/my-org/`, `123456.dkr.ecr.us-east-1.amazonaws.com/`). Leave `null` if using
+   local profile.
 3. **MLflow tracking URI**: URL or `file://./mlruns` for local.
 4. **DVC remote**: `gs://my-bucket/dvc/`, `s3://my-bucket/dvc/`, or `null` for local.
 5. **GitHub org**: org name for CI/CD workflows.
@@ -127,6 +129,7 @@ If any pattern matches → STOP. Chain to `/secret-breach`.
 ### Step 6 — Report (AUTO)
 
 Print a summary:
+
 - Context file path
 - Cloud provider selected
 - Profile (from `active_profile.yaml`)

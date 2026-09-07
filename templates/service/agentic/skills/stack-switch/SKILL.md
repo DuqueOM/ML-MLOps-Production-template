@@ -67,6 +67,7 @@ If any check fails → STOP with a clear message.
 ### Step 2 — Inspect current profile (AUTO, 5s)
 
 Read `configs/profiles/active_profile.yaml` and report:
+
 - Current profile name
 - What dependencies are currently required
 - What deploy targets are currently active
@@ -74,6 +75,7 @@ Read `configs/profiles/active_profile.yaml` and report:
 ### Step 3 — Review target profile (CONSULT)
 
 Read `configs/profiles/$profile.yaml` and present:
+
 - What dependencies the target profile requires
 - What deploy targets the target profile activates
 - The mode change (e.g. AUTO → CONSULT for staging, AUTO → STOP for prod)

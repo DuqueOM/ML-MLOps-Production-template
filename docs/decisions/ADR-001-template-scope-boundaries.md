@@ -10,7 +10,8 @@ Accepted
 
 ## Context
 
-External reviewers have identified several capabilities that "enterprise-grade" systems typically include but this template does not:
+External reviewers have identified several capabilities that "enterprise-grade" systems typically include but this
+template does not:
 
 1. **LLM/GenAI serving** — streaming responses, prompt versioning, guardrails, token observability
 2. **Multi-tenancy** — namespace-per-team isolation, team-scoped RBAC, model access policies
@@ -24,14 +25,15 @@ Each of these is a legitimate enterprise need. The question is whether they belo
 
 ## Decision
 
-**Defer all seven items.** This template targets **single-team, 1–5 model deployments of classical ML** (scikit-learn, XGBoost, LightGBM). Each deferred item is documented with a concrete revisit trigger.
+**Defer all seven items.** This template targets **single-team, 1–5 model deployments of classical ML** (scikit-learn,
+XGBoost, LightGBM). Each deferred item is documented with a concrete revisit trigger.
 
 ## Rationale
 
 Per the **Engineering Calibration Principle** (AGENTS.md): *"The solution must match the scale of the problem."*
 
 | Capability | Why Deferred | What We Have Instead |
-|---|---|---|
+| --- | --- | --- |
 | **LLM/GenAI** | Fundamentally different serving pattern (streaming, token budgets, prompt chains). Mixing classical ML and LLM patterns in one template creates confusion, not value. | Template is clearly scoped to classical ML. A separate `LLM-MLOps-Template` is the correct approach. |
 | **Multi-tenancy** | Requires org-level decisions (shared cluster vs dedicated, tenant isolation model). A template can't make these decisions. | Per-service RBAC (`rbac.yaml`), NetworkPolicy, ServiceAccount with least-privilege. Each scaffolded service gets its own namespace. |
 | **HashiCorp Vault** | Adds operational complexity (Vault cluster, unsealing, policies). K8s-native alternatives (IRSA, Workload Identity) cover 90% of use cases without extra infrastructure. | IRSA (AWS) + Workload Identity (GCP) + `.gitleaks.toml` pre-commit + RUNBOOK guidance for Secrets Manager. |

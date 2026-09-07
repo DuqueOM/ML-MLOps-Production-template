@@ -76,6 +76,7 @@ copier update --vcs-ref=<release-tag> --dry-run
 ```
 
 Categorize the diff:
+
 - **No-op**: files the service hasn't customized → safe to auto-apply.
 - **Conflict**: files the service has modified → require manual review.
 - **New files**: template additions not present in the service → safe.
@@ -83,6 +84,7 @@ Categorize the diff:
 ### Step 3 — Review with operator (CONSULT)
 
 Present the categorized diff to the operator. For each conflict:
+
 1. Show the template version (upstream).
 2. Show the service version (local).
 3. Propose a resolution strategy (keep local, adopt upstream, merge).
@@ -96,6 +98,7 @@ copier update --vcs-ref=<release-tag> --trust --defaults
 ```
 
 Copier will:
+
 - Re-render all template files with the latest template version.
 - Preserve files the service has customized (via `.copier-answers.yml`
   conflict detection).
@@ -105,6 +108,7 @@ Copier will:
 ### Step 5 — Resolve conflicts (CONSULT, if any)
 
 For each conflict Copier reports:
+
 1. Read both versions.
 2. Propose a merge that preserves service customizations while
    absorbing template improvements.

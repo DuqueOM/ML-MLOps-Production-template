@@ -5,7 +5,7 @@ Quick reference for working with the template: scaffolding services, running exa
 ## Quick Reference
 
 | Operation | Command |
-|-----------|---------|
+| ----------- | --------- |
 | Scaffold new service | `./templates/scripts/new-service.sh ServiceName service_slug` |
 | Run example (end-to-end) | `make demo-minimal` |
 | Validate all templates | `make validate-templates` |
@@ -37,12 +37,14 @@ make new-service NAME=FraudDetector SLUG=fraud_detector
 ```
 
 **What it does:**
+
 1. Copies `templates/service/` → `FraudDetector/`
 2. Copies K8s, infra, CI/CD, monitoring, docs, scripts, common_utils
 3. Replaces `{ServiceName}` → `FraudDetector`, `{service}` → `fraud_detector`, `{SERVICE}` → `FRAUD_DETECTOR`
 4. Creates `data/`, `models/` directories with `.gitkeep`
 
 **After scaffolding:**
+
 ```bash
 cd FraudDetector
 # Edit schemas, features, model, API schema (see QUICK_START.md)
@@ -101,7 +103,7 @@ docker compose -f templates/service/infra/docker-compose.mlflow.yml down -v
 The template enforces **no secrets in code** at multiple levels:
 
 | Layer | Mechanism |
-|-------|-----------|
+| ------- | ----------- |
 | **Pre-commit** | `.gitleaks.toml` scans for API keys, tokens, passwords on every commit |
 | **K8s** | Workload Identity (GCP) / IRSA (AWS) — pods get cloud IAM roles, no static credentials |
 | **CI/CD** | GitHub Actions secrets (`${{ secrets.* }}`) — never stored in repo |
@@ -119,7 +121,8 @@ aws secretsmanager create-secret --name mlflow-db-password --secret-string "..."
 # Reference in K8s: use ExternalSecrets Operator or IRSA + SDK
 ```
 
-**Anti-pattern D-10**: Never commit `terraform.tfstate` or `.tfvars` with real values. Use remote state (GCS/S3+DynamoDB) configured in `templates/service/infra/terraform/*/main.tf`.
+**Anti-pattern D-10**: Never commit `terraform.tfstate` or `.tfvars` with real values. Use remote state
+(GCS/S3+DynamoDB) configured in `templates/service/infra/terraform/*/main.tf`.
 
 ## Contributing to the Template
 
@@ -138,6 +141,7 @@ Pre-commit hooks run automatically on `git commit`.
 See [templates/service/docs/CHECKLIST_RELEASE.md](templates/service/docs/CHECKLIST_RELEASE.md) for the full checklist.
 
 Quick summary:
+
 ```bash
 # 1. Update CHANGELOG.md
 # 2. Tag
@@ -154,7 +158,7 @@ launch config must agree with this table; in-cluster traffic always
 goes through `Service:80` → container `8000` regardless of it.
 
 | Port | Owner | Why this port |
-|------|-------|---------------|
+| ------ | ------- | --------------- |
 | 8000 | Primary ML service API (example demo or scaffolded service) | FastAPI/uvicorn upstream default; matches Dockerfile `EXPOSE`, probes, and `/metrics` scrape annotations |
 | 8001 | Secondary/template API instance (e.g. `templates/service` in modelless dev mode) | One-port-per-service rule — never share 8000 between two local instances |
 | 5000 | MLflow tracking server | MLflow upstream default (`docker-compose.mlflow.yml`) |
@@ -172,7 +176,7 @@ networking.
 ## Troubleshooting
 
 | Issue | Fix |
-|-------|-----|
+| ------- | ----- |
 | `kustomize build` fails | Ensure kustomize is installed: `brew install kustomize` |
 | `terraform validate` skipped | Install terraform: `brew install terraform` |
 | Pre-commit fails on first run | Run `make install-dev` to install hooks |

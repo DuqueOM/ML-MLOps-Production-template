@@ -39,7 +39,7 @@ template's production layout.
 
 The key directories:
 
-```
+```text
 data/raw/          → your dataset goes here
 eda/               → structured EDA pipeline (6 phases)
 src/<service>/     → training + serving source code
@@ -74,6 +74,7 @@ make train DATA=data/raw/your_data.csv
 ```
 
 This runs:
+
 1. Pandera validation (`schemas.py`)
 2. Feature engineering (`features.py` — consumes
    `eda/artifacts/feature_catalog.yaml`)
@@ -81,6 +82,7 @@ This runs:
    `models/model.joblib`)
 
 > **What does this prevent?**
+>
 > - **D-05** (bare `>=` pinning): dependencies use `~=` so
 >   `numpy 2.x` doesn't silently corrupt your joblib model.
 > - **D-06** (suspiciously high metrics): if your AUC > 0.99, the
@@ -105,6 +107,7 @@ curl -X POST http://localhost:8000/predict \
 ```
 
 > **What does this prevent?**
+>
 > - **D-01** (`uvicorn --workers N` in K8s): causes CPU thrashing
 >   and dilutes the HPA signal. The template enforces `--workers 1`
 >   and uses `asyncio.run_in_executor()` for CPU-bound inference.
@@ -125,6 +128,7 @@ This runs PSI (Population Stability Index) against the baseline
 distributions from EDA phase 2.
 
 > **What does this prevent?**
+>
 > - **D-15** (missing baseline): without
 >   `baseline_distributions.parquet`, drift detection silently
 >   no-ops and you never know your model is degrading.
@@ -160,7 +164,7 @@ changes and wait for your approval.
 ## Anti-patterns covered in this tutorial
 
 | # | Anti-pattern | Where prevented | Failure if missing |
-|---|-------------|-----------------|-------------------|
+| --- | ------------- | ----------------- | ------------------- |
 | D-01 | `uvicorn --workers N` in K8s | `Makefile` + contract test | CPU thrashing, HPA signal diluted |
 | D-03 | Blocking `model.predict()` in async | `app/main.py` wrapper | Event loop blocks, latency spikes |
 | D-05 | Bare `>=` dependency pinning | `requirements.txt` + `pyproject.toml` | `numpy 2.x` corrupts joblib models |

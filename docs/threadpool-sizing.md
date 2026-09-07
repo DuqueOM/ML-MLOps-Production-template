@@ -29,7 +29,7 @@ _inference_executor = ThreadPoolExecutor(
 ## Why sizing matters
 
 | Symptom | Root cause |
-|---------|-----------|
+| --------- | ----------- |
 | p95 latency >> p50 | `max_workers` too small; queued tasks waiting |
 | Throughput flat at N rps then bursts up | `max_workers` too small relative to CPU cores |
 | CPU at 100% with high context-switch count | `max_workers` too large; threads fighting for CPU |
@@ -63,7 +63,7 @@ python scripts/benchmark_executor.py \
 Output example (fictional BankChurn service):
 
 | max_workers | p50 ms | p95 ms | p99 ms | RPS | notes |
-|-------------|--------|--------|--------|-----|-------|
+| ------------- | -------- | -------- | -------- | ----- | ------- |
 | 1 | 18 | 82 | 140 | 52 | queue-dominated |
 | 2 | 19 | 51 | 94 | 98 | **best p95, close to ideal** |
 | 4 | 21 | 48 | 88 | 119 | slight p50 regression |

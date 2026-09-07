@@ -16,6 +16,7 @@ between raw data and `train.py`**: exploratory data analysis (EDA) was undocumen
 and unautomated.
 
 Consequences observed in the wild when this gap exists:
+
 - **Data leakage shipping to production** — features with 0.98 correlation to target
   slip through because nobody ran a leakage audit
 - **Pandera schemas with arbitrary ranges** — `Check.greater_than(0)` copy-pasted
@@ -49,7 +50,7 @@ store, data contracts, compliance, audit logs. EDA is core ML engineering.
 The EDA phase produces five canonical machine-readable artifacts consumed by other phases:
 
 | Artifact | Consumer | Closes which loop |
-|---|---|---|
+| --- | --- | --- |
 | `eda_summary.json` | retrain / promotion evidence | EDA → provenance |
 | `schema_ranges.json` | Phase 6 schema proposal | EDA → Pandera schema |
 | `baseline_distributions.parquet` | **Drift CronJob in production** | **EDA → drift detection** |
@@ -99,6 +100,7 @@ cycle, but canonical consumers load the parquet artifact through
 ### Why two dependency tiers (lightweight vs heavy)
 
 `ydata-profiling` produces beautiful HTML reports but:
+
 - ~500MB install footprint (blocks containerized CI)
 - Heavy dependencies (pillow, ipywidgets, numba) that conflict with minimal
   inference environments
@@ -110,6 +112,7 @@ of actual usage. Heavy mode is one `pip install -r requirements-heavy.txt` away.
 ### Why schema_proposal.py, not auto-overwriting schemas.py
 
 Auto-generating `schemas.py` from observed data **will** produce schemas that:
+
 - Encode training-set quirks as hard constraints (e.g., range excludes legitimate
   outliers that appear in test)
 - Miss business-rule validations that data alone can't detect (e.g., "amount must

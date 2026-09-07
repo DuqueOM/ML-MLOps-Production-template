@@ -36,23 +36,27 @@ authorization_mode:
 ## Pre-Release Verification
 
 ### Code Quality
+
 - [ ] All CI checks passing (lint, test, build)
 - [ ] Coverage >= 90% lines, >= 80% branches
 - [ ] No TODO/FIXME items in critical paths
 - [ ] Type hints on all public functions
 
 ### Model Quality
+
 - [ ] Quality gates passing for all services
 - [ ] Fairness checks passed (DIR >= 0.80)
 - [ ] SHAP consistency verified
 - [ ] No data leakage detected
 
 ### Infrastructure
+
 - [ ] Terraform plan shows no unexpected changes
 - [ ] trivy config/checkov clean (no HIGH/CRITICAL findings)
 - [ ] Secrets rotated if approaching expiry
 
 ### Documentation
+
 - [ ] ADRs up to date for any new decisions
 - [ ] Service READMEs updated with new metrics
 - [ ] AGENTS.md updated if new invariants
@@ -128,6 +132,7 @@ kubectl rollout status deployment --all -n {namespace} --timeout=300s
 ## Post-Deploy Verification
 
 ### Both Clouds
+
 - [ ] `/health` returning 200 on all services
 - [ ] `/predict` returning valid predictions
 - [ ] `/metrics` being scraped by Prometheus
@@ -160,6 +165,7 @@ as SSOT).
 ## Rollback Plan
 
 If any issue detected within 30 minutes:
+
 ```bash
 # Rollback all services
 kubectl rollout undo deployment --all -n {namespace}

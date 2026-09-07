@@ -8,7 +8,7 @@
 ## Mapping
 
 | CCDS directory | This service | What lives here |
-|----------------|-------------|-----------------|
+| ---------------- | ------------- | ----------------- |
 | `data/raw/` | `data/raw/` | Untouched inputs (DVC-versioned) |
 | `data/interim/` | `data/validated/` | Pandera-validated frames (training cache) |
 | `data/processed/` | `data/processed/` | Cleaned + featurised data |
@@ -23,7 +23,7 @@
 These directories are production-specific and have no CCDS counterpart:
 
 | Directory | Purpose |
-|-----------|---------|
+| ----------- | --------- |
 | `app/` | FastAPI application (API schemas, main entry point) |
 | `k8s/` | Kubernetes manifests (base + overlays) |
 | `infra/` | Terraform infrastructure-as-code |

@@ -13,7 +13,7 @@ Automations remain Codex-specific wrappers around selected workflows.
 ## What Codex consumes
 
 | Type | Path | Behaviour |
-|------|------|-----------|
+| ------ | ------ | ----------- |
 | Project preamble | `AGENTS.md` | Codex's native preamble convention; highest authority |
 | Rules | `.codex/rules/` | Generated pointers to `agentic/rules/<id>.md` |
 | Skills | `.codex/skills/` | Generated pointers to `agentic/skills/<id>/SKILL.md` |
@@ -47,7 +47,7 @@ targeted verifier so drift fails CI.
 
 ## How an adopter onboards Codex
 
-```
+```text
 # 1. Copy the example MCP config and fill credentials (per surface, never committed)
 cp .codex/mcp.example.json .codex/mcp.json
 $EDITOR .codex/mcp.json
@@ -72,8 +72,8 @@ extended to MCP configs).
   these on every PR.
 - **I-2** — `.codex/mcp.json` (live) is gitignored. Only
   `.codex/mcp.example.json` is committed.
-- **I-3** — no installer entry point. The Codex adapter ships docs
-  + pointers + an example config; the adopter triggers MCP setup
+- **I-3** — no installer entry point. The Codex adapter ships docs +
+  pointers + an example config; the adopter triggers MCP setup
   manually from their Codex client.
 
 ## Anti-list (deliberately NOT here)

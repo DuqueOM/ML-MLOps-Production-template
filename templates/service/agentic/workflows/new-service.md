@@ -7,6 +7,7 @@ description: Create a complete new ML service from template — end-to-end scaff
 ## 1. Gather Requirements
 
 Before creating any files, determine:
+
 - **Service name**: `{@ service_name @}-{Purpose}` (e.g., `FraudDetect-Scorer`)
 - **Service slug**: lowercase, no hyphens (e.g., `frauddetect`)
 - **Business problem**: One sentence
@@ -26,6 +27,7 @@ grep -r "{@ service_name @}\|{@ service_slug @}\|{@ SERVICE_NAME @}" ${SVC_NAME}
 ```
 
 If `new-service.sh` is unavailable, manual fallback:
+
 ```bash
 cp -r templates/service/ ${SVC_NAME}/
 find ${SVC_NAME}/ -type f -exec sed -i "s/{@ service_name @}/${SVC_NAME}/g" {} +
@@ -112,6 +114,7 @@ Add to kustomization.yaml and create overlay patches.
 ## 14. Final Verification
 
 Run the acceptance checklist:
+
 - [ ] All tests passing
 - [ ] Coverage >= 90%
 - [ ] Load test < 1% errors

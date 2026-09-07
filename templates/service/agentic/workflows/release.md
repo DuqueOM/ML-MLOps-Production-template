@@ -50,6 +50,7 @@ gh release view v{VERSION}
 ## 4. Build and Push Docker Images (GCP)
 
 For each service in the project:
+
 ```bash
 docker build -t ${GCP_REGISTRY}/${SERVICE}:v{VERSION} ${SERVICE}/
 docker push ${GCP_REGISTRY}/${SERVICE}:v{VERSION}

@@ -11,7 +11,7 @@
 ## 0. Executive summary (the 6 decisions that matter)
 
 | # | Question | Verdict |
-|---|---|---|
+| --- | --- | --- |
 | 1 | n8n as the framework's orchestrator? | **NO in the agentic core. YES, optionally, as an integration/edge layer** (webhooks, SaaS connectors) |
 | 2 | Temporal/Camunda/Airflow? | **Not now.** Temporal is the right candidate IF this becomes a multi-tenant product; Camunda/Airflow don't fit agentic loops |
 | 3 | Agent framework (LangGraph, CrewAI, AutoGen...)? | **Not for the core.** A custom loop in Python/FastAPI is the right call — with LangGraph as the only future re-evaluation if the state graph grows |
@@ -75,7 +75,7 @@ Critique of the 4-model lineup:
 **Routing strategies evaluated:**
 
 | Strategy | Verdict |
-|---|---|
+| --- | --- |
 | Confidence routing | ✅ already adopted (v2) — calibrate with eval 01 |
 | Budget/latency-aware | ✅ already adopted (`RequestBudget`) |
 | **Semantic routing** | ✅ **ADOPT**: embeddings of known intents + cosine similarity BEFORE the E4B. Resolves 60-70% of repetitive traffic in <5ms without touching an LLM. The E4B becomes the semantic router's fallback, not the first line |
@@ -100,8 +100,8 @@ adds a latency hop, and a second SPOF to govern... a single host. That's
 enterprise theater.
 
 **Correct form: a `controller.py` module with a single interface** that
-already exists, almost fully, scattered across the plan (router + budget
-+ policy + telemetry). Design:
+already exists, almost fully, scattered across the plan (router + budget +
+policy + telemetry). Design:
 
 ```python
 class ExecutiveController:
@@ -131,7 +131,7 @@ invariants into a single auditable point.**
 Alternatives evaluated honestly:
 
 | Pattern | Verdict | Why |
-|---|---|---|
+| --- | --- | --- |
 | Current loop (plan→tools→observe→reflect→critic→policy→final) | ✅ correct baseline | maps 1:1 to the domain: live data + hard policies |
 | **Self-consistency (K samples, vote)** | ✅ adopt ONLY in `risk=high` with K=3 | 3× cost justified only where an error costs money; elsewhere it's wasted latency |
 | Tree search (ToT/MCTS) | ❌ | shines on puzzles with evaluable state; "do you have coke in stock?" has no tree to search. Complexity without signal |
@@ -158,7 +158,7 @@ THREE distinct problems that people all call "orchestration":
 - **(C) Integration/ETL/connectors** (webhooks, SaaS, transformations)
 
 | Tool | Type | Maturity | Enterprise-ready | Real strength | Why NOT for (A) |
-|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- |
 | **n8n** | C | high | medium (fair-code license, not pure OSS; self-hosting is fine) | 400+ connectors, brutal integration speed | a loop with reflect/critic/policy expressed as visual nodes is unreadable, undiffable, and untestable; loop state is not a workflow, it's a conversation |
 | **Temporal** | B | very high | **the reference** (Uber/Netflix/Stripe-class) | durable execution: the workflow survives crashes via deterministic replay | the determinism it requires clashes with non-deterministic LLMs (workable via activities, but you pay for a cluster + a learning curve for a laptop) |
 | **Camunda** | B | very high | high (BPMN, banking/insurance) | BPMN-auditable business processes | BPMN models human-approval processes, not inference loops; absurd Java/Zeebe weight here |
@@ -206,7 +206,7 @@ future ADR with an explicit trigger. The rest: rejected with cause.**
 The current ladder (file-based → BM25 → vector) is correct; what was
 missing is a picture of the FINAL state so it isn't improvised later:
 
-```
+```text
 query → [0 semantic cache (embeddings, exact hits)]
       → [1 alias/taxonomy (deterministic, products)]
       → [2 hybrid: BM25 + dense embeddings → RRF (reciprocal rank fusion)]
@@ -294,7 +294,7 @@ I confirm the current gate (Phase 4: >10k labeled events + a stable
 pattern that prompting doesn't solve) and lay out the ladder with
 triggers:
 
-```
+```text
 TODAY: prompts + retrieval + evals
  └─ trigger >10k examples + persistent style gap
      → QLoRA on E4B/12B (tone, format, brand protocol) — NEVER facts
@@ -312,7 +312,7 @@ the only "data flywheel" you need this year.
 ## Actionable changes this review introduces to the plan
 
 | # | Change | Phase |
-|---|---|---|
+| --- | --- | --- |
 | R1 | Semantic cache/router with a small embedder in front of the E4B | F1.5+ |
 | R2 | `ExecutiveController` as a 3-method module + circuit breakers | F2 |
 | R3 | Persistent SQLite queue (one worker per conversation) | F1.6 |
@@ -326,7 +326,7 @@ the only "data flywheel" you need this year.
 
 ---
 
-# ADDENDUM v3 — Adversarial review of R1–R10 (2026-06-12)
+## ADDENDUM v3 — Adversarial review of R1–R10 (2026-06-12)
 
 > Maintainer's mandate: subject the R1–R10 proposals themselves to the
 > same scrutiny as everything else, without optimizing for agreement,
@@ -472,7 +472,7 @@ is the legitimate flywheel.
 
 ## Resulting integrated architecture (v3)
 
-```
+```text
 WhatsApp/channels ──► FastAPI webhook (code-first; n8n = deferred trigger)
         │
         ▼
@@ -493,7 +493,7 @@ ExecutiveController (3-method facade; pure middlewares; in-memory CB)
 ```
 
 | Item | v3 status | When |
-|---|---|---|
+| --- | --- | --- |
 | Two layers + durable-state-as-data (sagas table) | adopted | F1.6 |
 | n8n track | deferred (≥2 SaaS integrations) | trigger P3 |
 | Controller facade+middlewares, ≤250 LOC | adopted | F2.0 |

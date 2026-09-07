@@ -25,7 +25,7 @@ is a control question a MEASURE/MANAGE assessor would ask, and the file
 that answers it.
 
 | Function | Control question | Template artifact | Evidence produced |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | **GOVERN** | Is there a documented, versioned decision record for architecture/risk trade-offs? | `docs/decisions/*.md` (37 ADRs) | Context → Decision → Consequences → Revisit triggers, per decision |
 | **GOVERN** | Are AI system actions constrained by an explicit authority/escalation policy? | `AGENTS.md` §Agent Behavior Protocol | AUTO/CONSULT/STOP modes; ADR-010 (escalation-only, never de-escalates) |
 | **GOVERN** | Are roles and responsibilities for the system defined? | `templates/governance/ROLES.md` | Named roles + approval paths for promotion/deploy |
@@ -48,7 +48,7 @@ that answers it.
 ## 2. ISO/IEC 42001:2023 (AI Management System) — Annex A controls
 
 | Annex A control area | Template artifact | Evidence |
-|---|---|---|
+| --- | --- | --- |
 | **A.4 Resources** (data, tooling, compute) | `pyproject.toml`/`requirements.txt` (`~=` pinning), `docs/decisions/ADR-025-*.md` | Compatible-release pinning prevents silent breakage (e.g. numpy 2.x corrupting joblib) |
 | **A.5 AI system impact assessment** | `templates/service/docs/model-card-template.md`, fairness gate (ADR-021) | DIR ≥ 0.80 floor documented with rationale (Siddiqi-style thresholds, ADR-022 for PSI) |
 | **A.6 AI system life cycle** | `Makefile` targets (`train`, `serve`, `drift-check`), `dvc.yaml` | Reproducible pipeline stages, versioned via DVC |
@@ -71,7 +71,7 @@ practices (risk management, data governance, logging, human oversight) are
 good engineering independent of the regulatory calendar.
 
 | Article | Requirement (paraphrased) | Template artifact | Evidence |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | **Art. 9** — Risk management system | Continuous risk identification/mitigation across the lifecycle | Quality gates + fairness gate + drift monitoring + dynamic risk escalation (ADR-010) | A closed loop: measure → gate → escalate, not a one-time check |
 | **Art. 10** — Data governance | Training/validation/test data subject to quality criteria; bias examination | 6-phase EDA with leakage gate; Pandera schema validation; fairness DIR gate | `eda_pipeline.py` phase 4 (leakage) blocks training on a leaking feature |
 | **Art. 11** — Technical documentation | Documentation sufficient to assess compliance | The [ADR index](decisions/README.md) (generated from the files, verified in CI) + model card + `RUNBOOK.md` | Documentation is versioned alongside code, not a separate artifact that drifts (rule 16 / ADR-031 doc-coherence gate). The count is deliberately not restated here: it was wrong (37 against 45 on disk) for as long as the index it cited did not exist. |

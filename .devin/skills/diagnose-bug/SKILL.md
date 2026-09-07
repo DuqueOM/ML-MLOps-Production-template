@@ -38,10 +38,12 @@ shipping a patch for the symptom instead of the cause.
 ## 1. Reproduce (AUTO)
 
 Get the failure to happen on demand, locally, before touching anything.
+
 ```bash
 git log -1 --format='%H %s'    # confirm exact commit/state
 # re-run the exact failing command/suite/workflow step
 ```
+
 If it won't reproduce locally, that gap (env difference, timing, scope)
 **is itself the first clue** — note it explicitly, don't paper over it.
 
@@ -72,6 +74,7 @@ old fix plan and bolt on a special case.
 Symptom: CI's gitleaks job went red on the first push *after* a
 history-rewrite force-push, flagging a line that had been in the repo,
 unchanged, for days.
+
 - **Reproduce**: confirmed the flagged file's current content was clean
   via `gitleaks detect --no-git` (scans a plain file, not history).
 - **Minimize**: the finding pointed at one specific historical commit,

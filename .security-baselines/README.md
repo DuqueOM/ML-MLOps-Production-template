@@ -7,7 +7,7 @@ unrelated PRs, the workflow consults the per-tool baseline files in this
 directory.
 
 | Tool | File | Format |
-|------|------|--------|
+| ------ | ------ | -------- |
 | trivy config (IaC) | `trivy-config.trivyignore` | plain ignore list, one id per line, `# expiry:` above or inline (ADR-046) |
 | Checkov | `checkov.yml` | Checkov config (skip-check + soft-fail-on lists) |
 | Trivy | `.trivyignore` | One CVE-ID per line; `# rationale` comments allowed |

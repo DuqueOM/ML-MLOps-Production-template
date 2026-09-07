@@ -11,7 +11,7 @@
 ## Ruleset 1 — `main` branch baseline
 
 | Setting | Value |
-|---|---|
+| --- | --- |
 | **Ruleset name** | `main-branch-baseline` |
 | **Target type** | `branch` |
 | **Target pattern** | `main` (exact, not glob) |
@@ -21,7 +21,7 @@
 ### Rules
 
 | Rule | State | Configuration |
-|---|---|---|
+| --- | --- | --- |
 | `deletion` | enabled | — |
 | `non_fast_forward` | enabled | — |
 | `pull_request` | enabled | `required_approving_review_count: 0`, `dismiss_stale_reviews_on_push: true`, `require_code_owner_review: false`, `require_last_push_approval: false`, `required_review_thread_resolution: true`, `required_reviewers: []`, `require_extra_approval_for_unattributed_changes: true`, `allowed_merge_methods: [squash, rebase]` |
@@ -54,7 +54,7 @@ the admin bypass actor is the break-glass path.
 ### Required status checks (exactly 6)
 
 | Display name | Workflow file | Always runs on PR? |
-|---|---|---|
+| --- | --- | --- |
 | `Tests & Coverage / Python 3.11` | `.github/workflows/ci-examples.yml` | ✅ |
 | `Tests & Coverage / Python 3.12` | `.github/workflows/ci-examples.yml` | ✅ |
 | `Self-audit (secrets + IaC + supply chain)` | `.github/workflows/validate-templates.yml` | ✅ |
@@ -71,7 +71,7 @@ the admin bypass actor is the break-glass path.
 ### Excluded from required (intentional)
 
 | Check | Reason for exclusion |
-|---|---|
+| --- | --- |
 | `Docs Quality` | Path-filtered to `**/*.md` |
 | `Kyverno Admission Smoke` | Path-filtered to `templates/k8s/policies/...` |
 | `Golden Path E2E` | `schedule` + `workflow_dispatch` only, not on PR |
@@ -84,7 +84,7 @@ the admin bypass actor is the break-glass path.
 ## Ruleset 2 — Tag immutability `v*`
 
 | Setting | Value |
-|---|---|
+| --- | --- |
 | **Ruleset name** | `tag-immutability-v` |
 | **Target type** | `tag` |
 | **Target pattern** | `v*` (glob, matches `v0.*`, `v1.*`, …) |
@@ -94,7 +94,7 @@ the admin bypass actor is the break-glass path.
 ### Rules
 
 | Rule | State |
-|---|---|
+| --- | --- |
 | `deletion` | enabled |
 | `non_fast_forward` | enabled |
 | `update` | disabled (tags are write-once; recreation is what `non_fast_forward` blocks) |
@@ -165,10 +165,13 @@ than to an updated tool list.
 
 After applying, confirm:
 
-- [x] `gh api repos/:owner/:repo/rulesets` returns 2 entries with `enforcement: active` — verified 2026-09-04 (`main-branch-baseline` id=22285485, `tag-immutability-v` id=22285487)
+- [x] `gh api repos/:owner/:repo/rulesets` returns 2 entries with `enforcement: active` — verified 2026-09-04
+  (`main-branch-baseline` id=22285485, `tag-immutability-v` id=22285487)
 - [ ] An attempt to `git push --force origin main` from a non-admin token is rejected
 - [ ] Opening a PR with a deliberately failing required check disables the merge button
-- [x] Opening a PR that touches only `.md` files (no Python/YAML) still shows the 6 required checks as the gate (not "Docs Quality") — `ci-examples.yml` and `validate-templates.yml` both trigger on every `pull_request` to `main` with no `paths:` filter, so all six contexts always report
+- [x] Opening a PR that touches only `.md` files (no Python/YAML) still shows the 6 required checks as the gate (not
+  "Docs Quality") — `ci-examples.yml` and `validate-templates.yml` both trigger on every `pull_request` to `main` with
+  no `paths:` filter, so all six contexts always report
 - [ ] `git push --force origin v0.15.3` is rejected
 - [ ] `git push --delete origin v0.15.0` is rejected
 
@@ -177,7 +180,7 @@ After applying, confirm:
 ## Change log
 
 | Date | Change | Author |
-|---|---|---|
+| --- | --- | --- |
 | 2026-05-15 | Initial ruleset (ADR-026) | `@DuqueOM` |
 | 2026-09-04 | Rulesets applied to the repository. The contract had been documented since 2026-05-15 but never deployed: `GET /rulesets` returned `0` and `GET /rules/branches/main` returned `0`, so `main` was unprotected the whole time. | `@DuqueOM` |
 | 2026-09-04 | Declared `required_reviewers`, `require_extra_approval_for_unattributed_changes` and `allowed_merge_methods` explicitly; previously left to GitHub defaults and therefore absent from this document. `allowed_merge_methods` narrowed to `[squash, rebase]` for coherence with `required_linear_history`. | `@DuqueOM` |

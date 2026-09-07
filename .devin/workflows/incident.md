@@ -8,7 +8,7 @@ description: ML service incident response — diagnose, mitigate, resolve, docum
 
 Answer these questions to determine severity:
 
-```
+```text
 Error rate > 5% in last 5 min?
   YES → P1 → Go to Step 1 (rollback NOW, investigate later)
 
@@ -23,7 +23,7 @@ PSI 0.10–0.20 or minor anomaly?
 ```
 
 | Severity | Symptoms | SLA | First Action |
-|----------|----------|-----|-------------|
+| ---------- | ---------- | ----- | ------------- |
 | **P1** | >5% error rate, service down | 15 min | Rollback immediately |
 | **P2** | AUC < 0.75, metric degradation | 4 hours | Investigate + retrain |
 | **P3** | PSI > 0.20 on critical feature | 24 hours | Analyze drift + plan retrain |
@@ -44,11 +44,13 @@ curl -f http://${ENDPOINT}/ready
 ## 3. Diagnose Root Cause
 
 ### Check Logs
+
 ```bash
 kubectl logs -l app=${SERVICE} -n ${NAMESPACE} --since=1h | grep -i "error\|exception\|traceback"
 ```
 
 ### Check Metrics
+
 ```bash
 # Error rate
 curl 'http://prometheus:9090/api/v1/query?query=rate(${SERVICE}_requests_total{status=~"5.."}[5m])'
@@ -61,6 +63,7 @@ curl 'http://prometheus:9090/api/v1/query?query=${SERVICE}_psi_score'
 ```
 
 ### Check Infrastructure
+
 ```bash
 kubectl top pod -l app=${SERVICE} -n ${NAMESPACE}
 kubectl describe pod -l app=${SERVICE} -n ${NAMESPACE} | grep -A5 "Events\|Conditions"
@@ -69,7 +72,7 @@ kubectl describe pod -l app=${SERVICE} -n ${NAMESPACE} | grep -A5 "Events\|Condi
 ## 4. Common Root Causes
 
 | Symptom | Likely Cause | Fix |
-|---------|-------------|-----|
+| --------- | ------------- | ----- |
 | 5xx errors, high latency | Event loop blocking | Wrap in `run_in_executor` |
 | OOM kills | Model too large for limits | Increase memory limit |
 | Pods not starting | Init container failing | Check model download path |
@@ -79,6 +82,7 @@ kubectl describe pod -l app=${SERVICE} -n ${NAMESPACE} | grep -A5 "Events\|Condi
 ## 5. Mitigate
 
 Based on root cause, apply the appropriate fix:
+
 - **Code fix**: PR → CI → deploy
 - **Model fix**: Trigger `/retrain` workflow
 - **Infra fix**: Terraform apply → deploy
@@ -95,6 +99,7 @@ Based on root cause, apply the appropriate fix:
 ## 7. Document Incident
 
 Create incident report:
+
 ```markdown
 ## Incident: ${TITLE}
 **Date**: YYYY-MM-DD HH:MM UTC

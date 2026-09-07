@@ -1,6 +1,8 @@
 # ML-MLOps Production Template
 
-Opinionated, production-grade template for building and operating ML systems on Kubernetes with multi-cloud deployment (GKE + EKS), governed CI/CD, closed-loop monitoring, supply-chain security, and agentic automation that stays inside enterprise guardrails.
+Opinionated, production-grade template for building and operating ML systems on Kubernetes with multi-cloud deployment
+(GKE + EKS), governed CI/CD, closed-loop monitoring, supply-chain security, and agentic automation that stays inside
+enterprise guardrails.
 
 [![Release](https://img.shields.io/github/v/release/DuqueOM/ml-service-template.svg)](https://github.com/DuqueOM/ml-service-template/releases)
 [![Python 3.11 | 3.12](https://img.shields.io/badge/python-3.11_%7C_3.12-blue.svg)](https://www.python.org/downloads/)
@@ -25,15 +27,21 @@ copier copy --vcs-ref=v0.26.0 https://github.com/DuqueOM/ml-service-template.git
 # or: git clone + ./templates/scripts/new-service.sh ChurnPredictor churn_predictor
 ```
 
-> **`--vcs-ref` is required, not decorative.** Without it Copier resolves to the highest-sorting tag, and this repo carries frozen `v1.0.0`–`v1.12.0` audit snapshots (ADR-014) alongside the active `v0.x` line. `v1.12.0` sorts above `v0.26.0`, so the bare command silently scaffolds an April 2026 snapshot — complete, plausible, and stale. Always pin the active version shown above; `scripts/check_adopter_scaffold_ref.py` keeps this snippet in sync with `VERSION`.
+> **`--vcs-ref` is required, not decorative.** Without it Copier resolves to the highest-sorting tag, and this repo
+> carries frozen `v1.0.0`–`v1.12.0` audit snapshots (ADR-014) alongside the active `v0.x` line. `v1.12.0` sorts above
+> `v0.26.0`, so the bare command silently scaffolds an April 2026 snapshot — complete, plausible, and stale. Always pin
+> the active version shown above; `scripts/check_adopter_scaffold_ref.py` keeps this snippet in sync with `VERSION`.
 
-**Start here:** [QUICK_START.md](QUICK_START.md) | [docs/TUTORIAL.md](docs/TUTORIAL.md) | [RUNBOOK.md](RUNBOOK.md) | [AGENTS.md](AGENTS.md) | [CONTRIBUTING.md](CONTRIBUTING.md)
+**Start here:** [QUICK_START.md](QUICK_START.md) | [docs/TUTORIAL.md](docs/TUTORIAL.md) | [RUNBOOK.md](RUNBOOK.md) |
+[AGENTS.md](AGENTS.md) | [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ---
 
 ## Who this is for
 
-This template is designed for ML engineers and platform teams that are past the experimentation phase and ready to operate models with production discipline. The active public release line is `v0.x` hardening; `v1.0.0` is reserved for the first release with real cloud E2E evidence on GKE and EKS.
+This template is designed for ML engineers and platform teams that are past the experimentation phase and ready to
+operate models with production discipline. The active public release line is `v0.x` hardening; `v1.0.0` is reserved for
+the first release with real cloud E2E evidence on GKE and EKS.
 
 It fits:
 
@@ -41,16 +49,23 @@ It fits:
 - a **platform team** standardizing how ML services are built, deployed, monitored, and governed across multiple squads
 - a **solo engineer or tech lead** who needs a reference implementation to anchor technical decisions and ADRs
 
-It is not designed for data science notebooks, batch-only pipelines, or teams that have already adopted a full ML platform such as Vertex AI Pipelines or SageMaker Pipelines end-to-end. Two narrow on-ramps exist for the last two, without diluting that scope: a [`batch-only` Kustomize overlay](templates/service/k8s/overlays/batch-only/) (ADR-036) for teams that only need scheduled scoring, no live API; and [`docs/EXPORTING.md`](docs/EXPORTING.md), which documents registering this template's own signed container image in Vertex AI Model Registry or as a SageMaker Model Package — the artifacts travel, the orchestration does not.
+It is not designed for data science notebooks, batch-only pipelines, or teams that have already adopted a full ML
+platform such as Vertex AI Pipelines or SageMaker Pipelines end-to-end. Two narrow on-ramps exist for the last two,
+without diluting that scope: a [`batch-only` Kustomize overlay](templates/service/k8s/overlays/batch-only/) (ADR-036)
+for teams that only need scheduled scoring, no live API; and [`docs/EXPORTING.md`](docs/EXPORTING.md), which documents
+registering this template's own signed container image in Vertex AI Model Registry or as a SageMaker Model Package — the
+artifacts travel, the orchestration does not.
 
 ---
 
 ## How this compares
 
-Four open-source projects are widely treated as references in the MLOps space. They are excellent, and this template deliberately borrows ergonomics from each — through its own canonical layer, never by forking them (see [ADR-029](docs/decisions/ADR-029-agentic-adoption-contract.md)). They optimize for different things:
+Four open-source projects are widely treated as references in the MLOps space. They are excellent, and this template
+deliberately borrows ergonomics from each — through its own canonical layer, never by forking them (see
+[ADR-029](docs/decisions/ADR-029-agentic-adoption-contract.md)). They optimize for different things:
 
 | | This template | [Made With ML](https://github.com/GokuMohandas/Made-With-ML) | [Cookiecutter Data Science](https://github.com/drivendataorg/cookiecutter-data-science) | [ZenML](https://github.com/zenml-io/zenml) | [Kubeflow](https://github.com/kubeflow/kubeflow) |
-|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- |
 | **Primary optimization** | Production discipline + governance | Teaching the *why* | Recognizable project structure | Infra-agnostic pipelines | Full ML platform (pipelines, KServe, Katib) |
 | **Production hardening** | leader | medium | low | medium | high |
 | **Multi-cloud (GKE + EKS)** | leader | no | no | via stacks | via distro |
@@ -59,40 +74,62 @@ Four open-source projects are widely treated as references in the MLOps space. T
 | **Standardized scaffolding** | Copier | n/a | de-facto | CLI | n/a |
 | **Pedagogy / learning arc** | narrated tutorial + anti-pattern walk-through | leader | medium | good | low |
 
-**What makes this template special** — and what no reference above ships — is the agentic spine: a vendor-neutral canonical rule store ([ADR-027](docs/decisions/ADR-027-vendor-neutral-canonical-surface.md)) read natively by Cursor, Devin, Claude Code, and Codex, governed by a three-mode behavior protocol (AUTO/CONSULT/STOP) with dynamic risk escalation, and 38 contract-tested anti-patterns.
+**What makes this template special** — and what no reference above ships — is the agentic spine: a vendor-neutral
+canonical rule store ([ADR-027](docs/decisions/ADR-027-vendor-neutral-canonical-surface.md)) read natively by Cursor,
+Devin, Claude Code, and Codex, governed by a three-mode behavior protocol (AUTO/CONSULT/STOP) with dynamic risk
+escalation, and 38 contract-tested anti-patterns.
 
-**Where we are improving adoption** — standardized scaffolding (Copier), a local-first on-ramp (stack profiles), a recognizable layout, and a guided tutorial — is tracked transparently in [`docs/audit/ACTION_PLAN_ADAPTABILITY.md`](docs/audit/ACTION_PLAN_ADAPTABILITY.md). Every one of those improvements is required to flow through the canonical agentic layer, so adoption ergonomics never dilute the governance that differentiates the template.
+**Where we are improving adoption** — standardized scaffolding (Copier), a local-first on-ramp (stack profiles), a
+recognizable layout, and a guided tutorial — is tracked transparently in
+[`docs/audit/ACTION_PLAN_ADAPTABILITY.md`](docs/audit/ACTION_PLAN_ADAPTABILITY.md). Every one of those improvements is
+required to flow through the canonical agentic layer, so adoption ergonomics never dilute the governance that
+differentiates the template.
 
-If you want a guided course on ML fundamentals, start with Made With ML. If you want a minimal, deployment-agnostic project skeleton, start with Cookiecutter Data Science. If you want orchestrator portability, look at ZenML. If you have a dedicated platform team and want a full ML platform (pipelines, KServe, Katib), graduate to Kubeflow or Vertex AI Pipelines. If you want a **governed, production-hardened, multi-cloud service template with an agentic operating model**, you are in the right place.
+If you want a guided course on ML fundamentals, start with Made With ML. If you want a minimal, deployment-agnostic
+project skeleton, start with Cookiecutter Data Science. If you want orchestrator portability, look at ZenML. If you have
+a dedicated platform team and want a full ML platform (pipelines, KServe, Katib), graduate to Kubeflow or Vertex AI
+Pipelines. If you want a **governed, production-hardened, multi-cloud service template with an agentic operating
+model**, you are in the right place.
 
 ### Tools we compose with, not against
 
 Two adjacent tools are complementary rather than alternatives, and are tracked as deliberate seams:
 
-- **[BentoML](https://github.com/bentoml/BentoML)** — best-in-class model packaging and serving DX (adaptive batching, `bentoml.Service`). Our serving path (FastAPI + `asyncio.run_in_executor` + `ThreadPoolExecutor`) is correct and dependency-light, but BentoML is evaluated as an *optional alternative serving backend* behind the same K8s/HPA invariants (1 worker, CPU-only HPA, init-container model load) — see [ADR-032](docs/decisions/ADR-032-bentoml-alternative-serving-backend.md). The stance is *evaluate, don't mandate*.
-- **[Evidently](https://github.com/evidentlyai/evidently)** — already used for drift and data-quality checks; the drift workflow can additionally emit an Evidently HTML report as a reviewer-friendly artifact (roadmap).
+- **[BentoML](https://github.com/bentoml/BentoML)** — best-in-class model packaging and serving DX (adaptive batching,
+  `bentoml.Service`). Our serving path (FastAPI + `asyncio.run_in_executor` + `ThreadPoolExecutor`) is correct and
+  dependency-light, but BentoML is evaluated as an *optional alternative serving backend* behind the same K8s/HPA
+  invariants (1 worker, CPU-only HPA, init-container model load) — see
+  [ADR-032](docs/decisions/ADR-032-bentoml-alternative-serving-backend.md). The stance is *evaluate, don't mandate*.
+- **[Evidently](https://github.com/evidentlyai/evidently)** — already used for drift and data-quality checks; the drift
+  workflow can additionally emit an Evidently HTML report as a reviewer-friendly artifact (roadmap).
 
 ---
 
 ## What this template is
 
-This repository is a reference template for teams that want strong production defaults without adopting a heavyweight ML platform too early. It is intentionally opinionated where production failures are expensive and intentionally flexible where teams need domain-specific control.
+This repository is a reference template for teams that want strong production defaults without adopting a heavyweight ML
+platform too early. It is intentionally opinionated where production failures are expensive and intentionally flexible
+where teams need domain-specific control.
 
 It ships:
 
 - Async ML serving patterns that avoid common Kubernetes and FastAPI failure modes.
 - Multi-cloud Kubernetes and Terraform scaffolding for GCP and AWS.
 - Environment promotion from `dev → staging → prod` with audit trail, approvals, digest-based deploys, signing, and attestations.
-- Closed-loop monitoring with prediction logging, delayed ground truth, sliced performance, champion/challenger evaluation, and retraining hooks.
+- Closed-loop monitoring with prediction logging, delayed ground truth, sliced performance, champion/challenger
+  evaluation, and retraining hooks.
 - Security controls for secrets, identity federation, SBOM generation, image signing, admission policy, and pod hardening.
 - Agentic governance through `AUTO / CONSULT / STOP`, plus dynamic risk escalation based on live signals.
 
-The template ALSO includes two **Phase 1 / contracts-only** capabilities — they are explicitly NOT runtime today, and the runtime work is gated on adopter feedback before opening Phase 2:
+The template ALSO includes two **Phase 1 / contracts-only** capabilities — they are explicitly NOT runtime today, and
+the runtime work is gated on adopter feedback before opening Phase 2:
 
 - Safe CI self-healing — see ADR-019. Today: classifier + policy contracts ship; runtime is shadow-only and writes nothing.
-- Operational Memory Plane — see ADR-018. Today: `MemoryUnit` dataclass + redaction pipeline ship; ingest worker, vector store, and retrieval API are deferred.
+- Operational Memory Plane — see ADR-018. Today: `MemoryUnit` dataclass + redaction pipeline ship; ingest worker, vector
+  store, and retrieval API are deferred.
 
-If your adoption decision depends on either capability being live, the answer is "not yet" — they are roadmap items shipped as reviewable contracts, not as production features.
+If your adoption decision depends on either capability being live, the answer is "not yet" — they are roadmap items
+shipped as reviewable contracts, not as production features.
 
 This is not a generic starter repo. It is a production template with encoded operating constraints.
 
@@ -102,13 +139,16 @@ This is not a generic starter repo. It is a production template with encoded ope
 
 This is a hardened open-source baseline for enterprise-style ML services. The matrix below reports two distinct things:
 
-1. **Designed-ready (verified L1+L2+L3)**: the patterns are contract-tested in this repo, render cleanly through `kustomize build`, and pass the golden-path E2E in kind. This is what every entry below means by default.
-2. **Verified end-to-end (L4)**: the component has been exercised against a real cloud account, real cluster, real traffic. **Today, no entry below claims L4.** The L4 paper trail is owned by the adopter — see `VALIDATION_LOG.md`.
+1. **Designed-ready (verified L1+L2+L3)**: the patterns are contract-tested in this repo, render cleanly through
+   `kustomize build`, and pass the golden-path E2E in kind. This is what every entry below means by default.
+2. **Verified end-to-end (L4)**: the component has been exercised against a real cloud account, real cluster, real
+   traffic. **Today, no entry below claims L4.** The L4 paper trail is owned by the adopter — see `VALIDATION_LOG.md`.
 
-The previous wording ("Production-ready by design") was reworked in the May 2026 audit because reviewers consistently read the row as "production-ready, full stop," which over-promised the L4 gap.
+The previous wording ("Production-ready by design") was reworked in the May 2026 audit because reviewers consistently
+read the row as "production-ready, full stop," which over-promised the L4 gap.
 
 | Area | Status | What that means |
-|------|--------|-----------------|
+| ------ | -------- | ----------------- |
 | Service scaffold | Designed-ready (L1+L2+L3) | FastAPI serving, async inference, contract versioning, structured errors, domain hooks, tests, observability, and the explicit [`FASTAPI_TEMPLATE_CONTRACT.md`](docs/FASTAPI_TEMPLATE_CONTRACT.md) are wired as first-class concerns. |
 | Kubernetes runtime | Designed-ready (L1+L2+L3) | Single-worker pod model, split probes, startup gating, PDB, HPA, pod security labels, digest-pinned deploys, drift CronJob with PSS-restricted securityContext + init-container data fetch (May 2026 audit), and non-root runtime defaults are part of the base. |
 | Multi-cloud infrastructure | Designed-ready (L1+L2+L3) | GCP and AWS both ship with environment separation, remote state, identity federation, secret manager patterns, and reproducible Terraform layouts. L4 cluster rollout is the adopter's responsibility. |
@@ -119,39 +159,52 @@ The previous wording ("Production-ready by design") was reworked in the May 2026
 | Agentic CI self-healing | Roadmap — Phase 1 contracts only | Classifier + policy contracts ship in shadow / read-only mode (ADR-019). NO writes, NO PRs, NO branch mutations today. Patch worker / verifier / write-enabled lanes are NOT implemented and are gated on 14 days of shadow precision data. |
 | Operational Memory Plane | Roadmap — Phase 1 contracts only | `MemoryUnit` dataclass + 13-class redaction pipeline ship (ADR-018). Ingest worker, vector store, retrieval API are NOT implemented. Adopters cannot call retrieval APIs today; the section describes the target shape, not a live capability. |
 
-External dependencies remain your responsibility: cloud accounts, Kubernetes clusters, MLflow backend, secret stores, and observability backends must exist before the template can operate in a real environment.
+External dependencies remain your responsibility: cloud accounts, Kubernetes clusters, MLflow backend, secret stores,
+and observability backends must exist before the template can operate in a real environment.
 
 ### Verification status
 
-Four verification layers. Inside this repo the author can guarantee the first three; the fourth is per-adopter and cannot be asserted template-wide.
+Four verification layers. Inside this repo the author can guarantee the first three; the fourth is per-adopter and
+cannot be asserted template-wide.
 
 | Layer | Scope | Where it runs | Evidence in this repo |
-|-------|-------|---------------|----------------------|
+| ------- | ------- | --------------- | ---------------------- |
 | **L1 — Contract tests** | Invariants on generated service code, schemas, policies, and agentic config | `.github/workflows/validate-templates.yml`; `templates/service/tests/test_*.py`; `make validate-templates` locally | Contract tests covering FastAPI serving invariants, memory (ADR-018), CI self-healing (ADR-019), model-routing disclaimer, Phase-0/1 disclosure, anti-pattern count consistency, Locust ↔ API parity, PR evidence policy, CI autofix policy |
 | **L2 — Scaffold smoke** | End-to-end scaffold of a fresh service + 6 overlay renders + kubeconform + binary audit | `.github/workflows/pr-smoke-lane.yml` on every PR; `make smoke` on demand (~60 s) | Green per PR; history in the Actions tab |
 | **L3 — Golden path E2E** | Full chain: scaffold → build → sign → attest → deploy to kind → rollout Available → `/health` + `/ready` + `/predict` 2xx + metrics smoke | `.github/workflows/golden-path.yml` on release tags / schedule | Shipped; uses an explicit CI-only synthetic model fallback so runtime checks do not depend on cloud buckets |
 | **L4 — Adopter production rollout** | Your cluster, your traffic, your SLOs, your compliance regime | Your CD pipeline + observability stack | **Not assertable from this repo.** Checklist lives in [`VALIDATION_LOG.md`](VALIDATION_LOG.md) §"Template for future entries" and [`docs/runbooks/`](docs/runbooks/). The R4 audit documents which runbooks are still pending execution by the author (secrets-integration-e2e, ground-truth ingestion SLA, Kyverno admission validation, secret history scan). |
 
-If you are an adopter deciding whether to stake a production service on this template: L1 + L2 + L3 are your contract; L4 is an obligation the template cannot discharge for you. The `docs/audit/ACTION_PLAN_R4.md` + `VALIDATION_LOG.md` pair is the paper trail for what has already been executed vs. what is only shipped as policy.
+If you are an adopter deciding whether to stake a production service on this template: L1 + L2 + L3 are your contract;
+L4 is an obligation the template cannot discharge for you. The `docs/audit/ACTION_PLAN_R4.md` + `VALIDATION_LOG.md` pair
+is the paper trail for what has already been executed vs. what is only shipped as policy.
 
 ---
 
 ### Recent hardening (v0.14.0 → v0.15.x)
 
-Each release reports the gaps it closed against the most recent enterprise audit, with file-level evidence rather than a self-given numeric score.
+Each release reports the gaps it closed against the most recent enterprise audit, with file-level evidence rather than a
+self-given numeric score.
 
-`v0.14.0` (R5 hardening): scaffolded CI/CD now follows the documented single-service root layout, deploy workflows use the same kebab-case image vocabulary as Kustomize, the Python package is discoverable under `src/`, inference fails fast unless the training `FeatureEngineer` is available, and non-agentic runbook references resolve to real files.
+`v0.14.0` (R5 hardening): scaffolded CI/CD now follows the documented single-service root layout, deploy workflows use
+the same kebab-case image vocabulary as Kustomize, the Python package is discoverable under `src/`, inference fails fast
+unless the training `FeatureEngineer` is available, and non-agentic runbook references resolve to real files.
 
 `v0.15.0` (May 2026 audit response — this release): closed 4 critical, 9 high, 8 medium, and 2 low audit findings. Highlights:
 
-- Drift `CronJob` now ships with PSS-restricted `securityContext` AND init-containers that fetch reference + production data into a shared volume (previously the file existed but lacked both, making the canonical kustomize stack fail-closed in any restricted namespace).
-- `slo-prometheusrule.yaml` is now actually included in the base kustomization; previous releases shipped the file but left it out of `resources:`, so SLO burn-rate alerts never reached deployed clusters.
-- Self-audit (tfsec/checkov/trivy) flipped from `soft_fail: true` to **hard-fail with explicit baselines** under `.security-baselines/`. The previous behaviour made CRITICAL findings silently green.
+- Drift `CronJob` now ships with PSS-restricted `securityContext` AND init-containers that fetch reference + production
+  data into a shared volume (previously the file existed but lacked both, making the canonical kustomize stack
+  fail-closed in any restricted namespace).
+- `slo-prometheusrule.yaml` is now actually included in the base kustomization; previous releases shipped the file but
+  left it out of `resources:`, so SLO burn-rate alerts never reached deployed clusters.
+- Self-audit (tfsec/checkov/trivy) flipped from `soft_fail: true` to **hard-fail with explicit baselines** under
+  `.security-baselines/`. The previous behaviour made CRITICAL findings silently green.
 - `retrain-service.yml` now writes `audit_record` entries on every promotion AND signs `model.joblib` with cosign blob signing.
-- `risk_context.py` now requires Bearer auth + TLS verification for the Prometheus signal query (previously plain HTTP, no auth).
+- `risk_context.py` now requires Bearer auth + TLS verification for the Prometheus signal query (previously plain HTTP,
+  no auth).
 - `ALLOW_MODELLESS_STARTUP=true` is now refused in `staging`/`production` environments.
 - `argo-rollout.yaml` rewritten with full security parity to `deployment.yaml` (was previously a regression vector if enabled).
-- README "Production-ready by design" wording softened to "Designed-ready (verified L1+L2+L3)" with explicit L4 gap call-out; numeric self-rating tables removed.
+- README "Production-ready by design" wording softened to "Designed-ready (verified L1+L2+L3)" with explicit L4 gap
+  call-out; numeric self-rating tables removed.
 
 The full per-finding evidence is in [`VALIDATION_LOG.md`](VALIDATION_LOG.md) Entry 005.
 
@@ -174,18 +227,24 @@ L4 production rollout evidence remains the adopter's responsibility and the `v1.
 
 ### Optional: Progressive delivery (Argo Rollouts)
 
-`argo-rollout.yaml` ships in `templates/service/k8s/base/` with full security parity to `deployment.yaml` (PSS restricted, init containers, `model-verifier`), but it is **opt-in** — it is intentionally NOT in `kustomization.yaml#resources` because it and `deployment.yaml` cannot coexist (they own the same Pods). Enabling is a deliberate swap.
+`argo-rollout.yaml` ships in `templates/service/k8s/base/` with full security parity to `deployment.yaml` (PSS
+restricted, init containers, `model-verifier`), but it is **opt-in** — it is intentionally NOT in
+`kustomization.yaml#resources` because it and `deployment.yaml` cannot coexist (they own the same Pods). Enabling is a
+deliberate swap.
 
-Enable when you need canary deploys with metric-gated rollback, want to exercise the shipped champion/challenger `AnalysisTemplate`, or have an SRE rotation that cannot be paged for a metric regression a Rollout could have caught at 30 % traffic. Do not enable for single-replica, low-traffic services.
+Enable when you need canary deploys with metric-gated rollback, want to exercise the shipped champion/challenger
+`AnalysisTemplate`, or have an SRE rotation that cannot be paged for a metric regression a Rollout could have caught at
+30 % traffic. Do not enable for single-replica, low-traffic services.
 
-See [`docs/runbooks/progressive-delivery.md`](docs/runbooks/progressive-delivery.md) for the full enable procedure (base swap, overlay patch rename, verification steps, failure paths).
+See [`docs/runbooks/progressive-delivery.md`](docs/runbooks/progressive-delivery.md) for the full enable procedure (base
+swap, overlay patch rename, verification steps, failure paths).
 
 ---
 
 ## Quick navigation
 
 | If you want to... | Read first | Then |
-|-------------------|------------|------|
+| ------------------- | ------------ | ------ |
 | Orient yourself — Day 1 to Month 2 | [docs/PROGRESSION.md](docs/PROGRESSION.md) | [QUICK_START.md](QUICK_START.md) |
 | Scaffold a new ML service | [QUICK_START.md](QUICK_START.md) | `copier copy` or `./templates/scripts/new-service.sh` |
 | Follow the narrated tutorial | [docs/TUTORIAL.md](docs/TUTORIAL.md) | [QUICK_START.md](QUICK_START.md) |
@@ -223,7 +282,8 @@ flowchart TD
 
 - The training, serving, monitoring, and retraining path is explicit and reviewable.
 - The scaffolded repository is self-contained. It does not depend on hidden files from the template root after generation.
-- The template uses strong defaults for production invariants and lets teams customize domain features, schema, model selection, thresholds, and integrations.
+- The template uses strong defaults for production invariants and lets teams customize domain features, schema, model
+  selection, thresholds, and integrations.
 - Governance is additive. Dynamic signals can escalate a decision to a safer mode; they cannot silently weaken policy.
 
 ---
@@ -286,7 +346,7 @@ flowchart TD
 ### Technology stack
 
 | Layer | Technologies | Coverage |
-|-------|-------------|----------|
+| ------- | ------------- | ---------- |
 | ML and training | Python 3.11+, scikit-learn, XGBoost, LightGBM, Optuna | baseline models, ensembles, hyperparameter tuning |
 | Serving and API | FastAPI, Uvicorn, Pydantic | async inference, contract validation, structured responses |
 | Explainability | SHAP | feature attribution in original feature space |
@@ -307,18 +367,22 @@ The template treats agent behavior as an engineering surface, not a prompt confi
 The governance pattern is now single-source:
 
 - `AGENTS.md` is the behavioral authority.
-- `agentic/` stores canonical rule, skill, and workflow bodies (ADR-027); `.devin/` is the generated Devin mirror, `.cursor/.claude/.codex/` are generated pointers.
+- `agentic/` stores canonical rule, skill, and workflow bodies (ADR-027); `.devin/` is the generated Devin mirror,
+  `.cursor/.claude/.codex/` are generated pointers.
 - `templates/config/agentic_manifest.yaml` declares which surfaces consume each asset.
 - `.cursor/`, `.claude/`, and `.codex/` contain generated pointer adapters only.
 
-Run `make agentic-sync` after changing the manifest or canonical `agentic/` files, then `make validate-agentic` to prove parity. Today the manifest exposes the same 18 rule files, 26 skills, and 18 workflows to Devin, Cursor, Claude, and Codex. The project shorthand "18 rules" refers to the numbered policy set; on disk, rule 04 is split into serving and training files.
+Run `make agentic-sync` after changing the manifest or canonical `agentic/` files, then `make validate-agentic` to prove
+parity. Today the manifest exposes the same 18 rule files, 26 skills, and 18 workflows to Devin, Cursor, Claude, and
+Codex. The project shorthand "18 rules" refers to the numbered policy set; on disk, rule 04 is split into serving and
+training files.
 
 ### Static decision protocol
 
 Every operation maps to one of three modes:
 
 | Mode | Meaning | Examples |
-|------|---------|----------|
+| ------ | --------- | ---------- |
 | `AUTO` | Safe to execute without waiting for approval | scaffolding, docs, tests, local training, lint, read-only inspection |
 | `CONSULT` | Propose plan and rationale, then wait for approval | staging deploys, workflow changes with moderate blast radius, non-prod infra changes |
 | `STOP` | Block and require explicit human governance | production infra changes, quality-gate override, secret rotation, destructive cloud actions |
@@ -349,15 +413,25 @@ See [AGENTS.md](AGENTS.md) for the canonical operation matrix and invariant cata
 
 ## Operational Memory Plane
 
-> **Status — Phase 1 (contracts + redaction).** The canonical `MemoryUnit` dataclass and the gitleaks + PII redaction pipeline ship today: `templates/service/common_utils/memory_types.py` and `templates/service/common_utils/memory_redaction.py`, with 59 contract-test invariants enforcing immutability, severity normalization, sensitivity ≥ bucket-ACL minimum, single-tenant Phase 1 scope, idempotent redaction, and structural isolation from the `/predict` path. The ingest worker, the vector store, the retrieval API, and any agent-facing recall surface are **NOT yet implemented** in this template and are explicitly deferred per ADR-018 §Phase plan. Adopters cannot call retrieval APIs today; the section describes the **target shape** so the policy is reviewable before code lands. See [`ADR-018`](docs/decisions/ADR-018-operational-memory-plane.md) §Phase plan for the staged delivery.
+> **Status — Phase 1 (contracts + redaction).** The canonical `MemoryUnit` dataclass and the gitleaks + PII redaction
+> pipeline ship today: `templates/service/common_utils/memory_types.py` and
+> `templates/service/common_utils/memory_redaction.py`, with 59 contract-test invariants enforcing immutability,
+> severity normalization, sensitivity ≥ bucket-ACL minimum, single-tenant Phase 1 scope, idempotent redaction, and
+> structural isolation from the `/predict` path. The ingest worker, the vector store, the retrieval API, and any
+> agent-facing recall surface are **NOT yet implemented** in this template and are explicitly deferred per ADR-018
+> §Phase plan. Adopters cannot call retrieval APIs today; the section describes the **target shape** so the policy is
+> reviewable before code lands. See [`ADR-018`](docs/decisions/ADR-018-operational-memory-plane.md) §Phase plan for the
+> staged delivery.
 >
-> _Audit trail: Phase 0 disclosure added in response to R4 finding C2; transitioned to Phase 1 in the same audit-r4 sprint. See [`docs/audit/ACTION_PLAN_R4.md`](docs/audit/ACTION_PLAN_R4.md) §S0-2 + §S2-1._
+> *Audit trail: Phase 0 disclosure added in response to R4 finding C2; transitioned to Phase 1 in the same audit-r4 sprint. See [`docs/audit/ACTION_PLAN_R4.md`](docs/audit/ACTION_PLAN_R4.md) §S0-2 + §S2-1.*
 
-The Operational Memory Plane is an optional companion capability for repos that want agents to draw on prior work without introducing hidden behavior.
+The Operational Memory Plane is an optional companion capability for repos that want agents to draw on prior work
+without introducing hidden behavior.
 
 ### What it is
 
-- A retrieval layer for prior incidents, deploy regressions, postmortems, drift events, training decisions, and successful fixes.
+- A retrieval layer for prior incidents, deploy regressions, postmortems, drift events, training decisions, and
+  successful fixes.
 - A derived memory system, not the source of truth.
 - Backed by structured metadata, embeddings, and evidence references to canonical artifacts.
 
@@ -380,11 +454,19 @@ The operational rule is simple: memory can add context and escalate caution, but
 
 ## Agentic CI self-healing
 
-> **Status — Phase 1 (shadow, read-only).** The classifier and collector ship today: `scripts/ci_collect_context.py` and `scripts/ci_classify_failure.py`, governed by `templates/config/ci_autofix_policy.yaml` and `templates/config/model_routing_policy.yaml`, with 10 policy-contract invariants and 27 Phase-1 runtime invariants enforced by `test_ci_autofix_policy_contract.py` and `test_ci_classify_failure_phase1.py`. The classifier is wired into CI in **shadow mode only** — it observes failures and emits classifications, but **does NOT write code, does NOT open PRs, does NOT mutate any branch**. The patch worker, verifier, and write-enabled lanes are **NOT implemented yet** and are gated on 14 days of shadow data per ADR-019 §Phase plan. No agent will autonomously open a PR against your CI today. See [`ADR-019`](docs/decisions/ADR-019-agentic-ci-self-healing.md) §Phase plan for the staged delivery.
+> **Status — Phase 1 (shadow, read-only).** The classifier and collector ship today: `scripts/ci_collect_context.py` and
+> `scripts/ci_classify_failure.py`, governed by `templates/config/ci_autofix_policy.yaml` and
+> `templates/config/model_routing_policy.yaml`, with 10 policy-contract invariants and 27 Phase-1 runtime invariants
+> enforced by `test_ci_autofix_policy_contract.py` and `test_ci_classify_failure_phase1.py`. The classifier is wired
+> into CI in **shadow mode only** — it observes failures and emits classifications, but **does NOT write code, does NOT
+> open PRs, does NOT mutate any branch**. The patch worker, verifier, and write-enabled lanes are **NOT implemented
+> yet** and are gated on 14 days of shadow data per ADR-019 §Phase plan. No agent will autonomously open a PR against
+> your CI today. See [`ADR-019`](docs/decisions/ADR-019-agentic-ci-self-healing.md) §Phase plan for the staged delivery.
 >
-> _Audit trail: Phase 0 disclosure added in response to R4 finding C2; transitioned to Phase 1 in the same audit-r4 sprint. See [`docs/audit/ACTION_PLAN_R4.md`](docs/audit/ACTION_PLAN_R4.md) §S0-2 + §S1-6._
+> *Audit trail: Phase 0 disclosure added in response to R4 finding C2; transitioned to Phase 1 in the same audit-r4 sprint. See [`docs/audit/ACTION_PLAN_R4.md`](docs/audit/ACTION_PLAN_R4.md) §S0-2 + §S1-6.*
 
-The template supports a bounded self-healing lane for CI. This is not "let the agent fix anything." It is a policy-governed repair loop with verification, audit, and branch isolation.
+The template supports a bounded self-healing lane for CI. This is not "let the agent fix anything." It is a
+policy-governed repair loop with verification, audit, and branch isolation.
 
 ### Safety model
 
@@ -397,7 +479,7 @@ The template supports a bounded self-healing lane for CI. This is not "let the a
 ### Repair matrix
 
 | Failure class | Mode | Examples |
-|---------------|------|----------|
+| --------------- | ------ | ---------- |
 | formatting drift | `AUTO` | lint formatting, imports, whitespace |
 | documentation quality | `AUTO` | markdown issues, link fixes, generated docs drift |
 | non-sensitive config syntax | `AUTO` | YAML, TOML, JSON syntax repairs in low-risk areas |
@@ -416,7 +498,7 @@ The template treats model selection as a routing problem, not a brand decision.
 ### Routing roles
 
 | Task type | Route | Expected behavior |
-|-----------|-------|-------------------|
+| ----------- | ------- | ------------------- |
 | failure classification, extraction, low-cost triage | low-cost router | prioritize speed and cost |
 | small patch generation | patch worker | optimize for bounded code edits |
 | diff review and risk evaluation | reviewer / gatekeeper | prioritize consistency and policy awareness |
@@ -433,44 +515,60 @@ The important part is not the provider. It is the routing policy, verification l
 
 ### Recommended baseline (cadence-anticipated, **NOT** vendor-verified)
 
-> **Status — Anticipated names, pending verification.** The model names in the snapshot table below follow the cadence the project's adopter requested (`gpt-5.x`, `claude-opus-4.x`, `gemini-3.x`). They have **NOT** been reconciled against the live catalog of any provider. Several names (e.g. `gpt-5.4`, `gpt-5.5`, `gemini-3.1-pro-preview`, `gemini-3-flash-preview`) may not exist at adoption time.
+> **Status — Anticipated names, pending verification.** The model names in the snapshot table below follow the cadence
+> the project's adopter requested (`gpt-5.x`, `claude-opus-4.x`, `gemini-3.x`). They have **NOT** been reconciled
+> against the live catalog of any provider. Several names (e.g. `gpt-5.4`, `gpt-5.5`, `gemini-3.1-pro-preview`,
+> `gemini-3-flash-preview`) may not exist at adoption time.
 >
-> Before enabling any of these names for a production-adjacent route, **verify against the provider dashboard** (see §"Verifying model availability before adoption" below) and update `verified_at` in [`templates/config/model_routing_policy.yaml`](templates/config/model_routing_policy.yaml). The ADR-019 contract test enforces routing **structure** (preview never on protected branches; AUTO mode never escalation-tier), not specific model identities.
+> Before enabling any of these names for a production-adjacent route, **verify against the provider dashboard** (see
+> §"Verifying model availability before adoption" below) and update `verified_at` in
+> [`templates/config/model_routing_policy.yaml`](templates/config/model_routing_policy.yaml). The ADR-019 contract test
+> enforces routing **structure** (preview never on protected branches; AUTO mode never escalation-tier), not specific
+> model identities.
 >
-> _Audit trail: this disclaimer was added in response to R4 finding C1 (cadence-anticipated names presented as verified). See [`docs/audit/ACTION_PLAN_R4.md`](docs/audit/ACTION_PLAN_R4.md) §S0-1._
+> *Audit trail: this disclaimer was added in response to R4 finding C1 (cadence-anticipated names presented as verified). See [`docs/audit/ACTION_PLAN_R4.md`](docs/audit/ACTION_PLAN_R4.md) §S0-1.*
 
 #### Cadence-anticipated names — pending vendor verification
 
 | Role | OpenAI | Anthropic | Google | Use it for |
-|------|--------|-----------|--------|------------|
+| ------ | -------- | ----------- | -------- | ------------ |
 | **Router / cheap classify** | `gpt-5.4-nano` | `claude-haiku-4-5` | `gemini-2.5-flash-lite` | Failure triage, extraction, label classification |
 | **Patch worker** | `gpt-5.4-mini` | `claude-haiku-4-5` | `gemini-2.5-flash` | Small patches, formatter fixes, doc edits |
 | **Reviewer / gatekeeper** | `gpt-5.4` | `claude-sonnet-4-6` | `gemini-2.5-pro` | Diff review, risk evaluation, consistency check |
 | **Hard escalation** | `gpt-5.5` | `claude-opus-4-6` | `gemini-2.5-pro` | Multi-file RCA, refactors with ripple, rare CI failures |
 | **Frontier preview (non-prod only)** | — | — | `gemini-3.1-pro-preview`, `gemini-3-flash-preview` | Benchmarking lane, `workflow_dispatch` only — never on `main` |
 
-The table above is a **structural recommendation** — four cost/quality tiers plus a non-prod preview lane. Substitute each cell with whichever model in that tier exists in your provider's catalog at adoption time.
+The table above is a **structural recommendation** — four cost/quality tiers plus a non-prod preview lane. Substitute
+each cell with whichever model in that tier exists in your provider's catalog at adoption time.
 
 #### Three pre-tuned structural profiles
 
-The profiles below are described in cadence-anticipated names for continuity with the table above; treat the names as placeholders for tier slots, not commitments to specific models.
+The profiles below are described in cadence-anticipated names for continuity with the table above; treat the names as
+placeholders for tier slots, not commitments to specific models.
 
-- **Maximum simplicity** (single family): `gpt-5.4-nano` → `gpt-5.4-mini` → `gpt-5.4` → `gpt-5.5`. Cleanest cost/quality gradient.
-- **Mix cost + quality**: `gemini-2.5-flash-lite` (router) → `gpt-5.4-mini` (patcher) → `claude-sonnet-4-6` (reviewer) → `gpt-5.5` or `claude-opus-4-6` (escalation). Strong gatekeeper without paying frontier cost on every call.
-- **Aggressive cost minimization**: `gemini-2.5-flash-lite` → `gemini-2.5-flash` → `gemini-2.5-pro` → escalation only when needed. Best volume economics.
+- **Maximum simplicity** (single family): `gpt-5.4-nano` → `gpt-5.4-mini` → `gpt-5.4` → `gpt-5.5`. Cleanest cost/quality
+  gradient.
+- **Mix cost + quality**: `gemini-2.5-flash-lite` (router) → `gpt-5.4-mini` (patcher) → `claude-sonnet-4-6` (reviewer) →
+  `gpt-5.5` or `claude-opus-4-6` (escalation). Strong gatekeeper without paying frontier cost on every call.
+- **Aggressive cost minimization**: `gemini-2.5-flash-lite` → `gemini-2.5-flash` → `gemini-2.5-pro` → escalation only
+  when needed. Best volume economics.
 
 #### Hard rules (codified in `ci_autofix_policy.yaml`)
 
 - AUTO mode never uses escalation-tier models — bounded blast radius implies bounded reasoning need.
-- Preview models are restricted to `workflow_dispatch` and benchmarking lanes; they cannot land on protected branches. The contract test refuses configurations that violate this.
-- Memory-plane signals (ADR-018) can route a query to a more capable model on `repeat_failure_pattern`, but never the other way around — same escalation-only discipline as ADR-010.
+- Preview models are restricted to `workflow_dispatch` and benchmarking lanes; they cannot land on protected branches.
+  The contract test refuses configurations that violate this.
+- Memory-plane signals (ADR-018) can route a query to a more capable model on `repeat_failure_pattern`, but never the
+  other way around — same escalation-only discipline as ADR-010.
 
 #### Verifying model availability before adoption
 
-Before enabling any name from the table above for a production-adjacent route, verify it exists in the provider's stable catalog **on the day of adoption** and update `verified_at` in [`templates/config/model_routing_policy.yaml`](templates/config/model_routing_policy.yaml).
+Before enabling any name from the table above for a production-adjacent route, verify it exists in the provider's stable
+catalog **on the day of adoption** and update `verified_at` in
+[`templates/config/model_routing_policy.yaml`](templates/config/model_routing_policy.yaml).
 
 | Provider | Where to verify | Catalog scope to confirm |
-|----------|-----------------|---------------------------|
+| ---------- | ----------------- | --------------------------- |
 | OpenAI | [`platform.openai.com/docs/models`](https://platform.openai.com/docs/models) | Model name appears under "Current models" (not "Deprecated" or "Legacy"); pricing and rate-limit tier acceptable for the route's expected volume |
 | Anthropic | [`docs.anthropic.com/en/docs/about-claude/models`](https://docs.anthropic.com/en/docs/about-claude/models) | Model name appears in the active models table; check the `model_id` column matches what your client will send |
 | Google | [`ai.google.dev/gemini-api/docs/models`](https://ai.google.dev/gemini-api/docs/models) and Vertex AI Model Garden | Confirm GA vs preview status; preview models are restricted to non-protected lanes by `model_routing_policy.yaml` |
@@ -478,13 +576,17 @@ Before enabling any name from the table above for a production-adjacent route, v
 **Process**:
 
 1. Open the dashboard above for each provider you intend to use.
-2. For every cell of the recommended-baseline table you plan to enable, confirm the model name still exists and is in the maturity tier the YAML expects (`stable` or `preview`).
-3. If a name no longer exists, the routing layer falls back to the next candidate in the route — it never silently switches families. Replace the missing name with a verified equivalent and bump `verified_at`.
+2. For every cell of the recommended-baseline table you plan to enable, confirm the model name still exists and is in
+   the maturity tier the YAML expects (`stable` or `preview`).
+3. If a name no longer exists, the routing layer falls back to the next candidate in the route — it never silently
+   switches families. Replace the missing name with a verified equivalent and bump `verified_at`.
 4. Reviewers MUST re-verify before any rollout to a protected branch.
 
 #### Honesty caveat
 
-Vendor model names rotate every 6–12 months. The `verified_at` field in `model_routing_policy.yaml` declares when the catalog was last reconciled. The names in the table above are anticipated based on the project's adopter cadence and have not been reconciled against any vendor catalog at the time of writing.
+Vendor model names rotate every 6–12 months. The `verified_at` field in `model_routing_policy.yaml` declares when the
+catalog was last reconciled. The names in the table above are anticipated based on the project's adopter cadence and
+have not been reconciled against any vendor catalog at the time of writing.
 
 ### Local model plane — the `agent-local` sibling repository
 
@@ -500,7 +602,7 @@ are implemented in a separate, self-contained repository:
 How the two repositories integrate (they are **deliberately separate**, never merged):
 
 | Direction | What flows | Reference |
-|-----------|-----------|-----------|
+| ----------- | ----------- | ----------- |
 | template → agent-local | When `agent-local` needs cloud infra, it **reuses** this template's Terraform modules and Kustomize overlays instead of rewriting them | agent-local ADR-002 |
 | agent-local → template | The local tiers run the **day-2 maintenance lanes** of ADR-028 (CI self-healing, operational memory, drift triage, docs-drift) below the cheapest cloud tier in `model_routing_policy.yaml` | ADR-028 §maintenance lanes |
 | shared | The unified plan `docs/audit/ACTION_PLAN_LLM_AGENT.md` governs **both** planes; the local-model decisions live in `agent-local/docs/decisions/` (ADR-001..005) | `ACTION_PLAN_LLM_AGENT.md` |
@@ -514,10 +616,11 @@ How the two repositories integrate (they are **deliberately separate**, never me
 
 ## Anti-patterns encoded
 
-The template encodes and audits 38 production anti-patterns across serving, training, Kubernetes, Terraform, security, observability, and delivery.
+The template encodes and audits 38 production anti-patterns across serving, training, Kubernetes, Terraform, security,
+observability, and delivery.
 
 | ID | Anti-pattern | Corrective action |
-|----|--------------|-------------------|
+| ---- | -------------- | ------------------- |
 | D-01 | `uvicorn --workers N` in Kubernetes | Use one worker per pod and move CPU-bound inference into `ThreadPoolExecutor`. |
 | D-02 | Memory as an HPA metric for ML pods | Use CPU-only HPA so scale-down remains meaningful. |
 | D-03 | `model.predict()` called directly in an async endpoint | Wrap inference with `run_in_executor`. |
@@ -771,13 +874,20 @@ tag-immutability-v). Adopters apply both to their fork with
 
 ## Adoption boundary
 
-For platform reviewers asking *"is this ready for our org?"* and teams that want to adopt the template **without using AI agents**, see [`docs/ADOPTION.md`](docs/ADOPTION.md). It contains:
+For platform reviewers asking *"is this ready for our org?"* and teams that want to adopt the template **without using
+AI agents**, see [`docs/ADOPTION.md`](docs/ADOPTION.md). It contains:
 
-- **Maturity matrix** per capability × cloud × environment (dev/staging/prod), with explicit `ready` / `partial` / `roadmap` ratings
-- **Non-agentic on-ramp**: every `/slash` workflow has a `make` equivalent or runbook reference; teams that don't use AI assistants get the same safety guarantees through `make` targets and contract tests
-- **Explicit non-claims**: what the template does NOT cover (multi-region active-active, compliance certifications, LLM serving, mobile/edge inference). *LLM serving is intentionally out of scope here and lives in the sibling [`agent-local`](https://github.com/DuqueOM/agent-local) repo — see "Local model plane" above.*
+- **Maturity matrix** per capability × cloud × environment (dev/staging/prod), with explicit `ready` / `partial` /
+  `roadmap` ratings
+- **Non-agentic on-ramp**: every `/slash` workflow has a `make` equivalent or runbook reference; teams that don't use AI
+  assistants get the same safety guarantees through `make` targets and contract tests
+- **Explicit non-claims**: what the template does NOT cover (multi-region active-active, compliance certifications, LLM
+  serving, mobile/edge inference). *LLM serving is intentionally out of scope here and lives in the sibling
+  [`agent-local`](https://github.com/DuqueOM/agent-local) repo — see "Local model plane" above.*
 
-The agentic surface is a productivity multiplier; it is not a load-bearing component of the template's safety guarantees. All production invariants (D-01..D-38) live in tests, CI workflows, and Kyverno policies — not in agent behavior.
+The agentic surface is a productivity multiplier; it is not a load-bearing component of the template's safety
+guarantees. All production invariants (D-01..D-38) live in tests, CI workflows, and Kyverno policies — not in agent
+behavior.
 
 ---
 
@@ -804,9 +914,11 @@ If you outgrow the template, the documented invariants and ADRs are designed to 
 
 ## Real-world origin
 
-This template was extracted from [ML-MLOps-Portfolio](https://github.com/DuqueOM/ML-MLOps-Portfolio), where the patterns were developed and validated across multiple ML services, ADRs, tests, and cloud deployments.
+This template was extracted from [ML-MLOps-Portfolio](https://github.com/DuqueOM/ML-MLOps-Portfolio), where the patterns
+were developed and validated across multiple ML services, ADRs, tests, and cloud deployments.
 
-The goal is not to mirror that portfolio one-to-one. The goal is to package the stable, reusable operating patterns into a template that other teams can adopt without starting from scratch.
+The goal is not to mirror that portfolio one-to-one. The goal is to package the stable, reusable operating patterns into
+a template that other teams can adopt without starting from scratch.
 
 ### Companion repositories
 
@@ -815,7 +927,7 @@ operating philosophy (engineering calibration, ADRs for every non-trivial
 decision, AUTO/CONSULT/STOP governance) but stay deliberately separate:
 
 | Repository | Role | Relationship to this template |
-|------------|------|-------------------------------|
+| ------------ | ------ | ------------------------------- |
 | [ML-MLOps-Portfolio](https://github.com/DuqueOM/ML-MLOps-Portfolio) | The 3 validated tabular-ML services | Source the template was extracted from |
 | **this template** | Reusable MLOps platform (multi-cloud K8s, supply chain, agentic governance) | — |
 | [agent-local](https://github.com/DuqueOM/agent-local) | Reusable **local-LLM agent** platform (the LLM plane) | Runs ADR-028's day-2 lanes on local tiers; reuses this template's IaC when it needs cloud — see "Local model plane" above |

@@ -21,7 +21,7 @@ A closed-loop ML system has **four lagging stages** between a
 prediction and the model that learns from it. Each stage has its own
 latency target.
 
-```
+```text
 [1] Prediction served             [2] Outcome materialized
     └─ logged within 1s     ─►        └─ ground truth available within T_gt
                                           │
@@ -30,7 +30,7 @@ latency target.
 ```
 
 | Stage | Latency target | Source of truth | Owner |
-|-------|---------------|-----------------|-------|
+| ------- | --------------- | ----------------- | ------- |
 | 1. Prediction logged | < 1 s after `/predict` returns | `prediction_logger.write_batch()` (D-21/D-22) | Service team |
 | 2. Ground truth available | **`T_gt` ≤ 24 h** by default; tune per domain | Adopter's data warehouse / event stream | Data eng |
 | 3. Drift / quality detected | Same day as ground truth lands | Drift CronJob + sliced-performance CronJob | ML team |
@@ -40,7 +40,7 @@ latency target.
 Domains where it is realistic:
 
 | Domain | `T_gt` (typical) |
-|--------|------------------|
+| -------- | ------------------ |
 | Click-through-rate (CTR) | minutes |
 | Fraud detection (chargeback) | 30–90 days |
 | Credit default | 90 days – 2 years |
@@ -60,7 +60,7 @@ faster than waiting for full label arrival.
 Defaults set in the scaffolded service:
 
 | Mechanism | Default | File |
-|-----------|---------|------|
+| ----------- | --------- | ------ |
 | Drift CronJob cadence | hourly | `templates/service/k8s/base/cronjob-drift.yaml` |
 | Drift PSI per-feature alert | 0.20 | `templates/service/monitoring/prometheus/alerts-template.yaml` |
 | Drift PSI severe threshold (escalation signal) | 0.40 (= 2× alert) | `risk_context.py` |
@@ -124,7 +124,7 @@ window, multi-burn-rate alerts" canonical table.
 ## Failure modes and detection
 
 | Failure | Detection | Triage entry point |
-|---------|-----------|--------------------|
+| --------- | ----------- | -------------------- |
 | Ground truth never arrives | `ground_truth_ingestion_lag_seconds` exceeds SLO | `/incident` workflow |
 | Drift CronJob silently failing | `drift_cronjob_last_success_timestamp_seconds` heartbeat alert | `docs/runbooks/incident-response.md` |
 | Retrain produces a worse model | Champion/challenger gate FAILS in CI | `docs/decisions/ADR-008-champion-challenger-statistical-gate.md` |

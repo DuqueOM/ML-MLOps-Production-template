@@ -9,6 +9,7 @@ description: Kubernetes patterns for ML serving — single-worker pods, CPU-only
 ## Single-Worker Pod Pattern (MANDATORY)
 
 `uvicorn --workers N` is an anti-pattern in K8s:
+
 - Multiple workers in one pod share CPU limits → CPU thrashing
 - HPA cannot distinguish worker load → scaling signal diluted
 
@@ -28,6 +29,7 @@ containers:
 ## CPU-Only HPA (MANDATORY)
 
 NEVER use memory as an HPA metric for ML services:
+
 - Model memory footprint is constant (loaded model = fixed RAM)
 - Memory-based HPA never scales down: `ceil(replicas × usage / target)` stays constant
 

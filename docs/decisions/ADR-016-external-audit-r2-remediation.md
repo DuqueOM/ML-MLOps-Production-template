@@ -16,7 +16,7 @@ The 5 Critical / High findings whose impact is "production thinks it
 works but doesn't" were closed in commit `7bc53fd` (this same hour):
 
 | # | Finding | Closed by |
-|---|---------|-----------|
+| --- | --------- | ----------- |
 | C-1 | Closed-loop logger silently disabled (Dockerfile missing `common_utils/`) | Dockerfile + fastapi_app fail-fast |
 | C-2 | SLO PrometheusRule queries `http_*` while exporter emits `<service>_*` | Rule rewrite + metric-contract test |
 | H-3 | Retrain workflow has wrong dataset paths and references missing `promote_to_mlflow.py` | Path fix + new module |
@@ -203,9 +203,9 @@ we standardised on **pinned direct-release-tarball downloads** from
 **Regression lint:** new self-audit step in `validate-templates.yml`
 ("Toolchain install hygiene (PR-R2-5)") greps every workflow for:
 
-  - `curl … | bash` (any piping of network bytes into a shell)
-  - `/releases/latest/download/` (moving-version pins)
-  - `install_kustomize.sh` (the specific upstream hack/ installer)
+- `curl … | bash` (any piping of network bytes into a shell)
+- `/releases/latest/download/` (moving-version pins)
+- `install_kustomize.sh` (the specific upstream hack/ installer)
 
 The lint's own patterns are assembled from concatenated string
 fragments so the scan covers every workflow including itself
@@ -356,8 +356,8 @@ baselines from raw data:
 Implementation: `templates/eda/eda_pipeline.py` (producer),
 `templates/service/src/{service}/monitoring/drift_detection.py`
 (consumer), `templates/service/src/{service}/training/train.py`
-(consumer). Contract enforced by `templates/eda/tests/test_eda_artifacts.py`
-+ `templates/service/tests/test_drift_eda_baseline.py` +
+(consumer). Contract enforced by `templates/eda/tests/test_eda_artifacts.py` +
+`templates/service/tests/test_drift_eda_baseline.py` +
 `templates/service/tests/test_eda_gate.py`.
 
 Refs: PR-B2 stage 1 commit `60e92aa` (producer + loaders),
@@ -404,8 +404,8 @@ state) is scoped as PR-R2-9b. Rationale:
 
 - Requires a Prometheus install in the kind cluster + matching
   PrometheusRule loaded + Pushgateway exposed. The minimum is a
-  Helm install of `prometheus-community/prometheus` (no operator)
-  + a custom values file pointing at the scaffolded service's
+  Helm install of `prometheus-community/prometheus` (no operator) +
+  a custom values file pointing at the scaffolded service's
   rules. ~3-4 min added to the workflow.
 - The scaffolded `templates/monitoring/alertmanager-rules.yaml`
   exposes `{service}DriftAlert` with `expr: {service}_psi_score >
@@ -452,22 +452,22 @@ receive when they scaffold a service.
 - `templates/service/tests/policy/test_anti_patterns.py` — 11 D-XX
   policy tests (10 PASS + 1 SKIP because `.gitignore` is at repo
   root, not service-level):
-    - **D-01** no multi-worker uvicorn in Dockerfile or k8s manifests
-    - **D-02** HPA does not reference memory metric
-    - **D-05** ML packages (numpy/pandas/scipy/sklearn/xgboost/
+  - **D-01** no multi-worker uvicorn in Dockerfile or k8s manifests
+  - **D-02** HPA does not reference memory metric
+  - **D-05** ML packages (numpy/pandas/scipy/sklearn/xgboost/
       lightgbm) pinned with `~=`, never `==`
-    - **D-10** `.gitignore` blocks `*.tfstate*` (skipped: gitignore
+  - **D-10** `.gitignore` blocks `*.tfstate*` (skipped: gitignore
       lives at repo root, not service)
-    - **D-11** Dockerfile does not COPY models/ or `*.joblib`/`*.pkl`
-    - **D-17** no direct `os.environ["API_KEY"]`-style reads outside
+  - **D-11** Dockerfile does not COPY models/ or `*.joblib`/`*.pkl`
+  - **D-17** no direct `os.environ["API_KEY"]`-style reads outside
       `common_utils/secrets.py`
-    - **D-23** liveness and readiness probes use distinct paths
-    - **D-25** `terminationGracePeriodSeconds >= 30` on base
+  - **D-23** liveness and readiness probes use distinct paths
+  - **D-25** `terminationGracePeriodSeconds >= 30` on base
       Deployments (overlay patches inherit the base value)
-    - **D-27** at least one `PodDisruptionBudget` ships in `k8s/`
-    - **D-29** every overlay Namespace carries
+  - **D-27** at least one `PodDisruptionBudget` ships in `k8s/`
+  - **D-29** every overlay Namespace carries
       `pod-security.kubernetes.io/enforce` label
-    - **D-31** AWS + GCP `iam*.tf` reference all 5 ADR-017 identities
+  - **D-31** AWS + GCP `iam*.tf` reference all 5 ADR-017 identities
       (ci / deploy / runtime / drift / retrain)
   - 2 process-only invariants (D-06, D-13) are present as explicit
     `@pytest.mark.skip` with reasons tying back to where they ARE
@@ -524,7 +524,7 @@ Every `/slash` workflow in `.windsurf/workflows/` has a corresponding
 same safety guarantees through `make` + contract tests:
 
 | Workflow | Make target |
-|----------|-------------|
+| ---------- | ------------- |
 | `/new-service` | `make new-service NAME=… SLUG=…` |
 | `/eda` | `make eda` |
 | `/drift-check` | `make drift-check` |

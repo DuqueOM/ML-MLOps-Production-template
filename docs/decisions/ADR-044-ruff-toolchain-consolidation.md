@@ -15,7 +15,7 @@
 The Python lint and format layer ran three separate tools:
 
 | Tool | Role | Pin |
-|---|---|---|
+| --- | --- | --- |
 | `black` | formatter | 25.1.0 |
 | `isort` | import ordering | 6.0.1 |
 | `flake8` | style + pyflakes | 7.1.1 |
@@ -34,7 +34,7 @@ architecture" and slow.
 
 Before assuming, the suite was timed:
 
-```
+```console
 $ pre-commit run --all-files      # cold, installing envs
 TOTAL WALL: 28.07 s
 

@@ -47,6 +47,7 @@ the plan; a human approves each destructive command.
 ## Prerequisites
 
 Before running the plan, verify:
+
 - `kubectl config current-context` points at the affected cluster
 - `kubectl argo rollouts version` is available OR kubectl with the
   `rollout` subcommand for plain Deployments
@@ -55,7 +56,7 @@ Before running the plan, verify:
 
 ## Decision tree
 
-```
+```text
               Incident declared
                       │
          ┌────────────┴────────────┐
@@ -239,6 +240,7 @@ EOF
 ## After the incident
 
 Within 5 business days, the on-call owner MUST:
+
 1. File a blameless RCA in `docs/incidents/{YYYY-MM-DD}-{service}.md`
 2. Add a regression test for the failure mode (NOT a pytest of the
    symptom — a test for the ROOT cause)

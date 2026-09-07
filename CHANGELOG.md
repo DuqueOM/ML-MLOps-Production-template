@@ -4,11 +4,70 @@ All notable changes to the ML-MLOps Production Template are documented in this f
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 
-> **Versioning policy is now governed by [`docs/RELEASING.md`](docs/RELEASING.md).** Adopter migration guidance lives in [`MIGRATION.md`](MIGRATION.md). Verified-execution evidence lives in [`VALIDATION_LOG.md`](VALIDATION_LOG.md). Tags `v1.0.0`–`v1.12.0` are immutable historical audit snapshots, archived under `archive/v1.x` per [ADR-045](docs/decisions/ADR-045-tag-namespace-separation.md) so version-resolving tooling stops picking them over the active line; the commits, trees and signatures are unchanged. The active public line is now `v0.x` hardening; `v1.0.0` is reserved for the first real cloud E2E validation across GKE and EKS.
+> **Versioning policy is now governed by [`docs/RELEASING.md`](docs/RELEASING.md).** Adopter migration guidance lives in
+> [`MIGRATION.md`](MIGRATION.md). Verified-execution evidence lives in [`VALIDATION_LOG.md`](VALIDATION_LOG.md). Tags
+> `v1.0.0`–`v1.12.0` are immutable historical audit snapshots, archived under `archive/v1.x` per
+> [ADR-045](docs/decisions/ADR-045-tag-namespace-separation.md) so version-resolving tooling stops picking them over the
+> active line; the commits, trees and signatures are unchanged. The active public line is now `v0.x` hardening; `v1.0.0`
+> is reserved for the first real cloud E2E validation across GKE and EKS.
 
 ---
 
 ## [Unreleased]
+
+### Fixed — the Markdown gate reported 8,584 findings and blocked nothing
+
+- `Markdown Lint (style)` shipped with `continue-on-error: true` and the
+  comment *"warn-only first run; flip to false after triage"*. **There was no
+  configuration file at all** — every default rule, at every default setting.
+  It reported **8,584 issues in 474 files** on every run and blocked nothing.
+- `.markdownlint-cli2.jsonc` is that triage, with a stated reason beside every
+  rule that is off or retuned. Repository is now at **zero findings** and the
+  gate **blocks**.
+- **`markdownlint --fix` is not content-safe on this corpus**, which is the
+  finding worth keeping:
+  - MD004 rewrote a wrapped `+` — the arithmetic plus in *"FastAPI +
+    `asyncio.run_in_executor` + `ThreadPoolExecutor`"* — into a `-` bullet,
+    **14 times**.
+  - MD060 inserted spaces *inside inline-code regexes*, turning
+    `(v[0-9]|main|master)` into `(v[0-9] | main | master)` — a regex that no
+    longer matches what it says.
+  Both were caught by a token-stream check run against every file, not by
+  reading the diff. The durable repair was to remove the ambiguity (escape
+  the pipes, rewrap so no operator starts a line), not just revert the
+  character.
+- **Real rendering bugs found and fixed**, not formatting nits:
+  - unescaped `|` inside inline code inside table cells — the table parser
+    splits on it before inline code is recognised, so cells were being
+    **silently dropped** (MD056 "Expected 4; Actual 6; extra data will be
+    missing") in `18-audit-quality.md`, `rule-audit/SKILL.md`, `MIGRATION.md`;
+  - `{% raw %}` markers on their own lines **splitting the D-34 table in two**
+    in `AGENTS.md` and `rule-audit/SKILL.md`;
+  - `<dataset>`, `<one-line title>` — angle-bracket placeholders the HTML
+    parser **eats**, so they never rendered;
+  - a wrapped sentence whose continuation began `# 5,` **rendering as an H1**
+    in ADR-020;
+  - `[0.23.0]` documented the **same fix twice** under an identical heading;
+    the shorter write-up was a strict subset and is gone.
+  - **236 code fences had no language**, so none were highlighted and none
+    were copy-buttoned.
+- **437 over-length lines** reflowed at 120 columns — matching
+  `ruff line-length = 120`, so the repo has one line-length number rather than
+  two. Split-only, never joined, so the diff shows exactly the lines that were
+  too long. Nine single-command lines (up to **467 characters**) were promoted
+  to fenced blocks instead: wrapping a command changes what it does.
+- **Two generators emitted Markdown their own lint rejects**, which would have
+  deadlocked the gates against each other — regenerate to satisfy one, break
+  the other. `sync_agentic_adapters.py` and `generate_adr_index.py` now emit
+  lint-clean tables.
+- `"gitignore": true` and explicit `globs` in the config, and **no `globs:` in
+  the workflow**: the action's input would shadow the config and let CI and a
+  local run check different files. Before this, a local run linted every
+  `LICENSE.md` under `.venv/`.
+- The job asserts its own config exists. Without `.markdownlint-cli2.jsonc`
+  the action finds no files and reports *"0 issues in 0 files"* — a pass
+  because it checked nothing, which is the failure mode this repo keeps
+  finding.
 
 ### Fixed — the shipped test suite could not even be collected in a scaffolded service
 
@@ -144,6 +203,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
   comment has no such distinction**, so a removed path must be described
   rather than spelled. The alternative, a per-line opt-out marker, would be a
   bigger hole than the one it closes.
+
 ### Fixed — the LOW triage: seven of eight were real
 
 - The previous review left LOW unenforced on the grounds that *"an unenforced
@@ -190,6 +250,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
   check id **repo-wide**, not per resource, so each carries a review question
   about *which* buckets the check fires on rather than whether the prose
   still reads well.
+
 ### Added — a procedure for the node-pool replacement, not just a warning
 
 - The ADR-017 identity change makes `terraform apply` **replace** both node
@@ -375,6 +436,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
   of the six required status checks in the ADR-026 ruleset, and renaming it
   there would have blocked that very change, because the required context
   would never report. **Since carried out** — see the rename entry below.
+
 ### Changed — baseline entries that can be verified now are verified, not dated
 
 - The two `runtime-artifact` entries in `.doc-path-baseline.yml` carried a
@@ -540,6 +602,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
   through `make verify`, and breaking the byte-identity of a vendored
   runbook — the exact mistake that reached CI on #84 — is now caught by the
   `vendored-runtime-drift` hook at commit time.
+
 ### Added — the context-file hygiene test that was documented but never written
 
 - `docs/agentic/contextualization.md` §7 states that
@@ -572,6 +635,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
 - The secret patterns are themselves pinned by a test, because a scanner
   that silently stops matching passes everything.
 - Baseline down from 5 entries to 4.
+
 ### Fixed — the baseline expiry gate could not see the entries it exists to watch
 
 - `scripts/check_baselines_expiry.py` reported `OK — no expired or
@@ -685,6 +749,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
   38 cases pinning token classification, frozen-record exclusion,
   dual-perspective resolution and all three baseline failure modes.
 - Rationale and the full contract: `docs/governance/doc-path-references.md`.
+
 ### Fixed — the Kyverno admission smoke tested whatever Kubernetes version kind happened to bundle
 
 - `scripts/test_kyverno_admission.sh` called `kind create cluster` with no
@@ -776,6 +841,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
   accepted edge-protection components under ADR-042 / D-38. A provider
   bump could have broken it with CI staying green. Added the fifth
   validate step.
+
 ### Fixed — the CI/CD Template Drift Gate had a narrower scope than the surface it guards
 
 - **The gate scanned one directory and was trusted to cover a tree.**
@@ -838,7 +904,7 @@ outside the version namespace.
   every prior defect:
 
   | Command | Before | After |
-  |---|---|---|
+  | --- | --- | --- |
   | `get_latest_tag()` | `v1.12.0` | **`v0.25.0`** |
   | `copier copy` (no ref) | 435 files, no answers file | **627 files, `_commit: v0.25.0`** |
   | `copier update` (no ref) | 627 → 435, 582 deleted, answers file gone | **627 → 627, 0 deleted, answers file present** |
@@ -892,7 +958,7 @@ template, not by the template's own CI. Both were partially fixed in
 ### Breaking for adopters
 
 | Change | Manual action required |
-|---|---|
+| --- | --- |
 | **`/scaffold-update` workflow now pins `--vcs-ref`** | If you scaffolded under `v0.24.0` or earlier, the `agentic/workflows/scaffold-update.md` in **your service** carries an unpinned `copier update`. Running it downgrades the service and deletes `.copier-answers.yml`. Pull this release, or edit the two commands in that file by hand before invoking `/scaffold-update`. |
 | **Repository renamed to `ml-service-template` in live instructions** | None — GitHub 301-redirects the old path (verified). Update any bookmarks or forks pointing at `ML-MLOps-Production-Template` at your convenience. |
 
@@ -964,7 +1030,7 @@ it worked.
 ### Breaking for adopters
 
 | Change | Manual action required |
-|---|---|
+| --- | --- |
 | **`copier update` now requires `--vcs-ref`** | Use `copier update --vcs-ref=v0.24.0 …`. A bare `copier update` **downgrades your service to a frozen April 2026 snapshot and deletes `.copier-answers.yml`**, removing the update path itself. If you already ran one, see `MIGRATION.md`. |
 
 ### Fixed — a bare `copier update` destroyed the service it was meant to upgrade
@@ -979,7 +1045,7 @@ it worked.
   `v0.23.0` service:
 
   | | Unpinned | Pinned `--vcs-ref=v0.23.0` |
-  |---|---|---|
+  | --- | --- | --- |
   | Files after | **435** | 627 |
   | Files deleted | **582** | 0 |
   | `.copier-answers.yml` | **deleted** | present |
@@ -1014,25 +1080,10 @@ resolves that gap: on the pre-GA channel the *number* is smaller, the
 ### Breaking for adopters
 
 | Change | Manual action required |
-|---|---|
+| --- | --- |
 | **`black`, `isort`, `flake8` pre-commit hooks removed; `ruff-check` + `ruff-format` added** (ADR-044) | Run `pre-commit install --install-hooks`. Adopters with a custom `.pre-commit-config.yaml` overlay must merge the swap in both the repo config and the scaffolded service's. Custom `[tool.black]` / `[tool.isort]` sections should move to `[tool.ruff]`. |
 | **`ruff format` output differs from `black`** | Expect a one-time reflow of your Python tree (55 of 134 files here). Apply it as an isolated commit and register it in `.git-blame-ignore-revs`. |
 | **Adopter scaffold command now requires `--vcs-ref`** | Use `copier copy --vcs-ref=v0.23.0 …`. Without it Copier resolves to the highest-sorting tag, which is a frozen `v1.x` audit snapshot. |
-
-### Fixed — the documented scaffold command served a stale template
-
-- Every adopter-facing `copier copy` example omitted `--vcs-ref`. Copier
-  resolves an unpinned git source to the **highest-sorting tag**, and the
-  frozen `v1.0.0`–`v1.12.0` audit snapshots (ADR-014) sort above every
-  `v0.x` tag. The documented command served the **April 2026 snapshot**:
-  **435 files and no `.copier-answers.yml`**, versus **626 files with a
-  correct answers file** when pinned. The `v0.22.0` copier-update fix
-  therefore reached nobody following the documentation.
-- **New `scripts/check_adopter_scaffold_ref.py`** + a `RELEASING.md` §3
-  checklist item, so a release cannot ship with the docs pointing at the
-  previous version. The `v1.x` tags were **not** touched: `agentic/rules/18`
-  and ADR-014 both declare them immutable, so changing that needs its own
-  ADR.
 
 ### Fixed — generated services carried 33 unresolvable ADR references
 
@@ -1132,7 +1183,7 @@ and did not function. In each case the test passed *because* of how it was
 written, not because the capability worked.
 
 | Capability | Asserted in | Reality |
-|---|---|---|
+| --- | --- | --- |
 | `copier update` path | ADR-003 + 4 other places | No answers file was ever emitted |
 | Secret-scan parity local↔CI | `.pre-commit-config.yaml` header | Two different allowlist dialects |
 | Phase-1 disclosure guard | `test_phase0_disclosure.py` | 6/6 skipped, 0 enforced |
@@ -1404,8 +1455,8 @@ audit + native-cloud-first edge-protection introduction.
   does NOT duplicate Cloud Armor's / WAFv2's / Cloudflare's own
   per-rule hit-rate analytics; tracks only coverage + audit freshness,
   the one signal none of those consoles can answer.
-- **`docs/runbooks/edge-protection-setup.md`**: setup steps per cloud
-  + a cloud equivalence matrix. The three implementations' rate-limit
+- **`docs/runbooks/edge-protection-setup.md`**: setup steps per cloud +
+  a cloud equivalence matrix. The three implementations' rate-limit
   windows/semantics genuinely differ (Cloud Armor: configurable,
   default 60s; AWS WAFv2: fixed 5-minute window, block-only, no native
   throttle; Cloudflare: fixed 10s) — documented so nobody copies a
@@ -1718,7 +1769,7 @@ audit + native-cloud-first edge-protection introduction.
   descriptions updated from D-01..D-34 to D-01..D-35 in canonical and
   generated surfaces.
 
-### Added
+### Added (documentation coherence system)
 
 - **Documentation Coherence System (rule 16 + ADR-031)**: a single-source-of-truth
   contract for facts restated across documents, enforced like every other
@@ -1736,7 +1787,7 @@ audit + native-cloud-first edge-protection introduction.
   coherence) and based on Keep a Changelog, towncrier/changesets,
   release-please, MADR/Log4brains, Vale, and Diátaxis patterns.
 
-### Fixed
+### Fixed (documentation coherence drift)
 
 - **Documentation coherence drift (audit R7, `docs/audit/AUDIT_R7_STAFF_LEAD.md`)**:
   `VERSION` 0.18.0 → 0.19.0 to match the latest released CHANGELOG heading;
@@ -2535,47 +2586,87 @@ reserved for the first verified cloud golden path.
 
 ## [1.12.0] - 2026-04-29
 
-Closes 4 external-audit Round-3 findings and hardens pre-commit as the first filter. Root cause of the R3 findings: contributor clones shipped without actually installing git hooks, so black / flake8 drift, a closed-loop workflow with a payload that didn't match the live schema, and a kebab-vs-snake path bug in the drift CronJob all reached CI as the last line of defense. This release makes the first filter non-optional.
+Closes 4 external-audit Round-3 findings and hardens pre-commit as the first filter. Root cause of the R3 findings:
+contributor clones shipped without actually installing git hooks, so black / flake8 drift, a closed-loop workflow with a
+payload that didn't match the live schema, and a kebab-vs-snake path bug in the drift CronJob all reached CI as the last
+line of defense. This release makes the first filter non-optional.
 
 ### Breaking for adopters (post-R4 audit re-classification)
 
-Under the versioning policy ratified in `docs/RELEASING.md` (introduced post-tag in response to R4 finding C3), the following items in this release WOULD have required a MAJOR bump. Tag `v1.12.0` is immutable; this block documents the contract change so adopters can migrate explicitly. See `MIGRATION.md` for the `v1.11 → v1.12` row.
+Under the versioning policy ratified in `docs/RELEASING.md` (introduced post-tag in response to R4 finding C3), the
+following items in this release WOULD have required a MAJOR bump. Tag `v1.12.0` is immutable; this block documents the
+contract change so adopters can migrate explicitly. See `MIGRATION.md` for the `v1.11 → v1.12` row.
 
-- **Closed-loop schema realignment** (HIGH-1, PR-R2-9): the `golden-path-extended.yml` workflow now POSTs `entity_id` + `feature_a/b/c` + `slice_values` to `/predict`, replacing the previous `feature_1/2/3` payload that returned 422 against the live schema. Adopters who copied or extended that workflow MUST update their payload to the canonical schema. Metric fallback also changed from `requests_total{endpoint="/predict"}` to `requests_total{status=~"2xx|4xx"}` because the counter only carries a `status` label.
-- **Drift CronJob Python path** (HIGH-2, D-32): scaffolded manifest now uses `src/{service}/monitoring/drift_detection.py` (snake) instead of `src/{service-name}/...` (kebab). Adopters whose CronJob applied cleanly but exploded with `ModuleNotFoundError` at runtime must redeploy after re-scaffolding or apply the snake-case path manually.
-- **Pre-commit hook contract**: hook count went 9 → 14 with `default_install_hook_types: [pre-commit, pre-push]`. Adopters who maintained custom `.pre-commit-config.yaml` overlays MUST run `pre-commit install --overwrite` (now wrapped in `scripts/dev-setup.sh` and `make verify-hooks`).
+- **Closed-loop schema realignment** (HIGH-1, PR-R2-9): the `golden-path-extended.yml` workflow now POSTs `entity_id` +
+  `feature_a/b/c` + `slice_values` to `/predict`, replacing the previous `feature_1/2/3` payload that returned 422
+  against the live schema. Adopters who copied or extended that workflow MUST update their payload to the canonical
+  schema. Metric fallback also changed from `requests_total{endpoint="/predict"}` to `requests_total{status=~"2xx|4xx"}`
+  because the counter only carries a `status` label.
+- **Drift CronJob Python path** (HIGH-2, D-32): scaffolded manifest now uses
+  `src/{service}/monitoring/drift_detection.py` (snake) instead of `src/{service-name}/...` (kebab). Adopters whose
+  CronJob applied cleanly but exploded with `ModuleNotFoundError` at runtime must redeploy after re-scaffolding or apply
+  the snake-case path manually.
+- **Pre-commit hook contract**: hook count went 9 → 14 with `default_install_hook_types: [pre-commit, pre-push]`.
+  Adopters who maintained custom `.pre-commit-config.yaml` overlays MUST run `pre-commit install --overwrite` (now
+  wrapped in `scripts/dev-setup.sh` and `make verify-hooks`).
 
 ### HIGH — closed (pre-commit + audit R3)
 
-- **HIGH-1 (PR-R2-9)** Stage 1 of `golden-path-extended.yml` was posting `feature_1/2/3` against a live schema that required `entity_id` + `feature_a/b/c` — every "valid" request was 422'd. The metric fallback `requests_total{endpoint="/predict"}` matched NOTHING because the counter only has a `status` label (see `fastapi_app.py:176`). Fixed: payload uses the canonical schema fields including `slice_values`; fallback awk pattern matches against `status="2xx|4xx"` which actually exists. NEW `test_closed_loop_workflow_contract.py` (3 tests) parses both sides and fails LOUD if workflow and schema drift.
-- **HIGH-2 (D-32)** Drift `CronJob` referenced `src/{service-name}/monitoring/drift_detection.py` (kebab) but the scaffolder renames `src/{service}` → `src/<snake_slug>`. Manifest applied cleanly, then exploded at runtime with `ModuleNotFoundError: fraud-detector is not a valid Python package name`. Fixed: manifest now uses `{service}` (snake). NEW **D-32** entry in `AGENTS.md` formalizes the rule with inline rationale. NEW `test_d32_drift_cronjob_python_path` regression test (placeholder leak guard + snake-case check + on-disk directory existence + `drift_detection.py` existence).
+- **HIGH-1 (PR-R2-9)** Stage 1 of `golden-path-extended.yml` was posting `feature_1/2/3` against a live schema that
+  required `entity_id` + `feature_a/b/c` — every "valid" request was 422'd. The metric fallback
+  `requests_total{endpoint="/predict"}` matched NOTHING because the counter only has a `status` label (see
+  `fastapi_app.py:176`). Fixed: payload uses the canonical schema fields including `slice_values`; fallback awk pattern
+  matches against `status="2xx|4xx"` which actually exists. NEW `test_closed_loop_workflow_contract.py` (3 tests) parses
+  both sides and fails LOUD if workflow and schema drift.
+- **HIGH-2 (D-32)** Drift `CronJob` referenced `src/{service-name}/monitoring/drift_detection.py` (kebab) but the
+  scaffolder renames `src/{service}` → `src/<snake_slug>`. Manifest applied cleanly, then exploded at runtime with
+  `ModuleNotFoundError: fraud-detector is not a valid Python package name`. Fixed: manifest now uses `{service}`
+  (snake). NEW **D-32** entry in `AGENTS.md` formalizes the rule with inline rationale. NEW
+  `test_d32_drift_cronjob_python_path` regression test (placeholder leak guard + snake-case check + on-disk directory
+  existence + `drift_detection.py` existence).
 
 ### Pre-commit as mandatory first filter
 
-Discovered this clone had ZERO hooks in `.git/hooks/` — which is why this session shipped 5 commits with black drift and F541 caught ONLY by CI. The fix makes hooks non-optional.
+Discovered this clone had ZERO hooks in `.git/hooks/` — which is why this session shipped 5 commits with black drift and
+F541 caught ONLY by CI. The fix makes hooks non-optional.
 
-- `default_install_hook_types: [pre-commit, pre-push]` in `.pre-commit-config.yaml` so a single `pre-commit install` covers both stages (previously `--hook-type pre-push` had to be passed separately and almost nobody did — the scaffold-smoke pre-push hook silently never ran).
-- NEW `scripts/dev-setup.sh` — idempotent bootstrap: installs pre-commit if missing, validates config, installs both stages with `--overwrite`, verifies hooks actually landed in `.git/hooks/`, runs `pre-commit run --all-files` as sanity check. Fails LOUD with the fix command.
+- `default_install_hook_types: [pre-commit, pre-push]` in `.pre-commit-config.yaml` so a single `pre-commit install`
+  covers both stages (previously `--hook-type pre-push` had to be passed separately and almost nobody did — the
+  scaffold-smoke pre-push hook silently never ran).
+- NEW `scripts/dev-setup.sh` — idempotent bootstrap: installs pre-commit if missing, validates config, installs both
+  stages with `--overwrite`, verifies hooks actually landed in `.git/hooks/`, runs `pre-commit run --all-files` as
+  sanity check. Fails LOUD with the fix command.
 - NEW `make verify-hooks` target — fails non-zero if either hook is missing or doesn't reference the pre-commit framework.
-- NEW hooks (ported from the portfolio): **mypy 1.13** narrowed to `common_utils/` + `examples/` + `scripts/` (template service territory is placeholder land and explodes mypy), **bandit 1.7.10** with `-ll -i` threshold.
-- NEW LOCAL hooks: **validate-agentic** (runs `scripts/validate_agentic.py --strict` when AGENTS.md or agent runtime config changes) and **ci-autofix-policy-contract** (runs the 10-invariant contract test from ADR-019 when policy YAMLs change). These are the project's OWN gates; contributors no longer wait for CI to discover drift.
+- NEW hooks (ported from the portfolio): **mypy 1.13** narrowed to `common_utils/` + `examples/` + `scripts/` (template
+  service territory is placeholder land and explodes mypy), **bandit 1.7.10** with `-ll -i` threshold.
+- NEW LOCAL hooks: **validate-agentic** (runs `scripts/validate_agentic.py --strict` when AGENTS.md or agent runtime
+  config changes) and **ci-autofix-policy-contract** (runs the 10-invariant contract test from ADR-019 when policy YAMLs
+  change). These are the project's OWN gates; contributors no longer wait for CI to discover drift.
 
 Result: **14 hooks** (was 9), all 14 green on `main`.
 
 ### LOW — release hygiene
 
-- `releases/v.1.11.0.md` → `releases/v1.11.0.md` (`git mv` preserves history). The previous filename broke alphabetical sorting between v1.10 and v1.11.
+- `releases/v.1.11.0.md` → `releases/v1.11.0.md` (`git mv` preserves history). The previous filename broke alphabetical
+  sorting between v1.10 and v1.11.
 
 ### MEDIUM — catalog reconciliation
 
-- README said "30 production anti-patterns" while AGENTS table ended at D-31 and code/tests already referenced D-32 without a canonical definition. Fixed: `D-01..D-32` across `README.md`, `AGENTS.md` (4 callsites reconciled), and D-32 formalized in the anti-pattern table.
+- README said "30 production anti-patterns" while AGENTS table ended at D-31 and code/tests already referenced D-32
+  without a canonical definition. Fixed: `D-01..D-32` across `README.md`, `AGENTS.md` (4 callsites reconciled), and D-32
+  formalized in the anti-pattern table.
 
 ### CI hardening
 
-- **CI parity for local hooks**: the two new local hooks need pytest/pyyaml/jsonschema in the lint lane. Added to the `python-quality` job so CI matches the same set of hooks as local pre-commit.
-- **ci-autofix-policy-contract** uses `--noconftest --rootdir=.` so pytest doesn't pick up the service's numpy-heavy conftest (unnecessary for a self-contained contract test). Fast + self-contained is the whole point.
-- **mypy fix** in `risk_context.py:301`: removed a redundant `ctx: RiskContext` annotation that re-declared a cache-unpacked variable. `[no-redef]` was the only mypy error blocking the new hook from going green on the existing tree.
-- **bandit fix** in `risk_context.py:215`: explicit `# nosec B310` on the Prometheus urlopen with a 3-line comment explaining the URL comes from deployment config, not request input.
+- **CI parity for local hooks**: the two new local hooks need pytest/pyyaml/jsonschema in the lint lane. Added to the
+  `python-quality` job so CI matches the same set of hooks as local pre-commit.
+- **ci-autofix-policy-contract** uses `--noconftest --rootdir=.` so pytest doesn't pick up the service's numpy-heavy
+  conftest (unnecessary for a self-contained contract test). Fast + self-contained is the whole point.
+- **mypy fix** in `risk_context.py:301`: removed a redundant `ctx: RiskContext` annotation that re-declared a
+  cache-unpacked variable. `[no-redef]` was the only mypy error blocking the new hook from going green on the existing
+  tree.
+- **bandit fix** in `risk_context.py:215`: explicit `# nosec B310` on the Prometheus urlopen with a 3-line comment
+  explaining the URL comes from deployment config, not request input.
 
 ### Known follow-ons (scoped, not regressions)
 
@@ -2583,21 +2674,31 @@ Result: **14 hooks** (was 9), all 14 green on `main`.
 - MEDIUM Windows CI matrix for `validate_agentic.py` (new lane; script currently works on Linux/WSL/macOS).
 - MEDIUM NetworkPolicy egress allowlist by cloud (per-overlay work).
 - MEDIUM `load_test.py` schema sync to `feature_a/b/c` (low-risk but clean review as separate PR).
-- ADR-018/019 runtime implementation remains staged: Phase 1 shadow/read-only capabilities are shipped; write-enabled runtime remains deferred pending shadow precision evidence.
+- ADR-018/019 runtime implementation remains staged: Phase 1 shadow/read-only capabilities are shipped; write-enabled
+  runtime remains deferred pending shadow precision evidence.
 
 ---
 
 ## [1.11.0] - 2026-04-28
 
-Closes the ADR-016 external-audit R2 remediation backlog (7-day, 30-day, and 90-day windows all materially shipped) and lays the policy foundation for two new agent capabilities (Operational Memory Plane, Agentic CI Self-Healing). Also closes the OSS-packaging gap (NOTICE, DCO, CODEOWNERS) and tightens cloud parity through an additional 33 contract tests.
+Closes the ADR-016 external-audit R2 remediation backlog (7-day, 30-day, and 90-day windows all materially shipped) and
+lays the policy foundation for two new agent capabilities (Operational Memory Plane, Agentic CI Self-Healing). Also
+closes the OSS-packaging gap (NOTICE, DCO, CODEOWNERS) and tightens cloud parity through an additional 33 contract
+tests.
 
 ### Breaking for adopters (post-R4 audit re-classification)
 
-Under the versioning policy in `docs/RELEASING.md`, the following items in this release WOULD have required a MAJOR bump. Tag `v1.11.0` is immutable; this block documents the contract change explicitly.
+Under the versioning policy in `docs/RELEASING.md`, the following items in this release WOULD have required a MAJOR
+bump. Tag `v1.11.0` is immutable; this block documents the contract change explicitly.
 
-- **GCP IAM split surface**: `gcp/iam.tf` introduced per-service identity bindings that change the IAM model. Adopters with existing GCP deployments must apply the `terraform plan` carefully and confirm no privilege downgrade for in-flight workloads.
-- **`templates/config/ci_autofix_policy.yaml` and `model_routing_policy.yaml` introduced**: these become the canonical source of truth for autofix routing. Adopters who previously relied on undocumented defaults must opt in by enabling the (Phase 0) policy contract tests; no runtime behavior change yet.
-- **New `make` targets in non-agentic on-ramp**: 12 targets added (`scaffold`, `validate`, `deploy-dev`, etc.). Adopters who maintained custom Makefiles must merge the new targets per `docs/ADOPTION.md`.
+- **GCP IAM split surface**: `gcp/iam.tf` introduced per-service identity bindings that change the IAM model. Adopters
+  with existing GCP deployments must apply the `terraform plan` carefully and confirm no privilege downgrade for
+  in-flight workloads.
+- **`templates/config/ci_autofix_policy.yaml` and `model_routing_policy.yaml` introduced**: these become the canonical
+  source of truth for autofix routing. Adopters who previously relied on undocumented defaults must opt in by enabling
+  the (Phase 0) policy contract tests; no runtime behavior change yet.
+- **New `make` targets in non-agentic on-ramp**: 12 targets added (`scaffold`, `validate`, `deploy-dev`, etc.). Adopters
+  who maintained custom Makefiles must merge the new targets per `docs/ADOPTION.md`.
 
 ### ADR-016 R2 remediation — closed
 
@@ -2605,52 +2706,80 @@ Under the versioning policy in `docs/RELEASING.md`, the following items in this 
 - **PR-R2-6** AWS parity: storage, registry, IAM, secrets, logging — shipped.
 - **PR-R2-7** Quality-gate config externalized per service — shipped.
 - **PR-R2-8** EDA artifacts as machine-readable contract — shipped (delivered as part of PR-B2 stages 1–2).
-- **PR-R2-9 Stage 1** Closed-loop verification — NEW `.github/workflows/golden-path-extended.yml` that re-scaffolds + deploys + posts 100 valid + 5 invalid `/predict` requests + asserts the prediction-log counter increments. Triggers on `workflow_run` after the base Golden Path E2E succeeds, plus weekly schedule and on-demand. PR-R2-9b (alert firing via Prometheus + Pushgateway) is the explicit follow-on.
+- **PR-R2-9 Stage 1** Closed-loop verification — NEW `.github/workflows/golden-path-extended.yml` that re-scaffolds +
+  deploys + posts 100 valid + 5 invalid `/predict` requests + asserts the prediction-log counter increments. Triggers on
+  `workflow_run` after the base Golden Path E2E succeeds, plus weekly schedule and on-demand. PR-R2-9b (alert firing via
+  Prometheus + Pushgateway) is the explicit follow-on.
 - **PR-R2-10** Reproducible drift + degraded-deploy drills — shipped.
-- **PR-R2-11** D-01..D-31 anti-patterns as policy tests over scaffolded output — NEW `templates/service/tests/policy/` (13 tests) + dedicated weekly workflow. The suite scaffolds a fresh service per session and asserts AGENTS.md invariants hold on the rendered output. Surfaces a documentation drift in `aws/iam.tf` on first run; fixed in same PR.
-- **PR-R2-12** Adoption-boundary doc + non-agentic on-ramp — NEW `docs/ADOPTION.md` (maturity matrix per cloud × environment + non-claims list) + 12 new `make` targets so teams can adopt the template without inheriting the agentic surface + `test_adoption_boundary_contract.py` (7 tests) enforcing parity workflow ↔ make target ↔ doc.
+- **PR-R2-11** D-01..D-31 anti-patterns as policy tests over scaffolded output — NEW `templates/service/tests/policy/`
+  (13 tests) + dedicated weekly workflow. The suite scaffolds a fresh service per session and asserts AGENTS.md
+  invariants hold on the rendered output. Surfaces a documentation drift in `aws/iam.tf` on first run; fixed in same PR.
+- **PR-R2-12** Adoption-boundary doc + non-agentic on-ramp — NEW `docs/ADOPTION.md` (maturity matrix per cloud ×
+  environment + non-claims list) + 12 new `make` targets so teams can adopt the template without inheriting the agentic
+  surface + `test_adoption_boundary_contract.py` (7 tests) enforcing parity workflow ↔ make target ↔ doc.
 
 ### Cloud parity (AWS ↔ GCP)
 
-- **GCP gets** secrets.tf, logging.tf, kms.tf at the live layer with bootstrap-tier KMS key separation. Mirrors the AWS surface introduced in 1.10.0.
-- **NEW** `test_terraform_cloud_parity.py` (14 tests) enforces semantic parity: same secret-store usage, logging retention, budget alert wiring, CMEK across both clouds.
-- **GCP IAM** parity rationale documented inline in `gcp/iam.tf`: GCP doesn't need an `iam-roles-split.tf` equivalent because per-service identities don't exist on GCP — Workload Identity bindings per-secret/per-bucket already partition responsibilities.
-- **Cluster defaults** (PR-A3): private endpoint configurable and secure by default, system/workload node pool split with taint, deny-default `NetworkPolicy`. Enforced by `test_cluster_defaults_contract.py`.
-- **Bootstrap split**: state bucket, KMS, registry tiers separated from live layer per ADR. Enforced by `test_terraform_bootstrap_contract.py` (~7 tests).
+- **GCP gets** secrets.tf, logging.tf, kms.tf at the live layer with bootstrap-tier KMS key separation. Mirrors the AWS
+  surface introduced in 1.10.0.
+- **NEW** `test_terraform_cloud_parity.py` (14 tests) enforces semantic parity: same secret-store usage, logging
+  retention, budget alert wiring, CMEK across both clouds.
+- **GCP IAM** parity rationale documented inline in `gcp/iam.tf`: GCP doesn't need an `iam-roles-split.tf` equivalent
+  because per-service identities don't exist on GCP — Workload Identity bindings per-secret/per-bucket already partition
+  responsibilities.
+- **Cluster defaults** (PR-A3): private endpoint configurable and secure by default, system/workload node pool split
+  with taint, deny-default `NetworkPolicy`. Enforced by `test_cluster_defaults_contract.py`.
+- **Bootstrap split**: state bucket, KMS, registry tiers separated from live layer per ADR. Enforced by
+  `test_terraform_bootstrap_contract.py` (~7 tests).
 
 ### NEW agent capabilities (Phase 0 only — runtime deferred)
 
-- **ADR-018 Operational Memory Plane** ratifies a typed retrieval layer over existing evidence (audit.jsonl, drift reports, postmortems, security findings) that feeds new dynamic risk signals to `risk_context.py`. Hard boundaries codified: NOT in `/predict` path, NOT authoritative, NOT a policy mutator (memory hits can only ESCALATE prudence, never demote STOP). Phase plan with 7 phases; either phase auto-withdraws if the next phase doesn't ship in 30 days.
-- **ADR-019 Agentic CI Self-Healing** ratifies the policy contract for bounded autofix on CI failures. Ships TWO governance YAMLs (`templates/config/ci_autofix_policy.yaml`, `templates/config/model_routing_policy.yaml`) + ONE contract test (10 invariants) + the canonical failure-class table (12 classes mapped AUTO/CONSULT/STOP). Runtime scripts deferred — policy first, scripts second.
+- **ADR-018 Operational Memory Plane** ratifies a typed retrieval layer over existing evidence (audit.jsonl, drift
+  reports, postmortems, security findings) that feeds new dynamic risk signals to `risk_context.py`. Hard boundaries
+  codified: NOT in `/predict` path, NOT authoritative, NOT a policy mutator (memory hits can only ESCALATE prudence,
+  never demote STOP). Phase plan with 7 phases; either phase auto-withdraws if the next phase doesn't ship in 30 days.
+- **ADR-019 Agentic CI Self-Healing** ratifies the policy contract for bounded autofix on CI failures. Ships TWO
+  governance YAMLs (`templates/config/ci_autofix_policy.yaml`, `templates/config/model_routing_policy.yaml`) + ONE
+  contract test (10 invariants) + the canonical failure-class table (12 classes mapped AUTO/CONSULT/STOP). Runtime
+  scripts deferred — policy first, scripts second.
 
 ### Model routing recommendation
 
-- New README §"Recommended baseline (verified 2026-04)" subsection adds a provider × tier table mirroring `model_routing_policy.yaml` plus three pre-tuned profiles. Includes an explicit honesty caveat: vendor model names rotate every 6–12 months; the `verified_at` field declares when the catalog was last reconciled; the contract test enforces structure (preview never lands on protected branches), not specific identities.
+- New README §"Recommended baseline (verified 2026-04)" subsection adds a provider × tier table mirroring
+  `model_routing_policy.yaml` plus three pre-tuned profiles. Includes an explicit honesty caveat: vendor model names
+  rotate every 6–12 months; the `verified_at` field declares when the catalog was last reconciled; the contract test
+  enforces structure (preview never lands on protected branches), not specific identities.
 
 ### OSS packaging
 
 - **NEW** `NOTICE` (Apache-2.0 attribution).
 - **NEW** `DCO.md` (explicit DCO policy — already used in commits but undocumented).
-- **NEW** `.github/CODEOWNERS` routes review for protected areas (AGENTS.md, agent runtime config, ADRs, CICD/k8s/infra/scripts, common_utils, service template, monitoring, governance files).
+- **NEW** `.github/CODEOWNERS` routes review for protected areas (AGENTS.md, agent runtime config, ADRs,
+  CICD/k8s/infra/scripts, common_utils, service template, monitoring, governance files).
 - Existing `LICENSE`, `CONTRIBUTING.md`, `SECURITY.md` retained — already detailed and aligned.
 
 ### CI hardening
 
-- **CI tfsec fix**: replaced unsupported Terraform `check` block with `terraform_data` + `lifecycle.precondition` for AWS subnet validation (tfsec v1.28.x parser limitation).
-- **Policy-tests workflow numpy isolation**: added `--rootdir` + `--confcutdir` so the policy suite doesn't trigger the parent ML conftest's numerics imports. Workflow stays cheap (~30s install vs ~5min full ML stack).
+- **CI tfsec fix**: replaced unsupported Terraform `check` block with `terraform_data` + `lifecycle.precondition` for
+  AWS subnet validation (tfsec v1.28.x parser limitation).
+- **Policy-tests workflow numpy isolation**: added `--rootdir` + `--confcutdir` so the policy suite doesn't trigger the
+  parent ML conftest's numerics imports. Workflow stays cheap (~30s install vs ~5min full ML stack).
 - **black drift fix**: 5 test files reformatted; local + CI now agree.
 - **F541 fix**: removed an f-prefix on a string with no placeholders.
 
 ### Test count
 
-Contract tests: **76 PASS** (14 parity, 7 bootstrap, 11 cluster defaults, 7 adoption boundary, 10 CI policy, 18 day-2 artifacts, 9 IAM least-privilege).
+Contract tests: **76 PASS** (14 parity, 7 bootstrap, 11 cluster defaults, 7 adoption boundary, 10 CI policy, 18 day-2
+artifacts, 9 IAM least-privilege).
 Policy tests over scaffolded output: **13 PASS + 3 SKIP** (~4 min wall-clock per run).
 
 ### Known follow-ons (scoped, not regressions)
 
 - **PR-R2-9b** alert-firing via Prometheus + Pushgateway (Stage 2 of PR-R2-9).
-- **ADR-018 Phases 1–6** (canonical contracts, ingestion, storage/retrieval, integration, shadow→advisory→guarded-gate→enforced, hardening).
-- **ADR-019 Phases 1–6** (context collection, classification, verifier helpers, workflow scaffold, AUTO enablement per failure class, CONSULT lane).
+- **ADR-018 Phases 1–6** (canonical contracts, ingestion, storage/retrieval, integration,
+  shadow→advisory→guarded-gate→enforced, hardening).
+- **ADR-019 Phases 1–6** (context collection, classification, verifier helpers, workflow scaffold, AUTO enablement per
+  failure class, CONSULT lane).
 
 ---
 
@@ -2665,13 +2794,26 @@ surface area but the existing surface now does what the docs say.
 
 ### Breaking for adopters (post-R4 audit re-classification)
 
-Under the versioning policy in `docs/RELEASING.md`, this release SHOULD have been `v2.0.0` rather than `v1.10.0`. The R4 audit (finding C3) explicitly flagged it. Tag `v1.10.0` is immutable; this block makes the contract change visible. See `MIGRATION.md` for the `v1.9 → v1.10` row, which is the highest-impact migration in the project's history.
+Under the versioning policy in `docs/RELEASING.md`, this release SHOULD have been `v2.0.0` rather than `v1.10.0`. The R4
+audit (finding C3) explicitly flagged it. Tag `v1.10.0` is immutable; this block makes the contract change visible. See
+`MIGRATION.md` for the `v1.9 → v1.10` row, which is the highest-impact migration in the project's history.
 
-- **Six environment overlays renamed**: `gcp-production` → `gcp-prod`; `aws-production` → `aws-prod`; new `gcp-dev`, `gcp-staging`, `aws-dev`, `aws-staging` introduced. Adopters MUST update every reference in custom CI, deploy scripts, and `kubectl` invocations. Pre-`v1.10` deploys for dev/staging never worked; adopters who thought they had dev deploys did not.
-- **Cosign signing path now wired end-to-end**: prior versions advertised image signing but did NOT install `cosign` in any workflow. From `v1.10.0` onward, every prod build signs and attests; adopters with existing Kyverno admission policies in audit mode must move to enforce mode AFTER confirming all images carry signatures and SBOMs.
-- **Image digest pinning is now mandatory**: `kustomize edit set image <name>=<repo>@<digest>` runs BEFORE every `kubectl apply`. Adopters who deployed by tag (e.g. `:latest`, `:1.0`) MUST switch to digest references; mutable tags are no longer supported by the deploy chain.
-- **Init-container model loading**: `templates/k8s/base/deployment.yaml` introduces an init-container with an `emptyDir` volume to download model artifacts at runtime. Adopters who baked artifacts into images (D-11) MUST migrate to the init pattern.
-- **Pod Security Standards labels mandatory**: each overlay now carries the correct PSS labels (`enforce=baseline` for dev/staging, `enforce=restricted` for prod). Adopters with custom namespaces MUST add the labels or admission control will reject the pods.
+- **Six environment overlays renamed**: `gcp-production` → `gcp-prod`; `aws-production` → `aws-prod`; new `gcp-dev`,
+  `gcp-staging`, `aws-dev`, `aws-staging` introduced. Adopters MUST update every reference in custom CI, deploy scripts,
+  and `kubectl` invocations. Pre-`v1.10` deploys for dev/staging never worked; adopters who thought they had dev deploys
+  did not.
+- **Cosign signing path now wired end-to-end**: prior versions advertised image signing but did NOT install `cosign` in
+  any workflow. From `v1.10.0` onward, every prod build signs and attests; adopters with existing Kyverno admission
+  policies in audit mode must move to enforce mode AFTER confirming all images carry signatures and SBOMs.
+- **Image digest pinning is now mandatory**: `kustomize edit set image <name>=<repo>@<digest>` runs BEFORE every
+  `kubectl apply`. Adopters who deployed by tag (e.g. `:latest`, `:1.0`) MUST switch to digest references; mutable tags
+  are no longer supported by the deploy chain.
+- **Init-container model loading**: `templates/k8s/base/deployment.yaml` introduces an init-container with an `emptyDir`
+  volume to download model artifacts at runtime. Adopters who baked artifacts into images (D-11) MUST migrate to the
+  init pattern.
+- **Pod Security Standards labels mandatory**: each overlay now carries the correct PSS labels (`enforce=baseline` for
+  dev/staging, `enforce=restricted` for prod). Adopters with custom namespaces MUST add the labels or admission control
+  will reject the pods.
 
 ### Critical fixes
 
@@ -2731,8 +2873,8 @@ Under the versioning policy in `docs/RELEASING.md`, this release SHOULD have bee
   `docs/runbooks/terraform-state-bootstrap.md` documents the
   bootstrap.
 - **Drift detection + retraining pipelines operationalized**.
-  Workflows previously had `# TODO: Configure data download`
-  + `echo "TODO: Upload model"` placeholders. Now use
+  Workflows previously had `# TODO: Configure data download` +
+  `echo "TODO: Upload model"` placeholders. Now use
   parametrized `{DATA,MODEL}_BUCKET_KIND` env vars to pick
   `gcs` vs `s3` and FAIL loudly on missing config instead of
   succeeding with a no-op. Champion/Challenger has a real
@@ -3020,6 +3162,7 @@ See **ADR-006** (closed-loop monitoring), **ADR-007** (sliced analysis),
 triggers) for the full rationale.
 
 **Prediction logger (ADR-006):**
+
 - `templates/common_utils/prediction_logger.py` — async buffered logger with
   4 pluggable backends (parquet, BigQuery, SQLite, stdout) via
   `PREDICTION_LOG_BACKEND` env var
@@ -3032,6 +3175,7 @@ triggers) for the full rationale.
   degrades if backend fails to start
 
 **Ground truth ingestion (ADR-006):**
+
 - `templates/service/src/{service}/monitoring/ground_truth.py` — daily
   CronJob with user-implemented `fetch_labels_from_source()` contract
 - Ships CSV stub for local dev + documented examples for BigQuery, Postgres
@@ -3039,6 +3183,7 @@ triggers) for the full rationale.
 - `configs/ground_truth_source.yaml` — declarative source config
 
 **Sliced performance monitor (ADR-007):**
+
 - `templates/service/src/{service}/monitoring/performance_monitor.py` —
   JOINs predictions with labels on `entity_id` with causality constraint
   (`label_ts >= prediction_ts`), computes AUC/F1/precision/recall/Brier
@@ -3051,6 +3196,7 @@ triggers) for the full rationale.
   (country, channel, model_version, score_bucket examples)
 
 **K8s manifests:**
+
 - `k8s/base/cronjob-performance.yaml` — two CronJobs:
   - `{service}-ground-truth-ingester` at 03:00 UTC
   - `{service}-performance-monitor` at 04:00 UTC
@@ -3062,6 +3208,7 @@ triggers) for the full rationale.
   - `PredictionLogErrorsHigh` (D-22 degradation visibility)
 
 **Champion/Challenger statistical gate (ADR-008):**
+
 - `templates/service/src/{service}/evaluation/champion_challenger.py` —
   McNemar exact binomial test + bootstrap ΔAUC 95% CI combined into
   tri-state decision (promote / keep / block)
@@ -3073,12 +3220,14 @@ triggers) for the full rationale.
 - Exit codes: 0 (promote) / 1 (keep) / 2 (block)
 
 **Anti-patterns (D-20, D-21, D-22):**
+
 - D-20 — prediction log events without `prediction_id` / `entity_id`
 - D-21 — prediction logging blocking the async inference event loop
 - D-22 — logging backend failure propagating to the HTTP response
 - Added to `AGENTS.md` anti-pattern table (now D-01 → D-22)
 
 **Agentic system:**
+
 - `.windsurf/rules/13-closed-loop-monitoring.md` — invariants + slicing /
   ground-truth / C/C contracts + agent behavior by file (AUTO/CONSULT/STOP)
 - `.windsurf/skills/concept-drift-analysis/` — new skill with RCA decision
@@ -3090,10 +3239,12 @@ triggers) for the full rationale.
   with multi-window metric collection + degrading-slice detection
 
 **IDE parity:**
+
 - `.cursor/rules/08-closed-loop.mdc` — parity with Windsurf rule 13
 - `.claude/rules/08-closed-loop.md` — parity with Windsurf rule 13
 
 **ADRs:**
+
 - `docs/decisions/ADR-006-closed-loop-monitoring.md`
 - `docs/decisions/ADR-007-sliced-performance-analysis.md`
 - `docs/decisions/ADR-008-champion-challenger-statistical-gate.md`
@@ -3102,6 +3253,7 @@ triggers) for the full rationale.
   explicitly rejects premature Argo Workflows adoption
 
 **Tests (50 total passing, 25 new):**
+
 - `templates/tests/unit/test_prediction_logger.py` — 20 tests covering
   `PredictionEvent` invariants, 3 backends, D-21/D-22 contract
 - `templates/tests/unit/test_ground_truth.py` — 6 tests for LabelRecord
@@ -3112,16 +3264,19 @@ triggers) for the full rationale.
   McNemar, bootstrap CI, decide() logic, end-to-end sklearn comparison
 
 **Schema changes (BREAKING for services on v1.6.x):**
+
 - `PredictionRequest.entity_id` is now REQUIRED (`min_length=1`)
 - `PredictionResponse.prediction_id` is now REQUIRED (UUID hex)
 - Optional: `PredictionRequest.slice_values: dict[str, str]` for sliced
   monitoring
 
 **Dependencies:**
+
 - `pyarrow ~=18.0` — parquet backend for prediction_logger
 - `pyyaml ~=6.0` — config loaders
 
 **Scope respected:**
+
 - No Argo Workflows (ADR-009 documents triggers; GHA remains default)
 - No Bytewax / streaming (parquet batch covers target audience)
 - No ClickHouse default (parquet is default; BigQuery optional; ClickHouse
@@ -3142,6 +3297,7 @@ chain has first-class controls (Cosign signing + SBOM + admission policy). See
 **ADR-005** for full rationale.
 
 **Agent Behavior Protocol (3 modes):**
+
 - `AGENTS.md` — new **Agent Behavior Protocol** section with AUTO / CONSULT / STOP modes
 - **Operation → Mode mapping table** (21 operations, canonical)
 - **Escalation triggers** — automatic STOP even from AUTO/CONSULT (marginal fairness,
@@ -3149,11 +3305,15 @@ chain has first-class controls (Cosign signing + SBOM + admission policy). See
 - Structured mode transition signal format for handoffs
 
 **Authorization checkpoints in skills:**
-- `.windsurf/skills/deploy-gke/SKILL.md` — `authorization_mode` frontmatter + protocol section (dev=AUTO, staging=CONSULT, prod=STOP)
+
+- `.windsurf/skills/deploy-gke/SKILL.md` — `authorization_mode` frontmatter + protocol section (dev=AUTO,
+  staging=CONSULT, prod=STOP)
 - `.windsurf/skills/deploy-aws/SKILL.md` — same pattern
-- `.windsurf/skills/model-retrain/SKILL.md` — train=AUTO, to_staging=CONSULT, to_production=STOP + automatic STOP on D-06 / marginal fairness / regression > 5%
+- `.windsurf/skills/model-retrain/SKILL.md` — train=AUTO, to_staging=CONSULT, to_production=STOP + automatic STOP on
+  D-06 / marginal fairness / regression > 5%
 
 **New Layer 2 agent: Agent-SecurityAuditor**
+
 - Runs **before** Agent-DockerBuilder and Agent-K8sBuilder
 - Blocks pipeline on findings (never silent)
 - Chains to `/secret-breach` on secret leaks
@@ -3162,6 +3322,7 @@ chain has first-class controls (Cosign signing + SBOM + admission policy). See
 "Blocked" entries cannot be bypassed by human insistence.
 
 **Agent Handoff Schema** — typed dataclass contracts replacing ad-hoc dicts:
+
 - `templates/common_utils/agent_context.py` — `AgentMode`, `Environment`,
   `EDAHandoff`, `TrainingArtifact`, `BuildArtifact`, `SecurityAuditResult`,
   `DeploymentRequest`, `AuditEntry`
@@ -3169,6 +3330,7 @@ chain has first-class controls (Cosign signing + SBOM + admission policy). See
 - `DeploymentRequest` refuses to construct if `env=production` + `audit.passed=False`
 
 **Audit Trail Protocol:**
+
 - Every agentic operation → `ops/audit.jsonl` (append-only)
 - Mirrored to GitHub Actions step summary
 - CONSULT/STOP operations additionally open a GitHub issue tagged `audit`
@@ -3177,11 +3339,13 @@ chain has first-class controls (Cosign signing + SBOM + admission policy). See
 #### Supply Chain Security (SLSA L2 components)
 
 **New anti-patterns D-17 / D-18 / D-19:**
+
 - D-17: Hardcoded credentials / direct `os.environ` for secrets in prod
 - D-18: Static AWS keys or GCP JSON keys in production
 - D-19: Unsigned images or missing SBOM in production
 
 **`.windsurf/rules/12-security-secrets.md` (NEW, `always_on`):**
+
 - Non-negotiable invariants D-17/D-18/D-19
 - Pre-commit gitleaks + credential-pattern grep
 - Python module guidance: `common_utils.secrets.get_secret`, never log values
@@ -3191,12 +3355,14 @@ chain has first-class controls (Cosign signing + SBOM + admission policy). See
 - Explicitly documents what it does NOT cover (Vault, SLSA L3+, compliance — per ADR-001)
 
 **`templates/common_utils/secrets.py` (NEW):**
+
 - Cloud-native secret loader with environment-aware resolution
 - Backends: dotenv (local), `os.environ` (CI), AWS Secrets Manager, GCP Secret Manager
 - **Refuses to fall through to `os.environ` in staging/production** (D-18)
 - Never logs secret values (D-17)
 
 **`templates/cicd/ci.yml` updates:**
+
 - New `security-audit` job: gitleaks + credential-pattern grep + IRSA/WI enforcement
 - `build` job renamed to "Build, Sign & Attest":
   - Syft SBOM generation (CycloneDX + SPDX) with 90-day retention
@@ -3206,6 +3372,7 @@ chain has first-class controls (Cosign signing + SBOM + admission policy). See
   - Build provenance summary in GHA step summary
 
 **`templates/k8s/policies/kyverno-image-verification.yaml` (NEW):**
+
 - ClusterPolicy `verify-image-signatures` — reject unsigned images in
   `environment=production` namespaces
 - Keyless Cosign: GitHub OIDC identity + Rekor transparency log
@@ -3213,12 +3380,14 @@ chain has first-class controls (Cosign signing + SBOM + admission policy). See
 - Companion ClusterPolicy `require-image-digest` — forbids tag-only refs in staging/prod
 
 **Incident response:**
+
 - `.windsurf/skills/security-audit/SKILL.md` (NEW) — pre-build/pre-deploy scans
 - `.windsurf/skills/secret-breach-response/SKILL.md` (NEW) — 7-phase playbook
   (halt → classify → revoke → audit → rotate → clean history → notify → post-mortem)
 - `.windsurf/workflows/secret-breach.md` (NEW, `/secret-breach` slash command)
 
 **Documentation:**
+
 - `docs/decisions/ADR-005-agent-behavior-and-security.md` (NEW)
   - Why 3 modes (not binary)
   - Why keyless Cosign (not keypair)
@@ -3247,7 +3416,7 @@ chain has first-class controls (Cosign signing + SBOM + admission policy). See
 
 ### The consultative gap is now closed
 
-```
+```text
 Before:  Agent executes all the way to kubectl apply — human sees only results.
 After:   Agent emits [AGENT MODE: CONSULT] before staging apply, [AGENT MODE: STOP]
          before production apply, presents plan, waits for explicit approval.
@@ -3255,7 +3424,7 @@ After:   Agent emits [AGENT MODE: CONSULT] before staging apply, [AGENT MODE: ST
 
 ### The supply chain gap is now closed
 
-```
+```text
 Before:  Trivy scan → push → deploy (no signature, no SBOM, no admission gate)
 After:   Trivy + Gitleaks → SBOM (CycloneDX + SPDX) → Cosign sign (keyless OIDC)
          → Cosign attest SBOM → push → Kyverno admission verifies at cluster entry
@@ -3273,6 +3442,7 @@ The template now has a first-class Exploratory Data Analysis phase that connects
 raw data → trained model through 6 structured phases with 4 agentic invariants.
 
 **Agentic configuration:**
+
 - **`AGENTS.md`**: new Agent-EDAProfiler (Layer 2); anti-patterns D-13 through D-16;
   updated skill/workflow inventories with `eda-analysis` and `/eda`
 - **`.windsurf/rules/11-data-eda.md`**: enforces snake_case, sandbox isolation,
@@ -3283,6 +3453,7 @@ raw data → trained model through 6 structured phases with 4 agentic invariants
   on pass or `/incident` on leakage block
 
 **Template module `templates/eda/`:**
+
 - **`eda_pipeline.py`** (500 lines): scriptable pipeline
   - Phase 0: ingest + snake_case normalization (D-13 sandbox check)
   - Phase 1: structural profile → `01_dtypes_map.json`
@@ -3298,12 +3469,14 @@ raw data → trained model through 6 structured phases with 4 agentic invariants
 - **`README.md`**: conventions, phase artifacts reference, drift loop diagram
 
 **Anti-patterns D-13 to D-16:**
+
 - D-13: EDA on production data without sandbox
 - D-14: Pandera schema without observed ranges from EDA
 - D-15: Baseline distributions not persisted (silently breaks drift detection)
 - D-16: Feature engineering without documented rationale
 
 **Integration:**
+
 - `new-service.sh` now copies `eda/` to scaffolded services + creates
   `reports/`, `artifacts/`, `notebooks/` subdirs
 - Updated scaffolder next-steps walk users through EDA before `schemas.py`/`features.py`
@@ -3311,6 +3484,7 @@ raw data → trained model through 6 structured phases with 4 agentic invariants
 - `make eda-validate` target (syntax + `py_compile`); chained into `make validate-templates`
 
 **Documentation:**
+
 - **`docs/decisions/ADR-004-eda-phase-integration.md`**: documents the design,
   rationale for 6 phases (not fewer), hard gate on leakage, lightweight vs heavy
   modes, and why `schemas.py` is never auto-overwritten
@@ -3321,7 +3495,8 @@ Tested end-to-end against `examples/minimal` fraud data (400 rows × 6 cols): al
 leakage gate correctly PASSED, 3 transforms proposed each with rationale.
 
 **The drift detection loop now closes:**
-```
+
+```text
 EDA phase 2 → 02_baseline_distributions.pkl (DVC-tracked)
            → Drift CronJob (production, consumes the pkl)
            → PSI per feature using quantile bins (D-08)
@@ -3335,13 +3510,17 @@ EDA phase 2 → 02_baseline_distributions.pkl (DVC-tracked)
 ### Added
 
 #### One-Command Bootstrap
-- **`scripts/bootstrap.sh`** — Detects OS (Linux/macOS/WSL), verifies required tools (Python 3.11+, Docker, kubectl, terraform, git, make), installs Python dependencies, configures MCPs interactively, installs pre-commit hooks, and validates by running the minimal example end-to-end. Idempotent; supports `--skip-mcp`, `--skip-demo`, `--check-only`.
+
+- **`scripts/bootstrap.sh`** — Detects OS (Linux/macOS/WSL), verifies required tools (Python 3.11+, Docker, kubectl,
+  terraform, git, make), installs Python dependencies, configures MCPs interactively, installs pre-commit hooks, and
+  validates by running the minimal example end-to-end. Idempotent; supports `--skip-mcp`, `--skip-demo`, `--check-only`.
 - **`scripts/_lib/detect_os.sh`** — OS detection helper
 - **`scripts/_lib/install_deps.sh`** — Python + system dependency installer
 - **`scripts/_lib/configure_mcp.sh`** — Interactive MCP configuration (github, git, kubectl-mcp-server, terraform-mcp-server)
 - **Makefile targets**: `make bootstrap`, `make bootstrap-check`
 
 #### Agentic System Validator
+
 - **`scripts/validate_agentic.py`** — Validates `.windsurf/` structure:
   - Rule frontmatter (`trigger`, `description`, `globs`)
   - Glob patterns match real files (catches dead rules)
@@ -3352,14 +3531,19 @@ EDA phase 2 → 02_baseline_distributions.pkl (DVC-tracked)
 - **Makefile target**: `make validate-agentic` (chained into `make validate-templates`)
 
 #### Governance Module (opt-in)
+
 - **`templates/governance/README.md`** — When/how to enable approval gates
 - **`templates/governance/ROLES.md`** — ML Engineer / Tech Lead / Platform Engineer responsibilities
-- **`templates/governance/github-environments.yml`** — GitHub Environments configuration reference (staging + production with `required_reviewers` and 24h soak)
-- **`templates/governance/promote-with-approval.yml`** — GitHub Actions workflow for Staging → Production promotion with MLflow stage transitions and audit tags
+- **`templates/governance/github-environments.yml`** — GitHub Environments configuration reference (staging + production
+  with `required_reviewers` and 24h soak)
+- **`templates/governance/promote-with-approval.yml`** — GitHub Actions workflow for Staging → Production promotion with
+  MLflow stage transitions and audit tags
 - **`templates/governance/promote_to_stage.sh`** — CLI for MLflow Model Registry stage transitions with audit trail
-- **`docs/decisions/ADR-002-model-promotion-governance.md`** — Documents why governance is opt-in, why GitHub Environments + MLflow stages over custom infrastructure, and how it respects ADR-001
+- **`docs/decisions/ADR-002-model-promotion-governance.md`** — Documents why governance is opt-in, why GitHub
+  Environments + MLflow stages over custom infrastructure, and how it respects ADR-001
 
 #### Scaffolder End-to-End Test
+
 - **`scripts/test_scaffold.sh`** — Runs `new-service.sh` in an isolated temp dir and validates:
   - Zero remaining `{ServiceName}`/`{service}`/`{SERVICE}` placeholders
   - All critical files and directories present
@@ -3371,6 +3555,7 @@ EDA phase 2 → 02_baseline_distributions.pkl (DVC-tracked)
 - **Makefile target**: `make test-scaffold` (also chained into `make validate-templates`)
 
 #### Feast Integration Pattern
+
 - **`docs/decisions/ADR-003-feast-integration-pattern.md`** — Documents the pattern for
   integrating Feast without modifying the core template. Uses external feature repo
   approach; service becomes a Feast client. Preserves Pandera validation (solves a
@@ -3379,6 +3564,7 @@ EDA phase 2 → 02_baseline_distributions.pkl (DVC-tracked)
 ### Changed
 
 #### Makefile (root)
+
 - `validate-templates` now includes `validate-agentic` and `test-scaffold` steps
 - Added `bootstrap`, `bootstrap-check`, `validate-agentic`, `test-scaffold` as first-class targets
 
@@ -3389,90 +3575,127 @@ EDA phase 2 → 02_baseline_distributions.pkl (DVC-tracked)
 ### Added
 
 #### Standalone Documentation (root)
-- **`QUICK_START.md`** — 10-minute setup guide: Option A (example demo), Option B (scaffold service), Option C (full MLflow stack)
+
+- **`QUICK_START.md`** — 10-minute setup guide: Option A (example demo), Option B (scaffold service), Option C (full
+  MLflow stack)
 - **`RUNBOOK.md`** — Template operations reference: scaffolding, validation, MLflow, contributing, release process
 - **`LICENSE`** — MIT License (was referenced in README but file was missing)
 - **`docker-compose.yml`** — Local dev stack: example fraud detection API + MLflow (one command: `docker compose up`)
 - **`releases/`** — GitHub Release notes directory: `v1.0.0.md`, `v1.1.0.md`, `v1.2.0.md` ready to publish
 
 #### DVC Templates (new)
+
 - **`templates/service/dvc.yaml`** — DVC pipeline with 4 stages: validate → featurize → train → evaluate
 - **`templates/service/.dvc/config`** — DVC remote configuration template for GCS/S3 storage
 
 #### Infrastructure (from portfolio)
-- **`templates/infra/docker-compose.mlflow.yml`** — Production-like MLflow stack: PostgreSQL + MinIO (S3-compatible) + MLflow server with health checks
+
+- **`templates/infra/docker-compose.mlflow.yml`** — Production-like MLflow stack: PostgreSQL + MinIO (S3-compatible) +
+  MLflow server with health checks
 
 #### Documentation Templates (new)
-- **`templates/docs/CHECKLIST_RELEASE.md`** — Pre-deployment release checklist: quality gates, Docker, K8s, infra, monitoring, multi-cloud
-- **`templates/docs/mkdocs.yml`** — MkDocs Material configuration template with navigation, plugins, theme, and docstring support
+
+- **`templates/docs/CHECKLIST_RELEASE.md`** — Pre-deployment release checklist: quality gates, Docker, K8s, infra,
+  monitoring, multi-cloud
+- **`templates/docs/mkdocs.yml`** — MkDocs Material configuration template with navigation, plugins, theme, and
+  docstring support
 
 #### Integration Test Templates (new)
+
 - **`templates/tests/integration/conftest.py`** — Service health wait fixture, auto-skip if unavailable
-- **`templates/tests/integration/test_service_integration.py`** — Full service validation: health, predictions, SHAP, latency SLA, metrics, model info
+- **`templates/tests/integration/test_service_integration.py`** — Full service validation: health, predictions, SHAP,
+  latency SLA, metrics, model info
 
 #### Enterprise K8s & Security (new)
-- **`templates/tests/infra/policies/kubernetes.rego`** — OPA/Conftest policies (ported from portfolio): non-root, resource limits, health probes, no :latest, namespace, HPA scaleDown + ML-specific D-01/D-02 enforcement
+
+- **`templates/tests/infra/policies/kubernetes.rego`** — OPA/Conftest policies (ported from portfolio): non-root,
+  resource limits, health probes, no :latest, namespace, HPA scaleDown + ML-specific D-01/D-02 enforcement
 - **`templates/k8s/base/slo-prometheusrule.yaml`** — SLO/SLA definitions as PrometheusRule:
   - Availability SLI (99.5% non-5xx), Latency SLI (95% < 500ms)
   - Error budget recording rules (30-day window)
   - Multi-window burn rate alerts: P1 (14.4x/1h), P2 (6x/6h), P3 (budget < 25%)
 
 #### Service Template Additions
+
 - **`templates/service/codecov.yml`** — Codecov configuration template with per-service coverage flags
 
 #### Example Improvements
+
 - **`examples/minimal/Dockerfile`** — Docker image for the fraud detection example (used by root docker-compose.yml)
 
 #### Architecture Decision Records
-- **`docs/decisions/ADR-001-template-scope-boundaries.md`** — Documents why LLM/GenAI, multi-tenancy, Vault, feature store, data contracts, SOC2/GDPR, and audit logs are deferred. Includes revisit triggers and Engineering Calibration rationale.
+
+- **`docs/decisions/ADR-001-template-scope-boundaries.md`** — Documents why LLM/GenAI, multi-tenancy, Vault, feature
+  store, data contracts, SOC2/GDPR, and audit logs are deferred. Includes revisit triggers and Engineering Calibration
+  rationale.
 
 #### CI: End-to-End Example Proof
-- **`validate-templates.yml`** — New `example-e2e` job: install → train → verify artifacts → start server → run tests → drift check → verify quality gates. Proves the template works in CI, not just locally.
+
+- **`validate-templates.yml`** — New `example-e2e` job: install → train → verify artifacts → start server → run tests →
+  drift check → verify quality gates. Proves the template works in CI, not just locally.
 
 ### Changed
 
 #### README — Major Restructure
+
 - **Concise hook at top** — Problem statement + differentiator in 3 lines, replacing verbose intro
 - **Quick Navigation** — Replaced bullet list with 3-column table (Getting Started | Architecture | Development)
-- **Quick Start** — Removed manual `sed -i` commands, now uses `new-service.sh` exclusively (fixes inconsistency with CHANGELOG v1.1.0)
+- **Quick Start** — Removed manual `sed -i` commands, now uses `new-service.sh` exclusively (fixes inconsistency with
+  CHANGELOG v1.1.0)
 - **"Try It in 5 Minutes"** — Added `make demo-minimal` one-liner and Docker Compose alternative
-- **Repository Structure** — Updated tree with all new files: QUICK_START.md, RUNBOOK.md, LICENSE, docker-compose.yml, releases/, DVC, integration tests, SLO, mkdocs, checklist, MLflow compose
+- **Repository Structure** — Updated tree with all new files: QUICK_START.md, RUNBOOK.md, LICENSE, docker-compose.yml,
+  releases/, DVC, integration tests, SLO, mkdocs, checklist, MLflow compose
 - **Templates Detail** — Added sections for DVC, integration tests, SLO, MLflow, release checklist, MkDocs
 - **MkDocs section** — Now references `templates/docs/mkdocs.yml` template instead of just the portfolio
 - Added links to QUICK_START.md and RUNBOOK.md at top of README
 
 #### AGENTS.md
+
 - Updated Template System tree with DVC, pyproject.toml, integration tests, SLO, MLflow compose, mkdocs, checklist
 
 #### CLAUDE.md
+
 - Updated File Structure with all new files and directories
 
 #### `new-service.sh`
+
 - Added DVC template copying step
 - Added integration test template copying
 - Added `data/validated/`, `data/processed/`, `reports/` to standard directories
 
 #### Fairness Module
-- **`templates/service/src/{service}/fairness.py`** — Added domain guidance: protected attribute selection by industry (Finance, Healthcare, Employment, GDPR), threshold customization, DIR limitations, proxy detection references
+
+- **`templates/service/src/{service}/fairness.py`** — Added domain guidance: protected attribute selection by industry
+  (Finance, Healthcare, Employment, GDPR), threshold customization, DIR limitations, proxy detection references
 
 #### common_utils Distribution Strategy
+
 - **`templates/common_utils/__init__.py`** — Documented the copy-in pattern, trade-offs, and PyPI graduation path (>5 services)
 
 #### README: Claude Code & Cursor Rules
-- **Agentic System section** — Added dedicated subsections for `.claude/rules/` (5 rules, `paths:` triggers) and `.cursor/rules/` (5 MDC rules, `globs:` triggers) with per-file tables
+
+- **Agentic System section** — Added dedicated subsections for `.claude/rules/` (5 rules, `paths:` triggers) and
+  `.cursor/rules/` (5 MDC rules, `globs:` triggers) with per-file tables
 
 #### RUNBOOK: Secret Management
+
 - **`RUNBOOK.md`** — Added Secret Management section: GCP/AWS Secrets Manager commands, anti-pattern D-10 guidance
 
 ### Notes
 
 #### Claude-code-main Assessment
-- Evaluated `/home/duque_om/projects/Claude-code-main` — TypeScript CLI rebuild of Claude Code, **no reusable content** for this MLOps template
+
+- Evaluated `/home/duque_om/projects/Claude-code-main` — TypeScript CLI rebuild of Claude Code, **no reusable content**
+  for this MLOps template
 
 #### Enterprise Gap Assessment
-- **Already present**: RBAC (`rbac.yaml`), NetworkPolicy, Workload Identity/IRSA, SHAP `/predict?explain=true`, JSONFormatter, Prometheus/Grafana (9 panels), Pandera (3 validation points), Makefile x2, MLflow+DVC, Codecov badge (dynamic), `make demo-minimal`
+
+- **Already present**: RBAC (`rbac.yaml`), NetworkPolicy, Workload Identity/IRSA, SHAP `/predict?explain=true`,
+  JSONFormatter, Prometheus/Grafana (9 panels), Pandera (3 validation points), Makefile x2, MLflow+DVC, Codecov badge
+  (dynamic), `make demo-minimal`
 - **Added in v1.3.0**: SLO/SLA PrometheusRule, ADR-001, e2e CI job, fairness domain guidance, Claude/Cursor docs
-- **Deferred by design** (ADR-001): LLM/GenAI, multi-tenancy, HashiCorp Vault, feature store, SOC2/GDPR — documented with revisit triggers
+- **Deferred by design** (ADR-001): LLM/GenAI, multi-tenancy, HashiCorp Vault, feature store, SOC2/GDPR — documented
+  with revisit triggers
 
 ---
 
@@ -3481,33 +3704,40 @@ EDA phase 2 → 02_baseline_distributions.pkl (DVC-tracked)
 ### Added
 
 #### Developer Experience (root DX files)
+
 - **`Makefile`** (root) — Contributor entry point with template-specific targets:
   - `make validate-templates` — lint + K8s validation in one command
   - `make lint-all` / `make format-all` — operate on all Python across `templates/` and `examples/`
   - `make demo-minimal` — run fraud detection example end-to-end (install → train → test → drift)
   - `make test-examples` — regression tests for examples/
   - `make new-service NAME=X SLUG=y` — scaffold wrapper around `new-service.sh`
-- **`.pre-commit-config.yaml`** (root) — Contributor hooks: black, isort, flake8, `pre-commit-hooks` (yaml, merge conflicts, large files), gitleaks
-- **`.gitleaks.toml`** (root) — Secret detection config shared between root and `templates/`, with allowlists for template placeholder tokens (`{ServiceName}`, `{service}`)
+- **`.pre-commit-config.yaml`** (root) — Contributor hooks: black, isort, flake8, `pre-commit-hooks` (yaml, merge
+  conflicts, large files), gitleaks
+- **`.gitleaks.toml`** (root) — Secret detection config shared between root and `templates/`, with allowlists for
+  template placeholder tokens (`{ServiceName}`, `{service}`)
 
 #### Multi-IDE Cursor Parity
+
 - **`.cursor/rules/02-kubernetes.mdc`** — K8s rules: 1 worker, CPU HPA, init container pattern with code example
 - **`.cursor/rules/03-python-serving.mdc`** — Serving rules: async inference, SHAP KernelExplainer, Prometheus metrics
 - **`.cursor/rules/04-python-training.mdc`** — Training rules: pipeline sequence, quality gate table, required tests
 - **`.cursor/rules/05-docker.mdc`** — Docker rules: multi-stage, non-root USER, HEALTHCHECK, no model artifacts
 
 #### GitHub Releases
+
 - **v1.0.0** — tag pushed to remote (was created locally, not published)
 - **v1.1.0** — annotated tag created and pushed with full release notes
 
 ### Changed
 
 #### CI Template (`templates/cicd/ci.yml`)
+
 - Added **Python 3.12 matrix** — test job now runs `["3.11", "3.12"]` in parallel
 - Added **Codecov integration** — uploads `coverage.xml` on `3.11` run via `codecov/codecov-action@v4`
 - Coverage report format changed from `term-missing` only → `xml` + `term-missing`
 
 #### README
+
 - Added **Release badge** with dynamic version from GitHub Releases
 - Updated **Python badge** to `3.11 | 3.12`
 - Added **Codecov badge**
@@ -3515,6 +3745,7 @@ EDA phase 2 → 02_baseline_distributions.pkl (DVC-tracked)
 - Updated repo tree with root DX files (`Makefile`, `.pre-commit-config.yaml`, `.gitleaks.toml`)
 
 #### AGENTS.md / CLAUDE.md / .cursor/rules/
+
 - Updated Multi-IDE Support section in AGENTS.md to show all 5 cursor rules
 
 ---
@@ -3524,6 +3755,7 @@ EDA phase 2 → 02_baseline_distributions.pkl (DVC-tracked)
 ### Added
 
 #### Working Example (`examples/minimal/`)
+
 - **Fraud detection service** — fully functional end-to-end demo (train → serve → predict → test → drift)
 - `train.py` — synthetic data generation, Pandera validation, sklearn pipeline, quality gates
 - `serve.py` — FastAPI with async inference (ThreadPoolExecutor), SHAP KernelExplainer, Prometheus metrics
@@ -3531,9 +3763,12 @@ EDA phase 2 → 02_baseline_distributions.pkl (DVC-tracked)
 - `drift_check.py` — PSI drift detection with quantile bins and exit codes (0/1/2)
 
 #### Scaffolding
-- **`new-service.sh`** — automated scaffolding script: copies templates, replaces placeholders ({ServiceName}, {service}, {SERVICE}), creates directory structure
+
+- **`new-service.sh`** — automated scaffolding script: copies templates, replaces placeholders ({ServiceName},
+  {service}, {SERVICE}), creates directory structure
 
 #### Monitoring
+
 - **`alertmanager-rules.yaml`** — production AlertManager rules with P1–P4 severity:
   - Service down + error rate spike (P1)
   - Inference latency degradation (P2)
@@ -3544,30 +3779,37 @@ EDA phase 2 → 02_baseline_distributions.pkl (DVC-tracked)
 ### Changed
 
 #### drift_detection.py — Production CronJob Integration
+
 - Added **exit codes** (0=ok, 1=warning, 2=alert) for K8s CronJob integration
 - Added **GitHub Issue creation** on alert-level drift via GitHub API
 - Added **reference data update** with timestamped backups
 - Added proper `main()` function with `sys.exit()` for clean process control
 
 #### test_explainer.py — Self-Contained SHAP Tests
+
 - Replaced stub tests with **runnable, self-contained regression tests**
 - Tests use synthetic data + simple pipeline (no service dependency)
-- Covers: all-zero SHAP detection, consistency property, original feature space, background representativeness, latency SLA
+- Covers: all-zero SHAP detection, consistency property, original feature space, background representativeness, latency
+  SLA
 
 #### Kustomize Structure
+
 - Moved manifests to `k8s/base/` (standard Kustomize pattern)
 - Fixed `commonLabels` (deprecated) → `labels` with pairs syntax
 - Fixed `patchesStrategicMerge` (deprecated) → `patches` in overlays
 - Replaced `kubeval` (abandoned) with `kubeconform` in CI
 
 #### README
+
 - Added **"Try It in 5 Minutes"** section with copy-paste commands
 - Added **"What's Different From Other Templates"** comparison table
 - Updated Quick Start to use `new-service.sh` scaffolding script
 - Updated repo structure tree with all new files
 
 #### Agentic System Improvements
-- **Split `04-python-ml.md`** into `04a-python-serving.md` (app/) and `04b-python-training.md` (training/) — reduces unnecessary context loading
+
+- **Split `04-python-ml.md`** into `04a-python-serving.md` (app/) and `04b-python-training.md` (training/) — reduces
+  unnecessary context loading
 - **Added `10-examples.md`** — prevents production rules from firing in `examples/` directory
 - **Added `.claude/rules/`** — 5 context-aware rules with `paths:` frontmatter for Claude Code IDE
 - **AGENTS.md** — added Session Initialization Protocol, How to Invoke Skills, Multi-IDE Support sections
@@ -3583,6 +3825,7 @@ EDA phase 2 → 02_baseline_distributions.pkl (DVC-tracked)
 - **Workflow `/cost-review`** — added PromQL queries for CPU/memory/throughput/HPA utilization
 
 ### Fixed
+
 - black formatting: reformatted `test_explainer.py` and `drift_detection.py`
 - flake8 F401: removed unused imports across 7 files
 - flake8 E501/F841: fixed long lines and unused variable in cli.py
@@ -3595,12 +3838,18 @@ EDA phase 2 → 02_baseline_distributions.pkl (DVC-tracked)
 ### Added
 
 #### Agentic System
-- **AGENTS.md** - Root-level agent architecture with 3-layer design (Orchestrator, 11 Specialist Agents, 4 Maintenance Agents), 12 anti-pattern detectors (D-01 to D-12), and Engineering Calibration Principle
-- **10 context-aware rules** (`.windsurf/rules/`) - Behavioral constraints for K8s, Terraform, Python serving/training (split), CI/CD, Docker, docs, data validation, monitoring, examples
-- **8 operational skills** (`.windsurf/skills/`) - Structured frontmatter with `allowed-tools`, `when_to_use`, `argument-hint`, per-step `Success criteria`
-- **8 slash-command workflows** (`.windsurf/workflows/`) - `/release`, `/retrain`, `/load-test`, `/new-adr`, `/incident`, `/drift-check`, `/new-service`, `/cost-review`
+
+- **AGENTS.md** - Root-level agent architecture with 3-layer design (Orchestrator, 11 Specialist Agents, 4 Maintenance
+  Agents), 12 anti-pattern detectors (D-01 to D-12), and Engineering Calibration Principle
+- **10 context-aware rules** (`.windsurf/rules/`) - Behavioral constraints for K8s, Terraform, Python serving/training
+  (split), CI/CD, Docker, docs, data validation, monitoring, examples
+- **8 operational skills** (`.windsurf/skills/`) - Structured frontmatter with `allowed-tools`, `when_to_use`,
+  `argument-hint`, per-step `Success criteria`
+- **8 slash-command workflows** (`.windsurf/workflows/`) - `/release`, `/retrain`, `/load-test`, `/new-adr`,
+  `/incident`, `/drift-check`, `/new-service`, `/cost-review`
 
 #### Service Template (`templates/service/`)
+
 - FastAPI app with async inference via ThreadPoolExecutor
 - SHAP KernelExplainer integration with consistency checks
 - Prometheus metrics (counter, histogram, summary)
@@ -3613,12 +3862,14 @@ EDA phase 2 → 02_baseline_distributions.pkl (DVC-tracked)
 - Multi-stage Dockerfile with non-root USER and HEALTHCHECK
 
 #### Common Utils (`templates/common_utils/`)
+
 - `seed.py` - Reproducibility across Python, NumPy, PyTorch, TensorFlow
 - `logging.py` - JSON formatter (production K8s) + colored human-readable (dev)
 - `model_persistence.py` - joblib save/load with SHA256 integrity validation
 - `telemetry.py` - OpenTelemetry tracing with graceful no-op fallback
 
 #### Kubernetes (`templates/k8s/`)
+
 - Deployment with init container for model download from GCS/S3
 - CPU-only HPA (never memory for ML pods)
 - Kustomize base + GCP-production and AWS-production overlays
@@ -3626,10 +3877,12 @@ EDA phase 2 → 02_baseline_distributions.pkl (DVC-tracked)
 - ServiceAccount with Workload Identity (GCP) and IRSA (AWS) annotations
 
 #### Infrastructure (`templates/infra/`)
+
 - Terraform GCP: GKE cluster, Workload Identity, GCS buckets, Artifact Registry
 - Terraform AWS: EKS cluster, OIDC for IRSA, managed node group, IAM roles
 
 #### CI/CD (`templates/cicd/`)
+
 - CI: flake8 + black + isort + mypy, pytest (90% coverage), Docker build + Trivy
 - Infrastructure CI: terraform validate + tfsec + Checkov + kubeval
 - Deploy GCP/AWS: tag-triggered with cluster verification and smoke tests
@@ -3637,11 +3890,13 @@ EDA phase 2 → 02_baseline_distributions.pkl (DVC-tracked)
 - Retraining: manual trigger with data validation, quality gates, artifact upload
 
 #### Scripts (`templates/scripts/`)
+
 - `deploy.sh` - Build, push, deploy with kubectl context verification and tag immutability
 - `promote_model.sh` - Quality gates (metric, fairness, leakage, integrity) before promotion
 - `health_check.sh` - Pod status + /health and /model/info endpoint checks
 
 #### Developer Experience
+
 - `docker-compose.demo.yml` - Demo stack with MLflow + Pushgateway + optional monitoring
 - `Makefile` - Standard targets: train, test, serve, build, deploy, health-check, demo
 - `.pre-commit-config.yaml` - black, isort, flake8, mypy, bandit, gitleaks
@@ -3649,6 +3904,7 @@ EDA phase 2 → 02_baseline_distributions.pkl (DVC-tracked)
 - `.env.example` - Environment variable documentation
 
 #### Documentation Templates
+
 - ADR template with Context, Options, Decision, Rationale, Consequences, Revisit When
 - Runbook template with P1-P4 severity procedures
 - Service README template with measured data slots
@@ -3656,10 +3912,12 @@ EDA phase 2 → 02_baseline_distributions.pkl (DVC-tracked)
 - Dependency analysis template for conflict documentation
 
 #### Monitoring Templates
+
 - Prometheus alerts: error rate, service down, drift heartbeat, latency, resources
 - Grafana dashboard: request rate, latency percentiles, PSI scores, HPA, CPU/memory
 
 #### Open Source Maturity
+
 - `SECURITY.md` - Vulnerability reporting policy and security measures
 - `CONTRIBUTING.md` - Contribution guidelines with Engineering Calibration awareness
 - `CODE_OF_CONDUCT.md` - Contributor Covenant v2.0

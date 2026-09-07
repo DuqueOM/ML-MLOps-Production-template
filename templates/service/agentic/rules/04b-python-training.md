@@ -9,6 +9,7 @@ description: Python ML training — pipeline structure, quality gates, fairness,
 ## Training Pipeline Structure
 
 Every trainer MUST follow this sequence:
+
 1. `load_data()` + Pandera validation
 2. `engineer_features()`
 3. `split_train_val_test()` — no temporal leakage if dates exist
@@ -41,6 +42,7 @@ def should_promote(new_metrics: dict, current_prod_metrics: dict) -> bool:
 ## Fairness Requirements
 
 Disparate Impact Ratio (DIR) per protected attribute:
+
 ```python
 dir_value = min(pos_rate_group_a, pos_rate_group_b) / max(pos_rate_group_a, pos_rate_group_b)
 assert dir_value >= 0.80, f"Fairness violation: DIR={dir_value}"
@@ -49,7 +51,8 @@ assert dir_value >= 0.80, f"Fairness violation: DIR={dir_value}"
 - Fairness MUST run at the operational decision threshold selected by evaluation, not a hard-coded `0.5`.
 - If a configured protected attribute is missing from the evaluation frame, the quality gate fails closed.
 - DIR in `[0.80, 0.85)` is a consultation band: do not auto-promote without human review.
-- The training run MUST persist `models/fairness.json` (or the run's output directory equivalent) when protected attributes are configured.
+- The training run MUST persist `models/fairness.json` (or the run's output directory equivalent) when protected
+  attributes are configured.
 
 ## EDA Evidence Gate
 
@@ -77,6 +80,7 @@ drift consumers use `common_utils.eda_artifacts`.
 - `test_fairness_disparate_impact()` — DIR >= 0.80
 
 ## When NOT to Apply
+
 - Serving code (`app/*.py`) — use `04a-python-serving` rules instead
 - Test files — conventions differ (synthetic data OK, stubs OK)
 - Notebook/exploration code

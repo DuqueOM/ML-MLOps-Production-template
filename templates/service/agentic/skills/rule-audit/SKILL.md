@@ -47,7 +47,7 @@ evidence (file:line or metric) per service.
 ### Serving (D-01 → D-05)
 
 | ID | Check | Command |
-|----|-------|---------|
+| ---- | ------- | --------- |
 | D-01 | `uvicorn --workers N` where N > 1 | `rg -n "uvicorn.*--workers\s+[2-9]" --glob "**/Dockerfile*" --glob "**/*.sh"` |
 | D-02 | HPA uses memory metric | `yq '.spec.metrics[] \| select(.resource.name == "memory")' k8s/**/hpa.yaml` |
 | D-03 | `model.predict(` inside an `async def` without `run_in_executor` | `rg -n "async def.*:" -A 30 app/ \| rg "model\.(predict\|predict_proba)\("` |
@@ -57,7 +57,7 @@ evidence (file:line or metric) per service.
 ### Infrastructure + Quality (D-06 → D-12)
 
 | ID | Check |
-|----|-------|
+| ---- | ------- |
 | D-06 | Any metric in `artifacts/metrics.json` ≥ 0.99 — requires ADR |
 | D-07 | Fairness DIR < 0.80 or missing |
 | D-08 | PSI CronJob reports but no alert routes configured |
@@ -69,7 +69,7 @@ evidence (file:line or metric) per service.
 ### Data + EDA (D-13 → D-16)
 
 | ID | Check |
-|----|-------|
+| ---- | ------- |
 | D-13 | EDA notebooks writing under `data/raw/` or `data/processed/` |
 | D-14 | Pandera schemas missing `Check.in_range` derived from EDA |
 | D-15 | canonical `baseline_distributions.parquet` missing or never regenerated |
@@ -78,15 +78,15 @@ evidence (file:line or metric) per service.
 ### Security (D-17 → D-19)
 
 | ID | Check |
-|----|-------|
-| D-17 | `os.environ[.*API_KEY|SECRET|TOKEN|PASSWORD]` outside tests |
+| ---- | ------- |
+| D-17 | `os.environ[.*API_KEY\|SECRET\|TOKEN\|PASSWORD]` outside tests |
 | D-18 | `AWS_ACCESS_KEY_ID` or raw JSON GCP SA key in committed files |
 | D-19 | Deploy workflow missing `cosign sign` + `syft` step |
 
 ### Closed-loop (D-20 → D-22)
 
 | ID | Check |
-|----|-------|
+| ---- | ------- |
 | D-20 | `PredictionEvent(` without `entity_id=` or `prediction_id=` |
 | D-21 | `log_prediction(` called synchronously in `async def` endpoint |
 | D-22 | Missing `except Exception` + `prediction_log_errors_total` metric |
@@ -94,7 +94,7 @@ evidence (file:line or metric) per service.
 ### Lifecycle + Operations (D-23 → D-27 — v1.7.1)
 
 | ID | Check | Automated? |
-|----|-------|-----------|
+| ---- | ------- | ----------- |
 | D-23 | Liveness and readiness probes share `httpGet.path` | yes (Rego) |
 | D-24 | `KernelExplainer(...)` constructed per request (not cached at startup) | `rg -n "KernelExplainer\(" app/` |
 | D-25 | `terminationGracePeriodSeconds` missing OR <= uvicorn `--timeout-graceful-shutdown` | yes (Rego) |
@@ -104,7 +104,7 @@ evidence (file:line or metric) per service.
 ### Contracts + Supply chain + IAM (D-28 → D-32)
 
 | ID | Check | Automated? |
-|----|-------|-----------|
+| ---- | ------- | ----------- |
 | D-28 | `tests/contract/openapi.snapshot.json` changed without `app.version` bump in `app/main.py` | `tests/contract/test_openapi_snapshot.py` + CI `Validate API contract` |
 | D-29 | Namespace manifest missing `pod-security.kubernetes.io/enforce` label | `rg -n "pod-security.kubernetes.io/enforce" k8s/overlays/*/namespace.yaml` (every overlay must hit) |
 | D-30 | Deploy workflow missing `cosign attest --type cyclonedx` after the SBOM step | `rg -n "cosign attest" .github/workflows/deploy-*.yml` |
@@ -114,11 +114,9 @@ evidence (file:line or metric) per service.
 ### Template lifecycle (D-33 → D-34)
 
 | ID | Check | Command |
-|----|-------|---------|
+| ---- | ------- | --------- |
 | D-33 | Manual `cp -r` + `sed -i` in the scaffolder instead of `copier copy` | `rg -n "sed.*-i.*\{service\}\|cp.*-r.*templates/service" templates/scripts/new-service.sh` |
-{% raw %}
-| D-34 | Unquoted `{@ @}` Jinja tokens in YAML list items | `rg -n '^\s*- \{@' templates/service/ --glob "*.yml"` |
-{% endraw %}
+| {% raw %}D-34 | Unquoted `{@ @}` Jinja tokens in YAML list items | `rg -n '^\s*- \{@' templates/service/ --glob "*.yml"`{% endraw %} |
 
 ## Execution flow
 
@@ -157,7 +155,7 @@ Record FAIL/WARN as additional rows.
 
 The agent emits:
 
-```
+```text
 # Rule Audit — {service-name} — {date}
 
 Summary: 23 PASS / 2 FAIL / 1 WARN / 1 SKIPPED

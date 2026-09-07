@@ -46,6 +46,7 @@ adaptability or interoperability change MUST satisfy, governed by one principle.
 > **Tools adapt to our canon, not the reverse.**
 
 Every external convention enters the template as one of:
+
 - a **renderer** over the canonical store (e.g. Copier templating `agentic/` +
   `AGENTS.md`, then running the sync script), or
 - a **generated view** (e.g. a CCDS-recognizable layout produced at scaffold
@@ -109,6 +110,7 @@ vendoring gate and the reference-license verification step — lives in
 through the canon; the preservation set; the pointer to the provenance guardrail.
 
 **Out of scope** (deferred to their own ADRs):
+
 - ADR-030 — Copier-based scaffolding migration (Wave 1).
 - ADR-031 — Local-first stack profiles (Wave 2).
 - ADR-032 — CCDS-aligned generated layout (Wave 3).
@@ -118,6 +120,7 @@ through the canon; the preservation set; the pointer to the provenance guardrail
 ## 5. Consequences
 
 ### Positive
+
 - Modernization cannot erode the agentic spine: the contract makes "bypass the
   canon" a reviewable, blockable event rather than a silent fork.
 - Adopters gain industry-standard ergonomics (Copier, local-first, recognizable
@@ -126,11 +129,13 @@ through the canon; the preservation set; the pointer to the provenance guardrail
   tracker.
 
 ### Negative
+
 - One more governance gate for contributors to internalize. Mitigated: it
   formalizes practices ADR-023/ADR-027 already imply; no new CI job is added at
   this scale (calibration principle).
 
 ### Neutral
+
 - The contract is process, not code. Its teeth come from existing validators plus
   PR review.
 
@@ -148,7 +153,7 @@ through the canon; the preservation set; the pointer to the provenance guardrail
 ## 7. Alternatives considered
 
 | Alternative | Why rejected |
-|-------------|--------------|
+| ------------- | -------------- |
 | No contract; review each adoption ad hoc | Re-introduces silent-fork risk ADR-023/027 exist to remove; not auditable |
 | Encode the contract directly in `AGENTS.md` only | `AGENTS.md` is the behavior authority for *agents at runtime*; a *maintenance governance* contract belongs in an ADR that `AGENTS.md` and the manifest can anchor to |
 | Add a new CI job to enforce the five conditions now | Over-engineering at current scale; existing validators + review cover it (calibration principle) |

@@ -1,4 +1,4 @@
-# Incident YYYY-MM-DD — <one-line title>
+# Incident YYYY-MM-DD — `<one-line title>`
 
 > **This is the canonical template.** Copy this file to `YYYY-MM-DD-<slug>.md`
 > (which will be gitignored) when you need to document a real incident.
@@ -62,7 +62,7 @@ Prevention for next time. Usually 1-3 items, with owners and due dates.
 Condensed timeline of events for exec summary.
 
 | Time (UTC) | Event |
-|------------|-------|
+| ------------ | ------- |
 | 14:03 | Alert fired |
 | 14:05 | Paged |
 | 14:12 | Rollback executed |

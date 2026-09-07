@@ -9,7 +9,8 @@ The R4 audit (finding C4) flagged the absence of this file as Critical:
 exists." This file is the operational artifact that makes execution evidence
 permanent and reviewable.
 
-> **Read this file before believing any maturity claim in `README.md` § "Production-ready scope".** A row in the maturity matrix that has no entry here is, at best, "designed-ready" — not verified-ready.
+> **Read this file before believing any maturity claim in `README.md` § "Production-ready scope".** A row in the
+> maturity matrix that has no entry here is, at best, "designed-ready" — not verified-ready.
 
 ---
 
@@ -18,7 +19,8 @@ permanent and reviewable.
 - **Date**: 2026-04-29
 - **Branch**: `audit-r4/sprint-0-credibility`
 - **Base commit (pre-Sprint-0)**: `42d0be8bcc951e29e4477c77b78f3b8929116908` (`v1.12.0`)
-- **Environment**: local Linux developer workstation (Ubuntu-class), Python 3.13.5, no cloud account, no Kubernetes cluster, no container registry connection
+- **Environment**: local Linux developer workstation (Ubuntu-class), Python 3.13.5, no cloud account, no Kubernetes
+  cluster, no container registry connection
 - **Operator**: Staff/Lead engineer — auditor mode
 - **Scope**: documentation-only validation that the Sprint-0 R4 changes hold; no cluster execution
 
@@ -26,7 +28,7 @@ permanent and reviewable.
 
 #### 1. R4 Sprint-0 invariant tests
 
-```
+```console
 $ python -m pytest templates/service/tests/test_phase0_disclosure.py \
                    templates/service/tests/test_readme_model_names.py \
                    --no-cov --noconftest -q
@@ -43,7 +45,7 @@ on README §"Operational Memory Plane" and §"Agentic CI self-healing").
 
 #### 2. Pre-existing contract tests still green
 
-```
+```console
 $ python -m pytest templates/service/tests/test_ci_autofix_policy_contract.py \
                    --no-cov --noconftest -q
 collected 10 items
@@ -57,7 +59,7 @@ README and CHANGELOG edits in this branch.
 
 #### 3. Working-tree secret scan (gitleaks)
 
-```
+```console
 $ gitleaks detect --no-git --source=. --redact --no-banner
 10:33AM INF scan completed in 1m23s
 10:33AM INF no leaks found
@@ -69,7 +71,7 @@ ADR-020 and `docs/runbooks/secret-history-scan.md` (to be added in Sprint 1).
 
 #### 4. Available binaries (deploy-chain prerequisite check)
 
-```
+```bash
 python    Python 3.13.5         OK
 pytest    9.0.1                 OK
 kubectl   /usr/local/bin/kubectl OK
@@ -132,13 +134,14 @@ before the row's status can claim "Production-ready".
 - **Base commit (Sprint 1 start)**: `12f5ccefba08edf198426609aba5fd608f616999`
 - **Environment**: local Linux developer workstation (Ubuntu-class), Python 3.13.5; no cloud account, no Kubernetes cluster
 - **Operator**: Staff/Lead engineer — agentic implementation, STOP-delegated items deferred
-- **Scope**: ADR-019 Phase 1 read-only runtime + per-PR smoke lane + per-PR evidence policy + STOP-delegated runbooks + agentic red-team log
+- **Scope**: ADR-019 Phase 1 read-only runtime + per-PR smoke lane + per-PR evidence policy + STOP-delegated runbooks +
+  agentic red-team log
 
 ### What was executed
 
 #### 1. ADR-019 Phase 1 runtime — protected paths short-circuit verified
 
-```
+```console
 $ printf 'would reformat templates/common_utils/secrets.py\n' \
   | python scripts/ci_collect_context.py --job-name lint --workflow ci \
       --changed-files templates/common_utils/secrets.py \
@@ -163,7 +166,7 @@ read-only invariant. End-to-end stdin pipeline functional.
 
 #### 2. ADR-019 Phase 1 runtime — full invariant suite
 
-```
+```console
 $ python -m pytest templates/service/tests/test_ci_classify_failure_phase1.py \
       --no-cov --noconftest -q
 collected 27 items
@@ -179,7 +182,7 @@ no-signature → STOP fallback, no memory hooks in Phase 1 output.
 
 #### 3. Aggregate R4 invariant suite — green
 
-```
+```console
 $ python -m pytest \
     templates/service/tests/test_ci_classify_failure_phase1.py \
     templates/service/tests/test_phase0_disclosure.py \
@@ -254,7 +257,9 @@ R4 finding closure status:
 - H2: closed (PR-evidence policy + workflow + CONTRIBUTING update).
 - H3: closed (per-PR smoke lane wired).
 - H4: closed (red-team log with 5 entries + invariant index).
-- H5, H6, H7: runbooks shipped; **execution evidence pending Platform / Security action**. The maturity matrix row for "Security and supply chain" remains "Production-ready" pending those entries (does NOT upgrade to "Verified end-to-end" until the runbooks have been executed and recorded).
+- H5, H6, H7: runbooks shipped; **execution evidence pending Platform / Security action**. The maturity matrix row for
+  "Security and supply chain" remains "Production-ready" pending those entries (does NOT upgrade to "Verified
+  end-to-end" until the runbooks have been executed and recorded).
 
 ---
 
@@ -265,13 +270,15 @@ R4 finding closure status:
 - **Base commit (Sprint 2 start)**: `b85c596b659371db91e0e7b0c265fc88efe1afca`
 - **Environment**: local Linux developer workstation, Python 3.13.5
 - **Operator**: Staff/Lead engineer
-- **Scope**: ADR-018 Phase 1 contracts + redaction · Compliance gap analysis · ADR-021 fairness + ADR-022 PSI · secrets + ground-truth runbooks
+- **Scope**: ADR-018 Phase 1 contracts + redaction · Compliance gap analysis · ADR-021 fairness + ADR-022 PSI ·
+  secrets +
+  ground-truth runbooks
 
 ### What was executed
 
 #### 1. ADR-018 Phase 1 contracts + redaction — full invariant suite
 
-```
+```console
 $ python -m pytest \
     templates/service/tests/test_memory_contracts.py \
     templates/service/tests/test_memory_redaction.py \
@@ -298,7 +305,7 @@ type discipline, idempotent on already-redacted output.
 
 #### 2. Aggregate R4 invariant suite — green
 
-```
+```console
 $ python -m pytest \
     templates/service/tests/test_memory_contracts.py \
     templates/service/tests/test_memory_redaction.py \
@@ -327,9 +334,9 @@ Per-row `Coverage / Evidence / Adopter responsibility` triplet so every
 
 #### 4. ADRs ratifying numeric thresholds
 
-- `docs/decisions/ADR-021-fairness-thresholds.md` — DIR ≥ 0.80 default
-  + per-domain table (credit ≥ 0.85, healthcare ≥ 0.90, advertising ≥ 0.75)
-  + `[0.80, 0.85)` consultation band + calibration parity rule.
+- `docs/decisions/ADR-021-fairness-thresholds.md` — DIR ≥ 0.80 default +
+  per-domain table (credit ≥ 0.85, healthcare ≥ 0.90, advertising ≥ 0.75) +
+  `[0.80, 0.85)` consultation band + calibration parity rule.
 - `docs/decisions/ADR-022-psi-thresholds.md` — `psi_warn = 0.10` /
   `psi_alert = 0.25` defaults + per-feature override file format with
   mandatory rationale + `2× alert` super-threshold mapped to
@@ -355,9 +362,10 @@ Per-row `Coverage / Evidence / Adopter responsibility` triplet so every
   execution requires cloud credentials per Procedure 1/2. Tracked under M1.
 - **Ground-truth SLA evidence on a real service** — Sprint 2 ships the
   contract; first-service evidence pending production deployment. Tracked under M2.
-- **Memory plane Phase 2 (ingest worker, vector store)** — gated on 30 days of Phase 1 contract stability per ADR-018 §Phase plan.
-- **Alertmanager routing test (S2-4 / M5)** — deferred (requires `amtool`
-  + sample alertmanager.yaml). Will land in Sprint 3 with the
+- **Memory plane Phase 2 (ingest worker, vector store)** — gated on 30 days of Phase 1 contract stability per ADR-018
+  §Phase plan.
+- **Alertmanager routing test (S2-4 / M5)** — deferred (requires `amtool` +
+  sample alertmanager.yaml). Will land in Sprint 3 with the
   observability-dashboard inventory work.
 
 ### Conclusion (Entry 003)
@@ -380,7 +388,9 @@ R4 cumulative finding closure status:
 - M6: closed (`ADR-022-psi-thresholds.md`).
 - L1, L2, L3: open — Sprint 3.
 
-Sprint 0 + Sprint 1 + Sprint 2 cumulative: **+~5500 lines / -~10 lines** across ~30 files. Net effect: 5 Critical + 4 High + 4 Medium closed; 3 High delegated with runbooks; 2 Medium with runbooks pending execution; 1 Medium + 3 Low open for Sprint 3.
+Sprint 0 + Sprint 1 + Sprint 2 cumulative: **+~5500 lines / -~10 lines** across ~30 files. Net effect: 5 Critical + 4
+High + 4 Medium closed; 3 High delegated with runbooks; 2 Medium with runbooks pending execution; 1 Medium + 3 Low open
+for Sprint 3.
 
 ---
 
@@ -390,17 +400,20 @@ Sprint 0 + Sprint 1 + Sprint 2 cumulative: **+~5500 lines / -~10 lines** across 
 - **Branch**: `audit-r4/sprint-0-credibility` (continuation; R5 closures batched on the same branch).
 - **Base commit (R5 batch start)**: `0505551b0756b1772c00fc21c0acb431ab8b716f`
 - **Operator**: Staff/Lead engineer.
-- **Scope**: 4 R5 AUTO findings + R5 plan publication. CONSULT findings (R5-M1, R5-M3) and the documentation-only High (R5-H1) tracked in remaining todos.
+- **Scope**: 4 R5 AUTO findings + R5 plan publication. CONSULT findings (R5-M1, R5-M3) and the documentation-only High
+  (R5-H1) tracked in remaining todos.
 
 ### What was executed
 
 #### 1. ACTION_PLAN_R5 published
+
 - `docs/audit/ACTION_PLAN_R5.md` — engineering judgement on pre-commit
   scaffold smoke friction, 6 R5 findings (1 H + 4 M + 1 L) plus R5-L4
   on pre-commit cardinality. Sprint plan integration table folds R5
   items into existing R4 Sprint 3.
 
 #### 2. R5-L4 — scaffold smoke off pre-commit
+
 - `.pre-commit-config.yaml`: removed `scaffold-smoke` pre-push hook
   (was 60 s on every push); replaced with a comment block citing R5-L4
   rationale + redirect to `make smoke` and `pr-smoke-lane.yml`.
@@ -413,6 +426,7 @@ Sprint 0 + Sprint 1 + Sprint 2 cumulative: **+~5500 lines / -~10 lines** across 
   `--hook-type pre-push` and point at `make smoke`.
 
 #### 3. R5-M4 — Locust schema sync
+
 - `templates/service/tests/load_test.py`: `SAMPLE_PAYLOAD` rewritten to
   match `app.schemas.PredictionRequest` (`entity_id`, `slice_values`,
   `feature_a/b/c`); `BATCH_PAYLOAD` switched from `instances` →
@@ -425,6 +439,7 @@ Sprint 0 + Sprint 1 + Sprint 2 cumulative: **+~5500 lines / -~10 lines** across 
   without the dev extras are not blocked.
 
 #### 4. R5-M2 — Windows ASCII fallback in validator
+
 - `scripts/validate_agentic.py`: try `sys.stdout.reconfigure(utf-8,
   errors=replace)` with safe fallback; probe whether the (possibly
   upgraded) stream can encode `✓ ✗ ⚠ ℹ` and substitute `[OK] [X] [!]
@@ -437,6 +452,7 @@ Sprint 0 + Sprint 1 + Sprint 2 cumulative: **+~5500 lines / -~10 lines** across 
     = False`, `MARK_OK = "[OK]"`, `MARK_FAIL = "[X]"`, etc.
 
 #### 5. R5-L1 — D-32 catalog drift sweep
+
 - Bumped `D-01..D-30` → `D-01..D-32` (and "30 invariants" → "32") in:
   - `CLAUDE.md` (3 sites + new D-31..D-32 partition row in summary table).
   - `.claude/rules/01-serving.md` (1 site).
@@ -456,7 +472,7 @@ Sprint 0 + Sprint 1 + Sprint 2 cumulative: **+~5500 lines / -~10 lines** across 
 
 ### Aggregate test run
 
-```
+```console
 $ python -m pytest \
     templates/service/tests/test_memory_contracts.py \
     templates/service/tests/test_memory_redaction.py \
@@ -594,7 +610,7 @@ ADR-018 and ADR-019 are Phase 1) + 1 locust env probe.
 
 ### Aggregate test run
 
-```
+```console
 $ python -m pytest \
     test_memory_contracts test_memory_redaction \
     test_phase0_disclosure test_readme_model_names \
@@ -627,6 +643,7 @@ Skips breakdown (all intentional): 6 Phase-0 banner auto-skips +
   - R5-L4: **closed** (Entry 004) — scaffold smoke off pre-commit.
 
 Every R5 finding is now either:
+
 - shipped with a contract test enforcing the invariant (7 of 7), or
 - explicitly documented as pending operator action (0 of 7).
 
@@ -665,13 +682,14 @@ Every R5 finding is now either:
 - **Base commit (pre-remediation)**: `2101933e3bb93200280f53fc51b87f1466aa2187`
 - **Environment**: local WSL/Linux developer workstation, Python 3.12 scaffold smoke venv, no cloud credentials
 - **Operator**: Codex implementation agent under Staff-level audit plan
-- **Scope**: first-adopter remediation: scaffolded CI/CD layout, deploy image vocabulary, Python packaging/importability, training-serving feature parity, non-agentic runbook integrity, release docs
+- **Scope**: first-adopter remediation: scaffolded CI/CD layout, deploy image vocabulary, Python
+  packaging/importability, training-serving feature parity, non-agentic runbook integrity, release docs
 
 ### What was executed
 
 #### 1. Static repo validators
 
-```
+```console
 $ python3 scripts/ci_verify_yaml.py
 YAML verification passed
 
@@ -697,7 +715,7 @@ $ python3 scripts/validate_agentic_manifest.py --strict
 
 #### 2. Targeted enterprise adoption contract
 
-```
+```console
 $ python3 scripts/verify_enterprise_adoption.py
 Enterprise adoption verification passed
 
@@ -712,7 +730,7 @@ anti-pattern range.
 
 #### 3. Scaffold structural smoke
 
-```
+```console
 $ bash scripts/test_scaffold.sh
 ✓ Documentation templates merged into docs/ without docs/docs nesting
 ✓ ci.yml uses scaffolded repo root for install, tests, coverage, and Docker build
@@ -724,7 +742,7 @@ $ bash scripts/test_scaffold.sh
 
 #### 4. Full scaffold smoke
 
-```
+```console
 $ SCAFFOLD_SMOKE=1 bash scripts/test_scaffold.sh
 ✓ Dependencies installed
 ✓ OpenAPI snapshot bootstrapped
@@ -835,8 +853,8 @@ Real cloud evidence remains the future `v1.0.0` gate.
 - **MED-4** — `/metrics` docstring + NetworkPolicy comment pair explicitly
   documents that access control is enforced at the L4 layer (not at the
   handler).
-- **MED-5** — `templates/service/constraints.txt`: pip-compile contract
-  + regeneration workflow documented for adopters needing bit-identical
+- **MED-5** — `templates/service/constraints.txt`: pip-compile contract +
+  regeneration workflow documented for adopters needing bit-identical
   builds.
 - **MED-6** — `templates/common_utils/tracing.py` + `app/main.py` import:
   opt-in OpenTelemetry middleware; no-op when `OTEL_ENABLED` unset;
@@ -1029,18 +1047,33 @@ makes the train→serve→drift contract executable in every PR.
 
 #### 1. FastAPI contract and focal serving tests
 
-- `PYTHONPATH=templates/service /tmp/template-mlops-fastapi-venv/bin/python -m pytest templates/service/tests/test_fastapi_template_contract.py -v --no-cov -s`
+- Command:
+
+  ```bash
+  PYTHONPATH=templates/service /tmp/template-mlops-fastapi-venv/bin/python -m pytest templates/service/tests/test_fastapi_template_contract.py -v --no-cov -s
+  ```
+
   - Result: **PASS** — 7 passed.
   - Covers: OpenAPI surface, executor-backed async endpoints,
     train/inference feature parity, `/health` vs `/ready` split,
     auth/admin guards, CORS/error-envelope/tracing/prediction-log hooks,
     and dev-only modelless startup.
-- `PYTHONPATH=templates/service:templates /tmp/template-mlops-fastapi-venv/bin/python -m pytest templates/service/tests/test_api.py templates/service/tests/test_auth.py templates/service/tests/test_error_envelope.py templates/service/tests/test_input_validation.py templates/service/tests/test_metrics_contract.py templates/service/tests/test_prediction_logger_lifecycle.py -v --no-cov -s`
+- Command:
+
+  ```bash
+  PYTHONPATH=templates/service:templates /tmp/template-mlops-fastapi-venv/bin/python -m pytest templates/service/tests/test_api.py templates/service/tests/test_auth.py templates/service/tests/test_error_envelope.py templates/service/tests/test_input_validation.py templates/service/tests/test_metrics_contract.py templates/service/tests/test_prediction_logger_lifecycle.py -v --no-cov -s
+  ```
+
   - Result: **PASS** — 69 passed, 3 skipped.
   - The 3 skips are the existing metric-reference checks that skip when
     their optional alert/metric discovery fixture is not applicable in
     this local invocation.
-- `PYTHONPATH=templates/service:templates /tmp/template-mlops-fastapi-venv/bin/python -m pytest templates/service/tests/test_release_notes_follow_ons.py -q --no-cov -s`
+- Command:
+
+  ```bash
+  PYTHONPATH=templates/service:templates /tmp/template-mlops-fastapi-venv/bin/python -m pytest templates/service/tests/test_release_notes_follow_ons.py -q --no-cov -s
+  ```
+
   - Result: **PASS** — 32 passed, 4 skipped.
   - Note: the first run exposed a pre-existing heading mismatch in
     `releases/v0.14.0.md`; the heading was normalized to the canonical
@@ -1119,7 +1152,12 @@ local evidence boundary.
 
 #### 1. EDA, fairness, split, and release-note contracts
 
-- `PYTEST_ADDOPTS='' PYTHONPATH=templates:templates/service/src TMPDIR=/tmp /home/duque_om/miniconda3/envs/ml/bin/python -m pytest -s templates/eda/tests/test_eda_artifacts.py templates/service/tests/test_eda_gate.py templates/service/tests/test_training_fairness_gate.py templates/service/tests/test_split_strategies.py templates/tests/unit/test_fairness_intersectional.py templates/service/tests/test_release_notes_follow_ons.py --no-cov -q --import-mode=importlib`
+- Command:
+
+  ```bash
+  PYTEST_ADDOPTS='' PYTHONPATH=templates:templates/service/src TMPDIR=/tmp /home/duque_om/miniconda3/envs/ml/bin/python -m pytest -s templates/eda/tests/test_eda_artifacts.py templates/service/tests/test_eda_gate.py templates/service/tests/test_training_fairness_gate.py templates/service/tests/test_split_strategies.py templates/tests/unit/test_fairness_intersectional.py templates/service/tests/test_release_notes_follow_ons.py --no-cov -q --import-mode=importlib
+  ```
+
   - Result: **PASS** — 70 passed, 4 skipped, 1 warning.
   - Covers: full canonical EDA packet checks, partial-packet refusal
     when `require_eda_artifacts=true`, operational-threshold fairness,
@@ -1128,7 +1166,12 @@ local evidence boundary.
 
 #### 2. Quality gates, drift baseline, and promotion evidence
 
-- `PYTEST_ADDOPTS='' PYTHONPATH=templates:templates/service/src TMPDIR=/tmp /home/duque_om/miniconda3/envs/ml/bin/python -m pytest -s templates/service/tests/test_quality_gates_config.py templates/service/tests/test_drift_eda_baseline.py templates/service/tests/test_evidence_bundle.py templates/service/tests/test_promote_evidence_gate.py --no-cov -q --import-mode=importlib`
+- Command:
+
+  ```bash
+  PYTEST_ADDOPTS='' PYTHONPATH=templates:templates/service/src TMPDIR=/tmp /home/duque_om/miniconda3/envs/ml/bin/python -m pytest -s templates/service/tests/test_quality_gates_config.py templates/service/tests/test_drift_eda_baseline.py templates/service/tests/test_evidence_bundle.py templates/service/tests/test_promote_evidence_gate.py --no-cov -q --import-mode=importlib
+  ```
+
   - Result: **PASS** — 70 passed, 1 warning.
   - Covers: quality gate config validation, drift PSI consumption of
     canonical EDA baselines, evidence bundle validation, and promotion
@@ -1138,9 +1181,19 @@ local evidence boundary.
 
 - `/home/duque_om/miniconda3/envs/ml/bin/python -m black --check --line-length=120 <changed-python-files>`
   - Result: **PASS** — 5 files would be left unchanged.
-- `/home/duque_om/miniconda3/envs/ml/bin/python -m isort --check-only --profile=black --line-length=120 <changed-python-files>`
+- Command:
+
+  ```bash
+  /home/duque_om/miniconda3/envs/ml/bin/python -m isort --check-only --profile=black --line-length=120 <changed-python-files>
+  ```
+
   - Result: **PASS** after applying isort to `test_eda_gate.py`.
-- `/home/duque_om/miniconda3/envs/ml/bin/python -m flake8 --max-line-length=120 --extend-ignore=E203,W503 <changed-python-files>`
+- Command:
+
+  ```bash
+  /home/duque_om/miniconda3/envs/ml/bin/python -m flake8 --max-line-length=120 --extend-ignore=E203,W503 <changed-python-files>
+  ```
+
   - Result: **PASS**.
 
 #### 4. Agentic, YAML, workflow, and targeted validators
@@ -1204,13 +1257,15 @@ scaffold path; L4 remains intentionally outside local evidence.
 - **Base commit**: `39e6ec2e3814f60ae33cc4065bbe740df98aaa07`
 - **Environment**: local Linux developer workstation (WSL), `.venv` Python 3.12, no cloud account, no cluster
 - **Operator**: Maintainer — adaptability program execution
-- **Scope**: documentation-only Wave 0 of `docs/audit/ACTION_PLAN_ADAPTABILITY.md` (ADR-029 + README §"How this compares" + tracker); verify the agentic spine remains intact (ADR-027/ADR-023 invariants) after adding the adoption-governance ADR.
+- **Scope**: documentation-only Wave 0 of `docs/audit/ACTION_PLAN_ADAPTABILITY.md` (ADR-029 + README §"How this
+  compares" + tracker); verify the agentic spine remains intact (ADR-027/ADR-023 invariants) after adding the
+  adoption-governance ADR.
 
 ### What was executed
 
 #### 1. Agentic system validator (canonical store integrity)
 
-```
+```console
 $ .venv/bin/python scripts/validate_agentic.py
 Checks passed: 107
 Skills found:    16
@@ -1220,7 +1275,7 @@ Workflows found: 12
 
 #### 2. Manifest strict validation (authority chain intact after ADR-029)
 
-```
+```console
 $ .venv/bin/python scripts/validate_agentic_manifest.py --strict
 [ OK ] authority_chain
 [ OK ] source_paths
@@ -1234,14 +1289,14 @@ $ .venv/bin/python scripts/validate_agentic_manifest.py --strict
 
 #### 3. Generated-surface drift check (no surface was hand-edited)
 
-```
+```console
 $ .venv/bin/python scripts/sync_agentic_adapters.py --check
 (no output — no drift)
 ```
 
 #### 4. Anti-pattern count consistency (README "32 anti-patterns" claim unchanged)
 
-```
+```console
 $ .venv/bin/python -m pytest templates/service/tests/test_anti_pattern_count_consistency.py -o addopts="" -q
 4 passed, 3 skipped in 0.60s
 ```
@@ -1249,7 +1304,8 @@ $ .venv/bin/python -m pytest templates/service/tests/test_anti_pattern_count_con
 ### What was NOT validated (pending)
 
 - **Wave 1** (Copier migration): shipped — see Entry 012 below.
-- **Waves 2–4** (local-first stack profiles, CCDS layout, tutorial): NOT started. Owner: maintainer. Tracking: `docs/audit/ACTION_PLAN_ADAPTABILITY.md` §6.
+- **Waves 2–4** (local-first stack profiles, CCDS layout, tutorial): NOT started. Owner: maintainer. Tracking:
+  `docs/audit/ACTION_PLAN_ADAPTABILITY.md` §6.
 - **ADR-031..032**: NOT authored. Tracking: ADR ledger §7 of the action plan.
 - **Full template test suite + `pre-commit run --all-files`**: not run for this docs-only wave; CI re-runs them per PR.
 
@@ -1272,7 +1328,8 @@ compares" section and the Agentic controls maturity row; it makes no L4 claim.
 - **Base commit**: v0.19.0 release
 - **Environment**: local Linux developer workstation, Python 3.13, no cloud account
 - **Operator**: Maintainer
-- **Scope**: validate that the Copier-based scaffolder (ADR-030) produces a working service and all Wave 1 deliverables are in place
+- **Scope**: validate that the Copier-based scaffolder (ADR-030) produces a working service and all Wave 1 deliverables
+  are in place
 
 ### What was executed
 
@@ -1353,8 +1410,6 @@ row; it makes no L4 claim.
 
 ## Entry 013 — Wave 2: Local-first stack profiles (ADR-033 + D-35 + stack-switch)
 
-
-
 - **Date**: 2026-06-30
 - **Branch**: main (working tree)
 - **Base commit**: HEAD at time of edit
@@ -1376,6 +1431,7 @@ Alternatives, Revisit triggers, Related.
 #### 2. Profile configuration files
 
 Four YAML files created under `templates/service/configs/profiles/`:
+
 - `local.yaml` — `requires: {docker: false, kubernetes: false,
   terraform: false, cloud_credentials: false}`, `deploy.enabled: false`,
   `mlflow.tracking_uri: file://./mlruns`, `drift.schedule: manual`.
@@ -1427,7 +1483,7 @@ and workflow `stack-switch` (CONSULT) added with `authority:` anchors.
 
 #### 8. Agentic adapter sync
 
-```
+```console
 $ python3 scripts/sync_agentic_adapters.py
 updated .claude/skills/stack-switch/SKILL.md
 updated .claude/skills/INDEX.md
@@ -1444,7 +1500,7 @@ updated .devin/workflows/stack-switch.md
 
 #### 9. Manifest validation
 
-```
+```console
 $ python3 scripts/validate_agentic_manifest.py --strict
 [ OK ] authority_chain
 [ OK ] source_paths
@@ -1499,8 +1555,6 @@ claim.
 
 ## Entry 014 — Waves 3+4: CCDS layout, TUTORIAL, template-onboard, uv, Copier index
 
-
-
 - **Date**: 2026-06-30
 - **Branch**: main (working tree)
 - **Base commit**: HEAD at time of edit
@@ -1552,7 +1606,7 @@ local-loop → switch to staging.
 `templates/config/agentic_manifest.yaml`: skill `template-onboard`
 (AUTO) and workflow `onboard` (AUTO) added with `authority:` anchors.
 
-```
+```console
 $ python3 scripts/sync_agentic_adapters.py
 updated .claude/skills/template-onboard/SKILL.md
 updated .claude/skills/INDEX.md
@@ -1566,7 +1620,7 @@ updated .devin/skills/template-onboard/SKILL.md
 updated .devin/workflows/onboard.md
 ```
 
-```
+```console
 $ python3 scripts/validate_agentic_manifest.py --strict
 [ OK ] authority_chain
 [ OK ] source_paths
@@ -1789,7 +1843,7 @@ render (not just static file reads). `v0.20.0` is cut on this basis.
 
 Defect reproduced first:
 
-```
+```console
 $ copier copy --trust --defaults . /tmp/baseline
 $ ls -la /tmp/baseline/.copier-answers.yml
 ls: cannot access '.../.copier-answers.yml': No such file or directory
@@ -1797,7 +1851,7 @@ ls: cannot access '.../.copier-answers.yml': No such file or directory
 
 After the fix, generating from a git source at HEAD:
 
-```
+```console
 $ cat /tmp/e2e/.copier-answers.yml | grep -v '^#'
 _commit: v0.21.0-16-g76b9613
 _src_path: /home/duqueom/projects/main_projects/template_MLOps
@@ -1810,7 +1864,7 @@ service_slug: demand_forecast
 The update path itself, end to end - scaffold, git init, change the
 template, pull the change:
 
-```
+```console
 $ cd /tmp/e2e && copier update --trust --defaults --vcs-ref=HEAD
 UPDATE-EXIT=0
 
@@ -1827,7 +1881,7 @@ prior releases asserted it without running it.
 
 Regression guard verified in both directions:
 
-```
+```text
 # answers template present
 ✓ Copier answers file present (.copier-answers.yml)
 ✓ Answers file records _commit (update path is live)
@@ -1844,7 +1898,7 @@ SCRIPT-EXIT=1
 
 The dialect conflict, reproduced against the pre-fix config:
 
-```
+```console
 $ pre-commit run gitleaks --all-files
 FTL Failed to load config
     error="[allowlist] is deprecated, it cannot be used alongside [[allowlists]]"
@@ -1853,7 +1907,7 @@ Command exited with non-zero status 1
 
 After removing the deprecated singular block:
 
-```
+```console
 $ pre-commit run gitleaks --all-files
 gitleaks (secret detection)..............................................Passed
 WALL: 0.17 s
@@ -1862,7 +1916,7 @@ WALL: 0.17 s
 Full git-history scan, replaying the exact CI step (pinned binary,
 explicit `--config`):
 
-```
+```console
 $ /tmp/gitleaks version
 8.30.1
 $ /tmp/gitleaks detect --source=. --config=.gitleaks.toml --redact --no-banner
@@ -1873,7 +1927,7 @@ INF no leaks found
 
 Pin-drift guard, both directions:
 
-```
+```console
 $ python3 scripts/check_gitleaks_pin.py
 [ OK ] gitleaks pinned to 8.30.1 in all 3 sites (>= 8.25.0)
 
@@ -1889,27 +1943,27 @@ EXIT=1
 
 Before (both ADRs at Phase 1, every check gated on `_is_phase_0`):
 
-```
+```console
 $ python3 -m pytest templates/service/tests/test_phase0_disclosure.py
 6 skipped in 0.02s
 ```
 
 After the phase-aware rewrite:
 
-```
+```console
 $ python3 -m pytest templates/service/tests/test_phase0_disclosure.py
 10 passed in 0.03s
 ```
 
 Verified it can fail. Promoting the maturity-matrix row:
 
-```
+```text
 FAILED test_maturity_matrix_row_not_production_ready[ADR-019]
 ```
 
 Stripping every disclosure marker from the section body:
 
-```
+```text
 FAILED test_section_banner_discloses_non_runtime[ADR-019]
 ```
 
@@ -1917,7 +1971,7 @@ FAILED test_section_banner_discloses_non_runtime[ADR-019]
 
 Before the fix, across the workflow's entire lifetime:
 
-```
+```console
 $ gh api repos/DuqueOM/ml-service-template/actions/workflows/ci-self-healing-shadow.yml/runs --jq .total_count
 0
 ```
@@ -1926,7 +1980,7 @@ Cause: `workflow_run.workflows` matches the upstream workflow's `name:`
 field, and the list held filename stems. None matched:
 
 | Declared | Real `name:` |
-|---|---|
+| --- | --- |
 | `validate-templates` | `Validate Templates` |
 | `policy-tests` | `Policy Tests (D-XX anti-patterns)` |
 | `golden-path` | `Golden Path E2E` |
@@ -1934,12 +1988,12 @@ field, and the list held filename stems. None matched:
 
 After the fix, measured on `main` post-merge:
 
-```
+```console
 $ gh api repos/DuqueOM/ml-service-template/actions/workflows/ci-self-healing-shadow.yml/runs --jq .total_count
 2
 $ gh run list --workflow=ci-self-healing-shadow.yml --limit 5
-skipped	workflow_run	2026-08-07T23:14:37Z
-skipped	workflow_run	2026-08-07T23:13:39Z
+skipped workflow_run 2026-08-07T23:14:37Z
+skipped workflow_run 2026-08-07T23:13:39Z
 ```
 
 `conclusion=skipped` is the correct outcome here: the job is gated on
@@ -1948,14 +2002,14 @@ succeeded. The trigger fires; the guard clause then declines the work.
 
 Reachability guard verified in reverse - reintroducing one filename stem:
 
-```
+```text
 AssertionError: workflow_run trigger references workflow names that do not exist:
     - 'validate-templates'
 ```
 
 #### 5. Pre-commit suite timing (measured, previously only asserted)
 
-```
+```console
 $ pre-commit run --all-files      # cold, installs envs
 TOTAL WALL: 28.07 s
 
@@ -1970,13 +2024,13 @@ retired the performance argument for the deferred ruff migration.
 
 #### 6. `main` green at the release commit
 
-```
-success	Validate Templates
-success	CI — Examples, Unit Tests & Coverage
-success	pr-smoke-lane
-success	OpenSSF Scorecard
-success	Template-Context Tests
-skipped	ci-self-healing-shadow   (upstream green; job gated on failure)
+```text
+success Validate Templates
+success CI — Examples, Unit Tests & Coverage
+success pr-smoke-lane
+success OpenSSF Scorecard
+success Template-Context Tests
+skipped ci-self-healing-shadow   (upstream green; job gated on failure)
 ```
 
 ### What was NOT validated (pending)
@@ -2017,7 +2071,7 @@ skipped	ci-self-healing-shadow   (upstream green; job gated on failure)
 
 Run as an adopter would, against the published tag:
 
-```
+```console
 $ copier copy gh:DuqueOM/ml-service-template /tmp/adopter
 -> 435 files, NO .copier-answers.yml
 
@@ -2029,7 +2083,7 @@ _commit: v0.22.0
 
 Cause confirmed:
 
-```
+```console
 $ git tag --sort=-v:refname | head -1
 v1.12.0
 ```
@@ -2041,7 +2095,7 @@ reached nobody following the docs.
 
 Guard verified in three directions:
 
-```
+```console
 $ python3 scripts/check_adopter_scaffold_ref.py
 [ OK ] 4 adopter scaffold command(s) pin --vcs-ref=v0.23.0
 
@@ -2054,7 +2108,7 @@ error: README.md:19: --vcs-ref=v0.21.0 but VERSION is 0.22.0 ... EXIT=1
 
 #### 2. Ruff consolidation - measurement first
 
-```
+```console
 $ pre-commit run --all-files      # BEFORE, warm
 TOTAL WALL: 2.62 s
 $ pre-commit run --all-files      # AFTER, warm
@@ -2067,7 +2121,7 @@ one in ADR-044.
 
 Rule-scope measurement that set the boundary:
 
-```
+```text
 # with UP + B enabled
 Found 90 errors.
 # parity scope E,W,F,I
@@ -2076,7 +2130,7 @@ All checks passed!
 
 Formatter equivalence - the decisive check:
 
-```
+```console
 $ ruff format templates/service/ examples/ scripts/
 55 files reformatted, 79 files left unchanged
 (214 insertions, 290 deletions)
@@ -2096,7 +2150,7 @@ reformatted file also passes py_compile.
 flake8's `files:` was `^(templates/service/|examples/)`, so `scripts/` and
 `templates/tests/` had never been style-linted.
 
-```
+```text
 F841 Local variable `ctx1` is assigned to but never used
    --> templates/tests/unit/test_risk_context.py:216:9
 ```
@@ -2106,7 +2160,7 @@ named for an isolation property never asserted it - it would have passed
 with caching absent entirely. Fixed by ADDING `assert ctx1 is not ctx2`,
 not by deleting the variable as the linter suggested.
 
-```
+```console
 $ python3 -m pytest templates/tests/unit/test_risk_context.py -q
 33 passed
 ```
@@ -2114,7 +2168,7 @@ $ python3 -m pytest templates/tests/unit/test_risk_context.py -q
 Plus an unused import and two over-length lines in `scripts/`. The regex
 edit was verified to compile to a byte-identical pattern:
 
-```
+```text
 dashes in original: 75
 identical: True
 ```
@@ -2123,7 +2177,7 @@ identical: True
 
 Both caught by CI, both real:
 
-```
+```text
 FAIL: vendored runtime files drifted from their canonical originals.
   - templates/service/agentic/rules/01-mlops-conventions.md
 ```
@@ -2131,7 +2185,7 @@ FAIL: vendored runtime files drifted from their canonical originals.
 The root rule was updated and its byte-identical vendored copy was not -
 exactly the class the gate exists for. Synced with `--fix`.
 
-```
+```text
 FAIL: wall-clock isolation contract violations:
   - templates/tests/unit/test_risk_context.py:173 ...
 ```
@@ -2140,7 +2194,7 @@ Its ALLOWLIST is keyed by file:line and the reformat shifted every entry.
 Verified 1:1 before remapping - same call count, same APIs, same order per
 file - so a pure line shift, not a new wall-clock call.
 
-```
+```console
 $ python3 scripts/check_test_clock_isolation.py
 [clock-isolation] OK - scanned 16 test file(s); 10 allowlisted call(s).
 $ python3 scripts/check_vendored_runtime_drift.py
@@ -2149,7 +2203,7 @@ $ python3 scripts/check_vendored_runtime_drift.py
 
 #### 5. Template ADR references
 
-```
+```text
 39 distinct template ADRs referenced inside the render root
  6 vendored into the generated service
 33 dangling
@@ -2163,7 +2217,7 @@ generated service from upstream.
 
 Resolution layer verified in three directions:
 
-```
+```console
 $ python3 scripts/check_service_adr_references.py
 [ OK ] 40 template ADRs referenced, 6 vendored, 34 resolvable via README.md
 
@@ -2211,7 +2265,7 @@ All contract suites green; full pre-commit sweep 16 hooks passing.
 Scaffolded a service from the freshly published v0.23.0 tag, committed it,
 then ran the update command exactly as `_message_after_copy` instructed:
 
-```
+```console
 $ copier copy --vcs-ref=v0.23.0 gh:DuqueOM/ml-service-template ./final
 files=627
 $ grep '^_commit' final/.copier-answers.yml
@@ -2237,7 +2291,7 @@ snapshots sort above every v0.x tag. 435 is the v1.12.0 file count.
 
 After pinning, on an identically-created service:
 
-```
+```text
 files before=627 after=627
 answers file: PRESENT
 deleted files: 0
@@ -2245,7 +2299,7 @@ deleted files: 0
 
 Guard extended to cover `copier update`, verified in both directions:
 
-```
+```console
 $ python3 scripts/check_adopter_scaffold_ref.py
 [ OK ] 4 adopter scaffold command(s) pin --vcs-ref=v0.24.0
 
@@ -2290,7 +2344,7 @@ EXIT=1
 v0.24.0's `check_adopter_scaffold_ref.py` enumerated three files. Replacing
 the enumeration with a tree scan, run against the pre-fix tree:
 
-```
+```text
 error: adopter scaffold command would serve the wrong template:
   - .devin/workflows/scaffold-update.md:21
   - .devin/workflows/scaffold-update.md:37
@@ -2309,14 +2363,14 @@ still one command away in the most likely place to run it.
 
 After pinning:
 
-```
+```console
 $ python3 scripts/check_adopter_scaffold_ref.py
 [ OK ] 4 adopter scaffold command(s) pin --vcs-ref=v0.25.0
 ```
 
 Confirmed in a freshly generated service:
 
-```
+```console
 $ grep -n "copier update" <svc>/agentic/workflows/scaffold-update.md
 26:copier update --vcs-ref=<release-tag> --dry-run
 42:copier update --vcs-ref=<release-tag> --trust --defaults
@@ -2326,7 +2380,7 @@ $ grep -n "copier update" <svc>/agentic/workflows/scaffold-update.md
 
 The finding was reported as a private-repo reference. It is not:
 
-```
+```console
 $ curl -s -o /dev/null -w "%{http_code} -> %{redirect_url}" \
     https://github.com/DuqueOM/ML-MLOps-Production-Template
 301 -> https://github.com/DuqueOM/ml-service-template
@@ -2337,7 +2391,7 @@ identifier inherited by every generated service.
 
 Badge behaviour differs per service, which decided the scope:
 
-```
+```text
 shields.io release badge, OLD name  -> <title>release: v0.24.0</title>   (follows the API redirect)
 codecov badge, OLD name             -> 40%
 codecov badge, NEW name             -> unknown
@@ -2349,14 +2403,14 @@ the old slug with an explanatory comment; everything else was renamed.
 
 After the rename, in a freshly generated service:
 
-```
+```console
 $ grep -rl "ML-MLOps-Production-Template" <svc>
 (no output)
 ```
 
 Repo-wide checks after the change:
 
-```
+```text
 [vendored-drift] OK - all vendored runtime files match canonical originals.
 [doc-coherence]  OK - all 7 cross-document checks pass.
 all template JSON parses
@@ -2401,7 +2455,7 @@ sorted_tags = sorted(all_tags, key=version.parse, reverse=True)
 return sorted_tags[0]
 ```
 
-```
+```text
 v1.12.0          PEP440-valid=True   parses as 1.12.0
 v0.25.0          PEP440-valid=True   parses as 0.25.0
 archive/v1.12.0  PEP440-valid=False  -> FILTERED OUT by copier
@@ -2415,7 +2469,7 @@ so no content depended on the Release objects.
 
 #### 3. Archive tags created and verified against originals
 
-```
+```text
 ✓ v1.0.0  -> 0b6b2e59      ✓ v1.8.0  -> 7ba92587
 ✓ v1.1.0  -> 13a26452      ✓ v1.8.1  -> a2ac4a14
 ...                        ✓ v1.12.0 -> 5ce52a09
@@ -2429,7 +2483,7 @@ $ git diff v1.12.0 archive/v1.12.0
 
 #### 4. Deletion tested on ONE tag first
 
-```
+```text
 BEFORE: tag=v1.0.0 draft=false
 $ git push origin :refs/tags/v1.0.0
  - [deleted]  v1.0.0
@@ -2439,7 +2493,7 @@ AFTER:  tag=v1.0.0 draft=true
 Deleting a tag DRAFTS its GitHub Release rather than destroying it. The
 release was re-pointed and un-drafted:
 
-```
+```console
 $ gh release edit v1.0.0 --tag archive/v1.0.0 --draft=false
 tag=archive/v1.0.0 draft=false name=v1.0.0 — Initial Release
 ```
@@ -2448,7 +2502,7 @@ Only after observing that on one tag were the remaining 14 processed.
 
 #### 5. Final remote state
 
-```
+```text
 v1.x:     0
 archive/: 15
 v0.x:     16
@@ -2456,7 +2510,7 @@ v0.x:     16
 
 #### 6. The verification the whole exercise exists for
 
-```
+```console
 $ get_latest_tag('https://github.com/DuqueOM/ml-service-template.git')
 BEFORE: v1.12.0
 AFTER:  v0.25.0
@@ -2465,7 +2519,7 @@ AFTER:  v0.25.0
 Bare `copier copy`, no `--vcs-ref` — the command that had been serving the
 April 2026 snapshot for four releases:
 
-```
+```text
 files:   627        (435 = v1.12.0 snapshot, 627 = current)
 answers: PRESENT
 _commit: v0.25.0
@@ -2473,7 +2527,7 @@ _commit: v0.25.0
 
 Bare `copier update`, no `--vcs-ref` — the destructive path:
 
-```
+```text
 files: 627 -> 627
 deleted: 0
 answers: PRESENT
@@ -2492,7 +2546,7 @@ Both traps structurally gone, not merely documented around.
   exercised. All six resolvers now verified against the live repository:
 
   | Resolver | Consumer | Result |
-  |---|---|---|
+  | --- | --- | --- |
   | `git tag --sort=-v:refname \| head -1` | the original diagnostic | `v0.26.0` |
   | `git tag \| sort -V \| tail -1` | shell scripts, Makefiles | `v0.26.0` |
   | `git describe --tags` | build stamping | `v0.26.0` |

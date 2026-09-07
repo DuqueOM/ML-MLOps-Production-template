@@ -24,7 +24,7 @@ Do not add a parallel API template. Improve this contract instead.
 Every scaffolded service must expose:
 
 | Endpoint | Purpose | Contract |
-|----------|---------|----------|
+| ---------- | --------- | ---------- |
 | `POST /predict` | Single inference | Uses `ThreadPoolExecutor`, validates input twice, returns `prediction_id`, score, risk level, and model version. |
 | `POST /predict_batch` | Batch inference | Uses one executor call for the batch, validates the full batch atomically, logs each prediction. |
 | `GET /health` | Liveness | Always 200 while the process is alive; never doubles as readiness. |

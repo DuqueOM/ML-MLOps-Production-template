@@ -24,14 +24,25 @@ Every architectural decision is documented in ADRs with measured trade-offs.
 When starting a new session:
 
 1. **READ** `AGENTS.md` fully before writing any code
-2. **CONFIRM** scaffold is complete: `grep -r "{% raw %}{@ service_name @}{% endraw %}\|{% raw %}{@ service_slug @}{% endraw %}" . --include="*.py" --include="*.yaml"`
-3. **CHECK** invariants: `grep -r "TODO\|{% raw %}{@ service_name @}{% endraw %}\|{% raw %}{@ service_slug @}{% endraw %}" . --include="*.py" --include="*.yaml"`
+2. **CONFIRM** scaffold is complete:
+
+   ```bash
+   grep -r "{% raw %}{@ service_name @}{% endraw %}\|{% raw %}{@ service_slug @}{% endraw %}" . --include="*.py" --include="*.yaml"
+   ```
+
+3. **CHECK** invariants:
+
+   ```bash
+   grep -r "TODO\|{% raw %}{@ service_name @}{% endraw %}\|{% raw %}{@ service_slug @}{% endraw %}" . --include="*.py" --include="*.yaml"
+   ```
+
 4. **IDENTIFY** phase: **Build** (new service) vs **Operate** (existing service)
 5. **SELECT** the appropriate approach based on the task
 
 ## Critical Invariants — NEVER VIOLATE
 
 ### ML Serving
+
 - **NEVER** `uvicorn --workers N` in K8s — 1 worker, HPA handles horizontal scale
 - **NEVER** memory HPA for ML pods — CPU only (fixed RAM prevents scale-down)
 - **ALWAYS** `asyncio.run_in_executor()` + `ThreadPoolExecutor` for inference
@@ -40,6 +51,7 @@ When starting a new session:
 - **NEVER** `model.predict()` directly in async endpoint — blocks event loop
 
 ### Infrastructure
+
 - **ALWAYS** IRSA (AWS) / Workload Identity (GCP) — no hardcoded credentials
 - **ALWAYS** remote Terraform state (GCS for GCP, S3+DynamoDB for AWS)
 - **NEVER** commit secrets to tfvars or repository
@@ -47,6 +59,7 @@ When starting a new session:
 - **ALWAYS** verify `kubectl config current-context` before applying manifests
 
 ### Model Quality
+
 - **ALWAYS** quality gates before promotion (metric, fairness DIR >= 0.80, leakage check)
 - **ALWAYS** compute SHAP in ORIGINAL feature space, never transformed
 - **ALWAYS** compatible release pinning (`~=`) — `numpy 2.x` corrupts joblib models
@@ -57,7 +70,7 @@ When starting a new session:
 Compact summary; full table with corrective actions in `AGENTS.md`.
 
 | Range | Domain |
-|-------|--------|
+| ------- | -------- |
 | D-01..D-08 | Serving + ML quality (workers, HPA, async, SHAP, drift, leakage) |
 | D-09..D-12 | Operations (heartbeat, tfstate, model-in-image, quality gates) |
 | D-13..D-16 | EDA + data validation (sandbox, Pandera, baseline, schema-evolution) |
@@ -96,7 +109,7 @@ kustomize build templates/k8s/base/ > /dev/null
 
 ## File Structure
 
-```
+```text
 AGENTS.md              → Full architecture, invariants D-01..D-38, anti-patterns (canonical source)
 CLAUDE.md              → This file (Claude Code context, condensed)
 QUICK_START.md         → 10-minute setup guide (standalone)
@@ -153,7 +166,7 @@ were closed in commits `9d8894e` through `b8708b6`:
 - AWS_ROLE_ARN declared in workflow_call.secrets contract (was lying)
 - Smoke test FQDN + correct namespace (was hitting `default`)
 - Prometheus metric prefix env-resolved (root pytest no longer crashes)
-- common_utils.__init__.py lazy imports (audit_record runs without joblib)
+- common_utils.**init**.py lazy imports (audit_record runs without joblib)
 - SecurityAuditResult HIGH gate (was passing HIGH findings silently)
 - Per-env Terraform state segregation
 - Drift + retrain workflows operationalized with cloud-aware adapters
@@ -163,6 +176,7 @@ See `CHANGELOG.md` for the full list with verification commands.
 ## Engineering Calibration
 
 Match solution complexity to problem scale:
+
 - 2-3 models → CronJob + GitHub Actions (not Airflow)
 - In-memory DataFrames → Pandera (not Great Expectations)
 - Simple drift → PSI with quantile bins (not feature store)

@@ -13,7 +13,7 @@ shares the same invariants.
 Scheduled rotation applies to:
 
 | Credential | Frequency | Source |
-|---|---|---|
+| --- | --- | --- |
 | AWS IRSA role trust policy | quarterly | Terraform `aws_iam_role` |
 | GCP Workload Identity pool | quarterly | Terraform `google_iam_workload_identity_pool` |
 | MLflow Tracking token | quarterly | AWS Secrets Manager / GCP Secret Manager |
@@ -94,7 +94,7 @@ curl -sf http://{service}.dev.internal/ready
 Each env is independent — the operator approves staging AFTER dev is
 stable for ≥ 15 min; approves prod AFTER staging is stable for ≥ 1 h.
 
-```
+```text
 [AGENT MODE: STOP]
 Operation: Rotate MLflow token in STAGING
 Rationale: Dev validated 27 min ago, no auth errors in logs, health

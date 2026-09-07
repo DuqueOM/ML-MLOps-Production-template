@@ -82,7 +82,7 @@ ADR refines it: surfaces are generated from the canonical store and fall
 into two kinds, declared per surface in the manifest via `kind:`:
 
 | Surface kind | Content | Surfaces | Why |
-|--------------|---------|----------|-----|
+| -------------- | --------- | ---------- | ----- |
 | `canonical` | authored bodies | `agentic/` | single source of truth |
 | `mirror` | generated full bodies | `.devin/` | IDE ingests bodies, can't follow pointers |
 | `pointer` | generated thin pointers | `.cursor/`, `.claude/`, `.codex/` | tool can discover via reference |
@@ -168,7 +168,7 @@ The single-source-of-truth guarantee is **preserved** even though
 ## 7. Alternatives considered
 
 | Alternative | Why rejected |
-|-------------|--------------|
+| ------------- | -------------- |
 | Accept the rename: `.devin/` is canonical (Option A) | Re-couples the source of truth to a vendor name; repeats the exact failure this ADR removes |
 | Keep `.windsurf/` canonical, treat Devin as one more adapter (Option B) | `.windsurf` is now a dead brand and Devin needs real bodies under `.devin/`, so a pointer adapter would not be ingested |
 | Hidden `.agents/` as canonical | Demotes authored content to tool-config status; inconsistent with the visible `AGENTS.md` authority; introduces `agents` vs `agentic` vocabulary split |

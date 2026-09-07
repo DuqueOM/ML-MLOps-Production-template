@@ -19,7 +19,7 @@ rationale grounding the choice.
 
 PSI between two distributions A and B over K bins is:
 
-```
+```text
 PSI = Σ_k (p_A,k − p_B,k) · ln(p_A,k / p_B,k)
 ```
 

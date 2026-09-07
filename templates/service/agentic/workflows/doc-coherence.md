@@ -13,6 +13,7 @@ authority; this workflow is the procedure that makes it green.
 ```bash
 python3 scripts/check_doc_coherence.py
 ```
+
 // turbo
 
 Exit 0 → done. Exit 1 → note each `[C1..C5]` violation and continue.
@@ -20,6 +21,7 @@ Exit 0 → done. Exit 1 → note each `[C1..C5]` violation and continue.
 ## 2. Apply the cascade map (rule 16)
 
 For each violation, fix the SSoT first, then propagate to mirrors:
+
 - **C1** version: `VERSION` ⇄ latest dated CHANGELOG heading.
 - **C2** llms.txt: `> Version:` line ⇄ `VERSION`.
 - **C3** anti-patterns: AGENTS.md max `D-NN` → README count, llms.txt range, CLAUDE.md, skills.

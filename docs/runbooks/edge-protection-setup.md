@@ -150,7 +150,7 @@ misrepresent at least one cloud. Key differences an adopter must
 account for when tuning `waf_mode` / rate limits per cloud:
 
 | Dimension | Cloud Armor (GCP) | AWS WAFv2 | Cloudflare (optional) |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | WAF rule source | Google preconfigured rules (`sqli-v33-stable`, `xss-v33-stable`, `lfi-v33-stable`) | AWS Managed Rules (`AWSManagedRulesCommonRuleSet`, `AWSManagedRulesSQLiRuleSet`) | Cloudflare Managed Ruleset (single bundle, OWASP + CVE coverage) |
 | Observe-before-block mode | `waf_mode = "count"` (per-rule action) | `waf_mode = "count"` (`override_action { count {} }`) | `waf_mode = "log"` (ruleset-level override) |
 | Block mode | `waf_mode = "deny(403)"` | `waf_mode = "block"` | `waf_mode = "block"` |

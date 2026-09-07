@@ -38,7 +38,7 @@ This skill is the RCA counterpart to `drift-detection`. Where PSI detects
 
 ## Decision tree
 
-```
+```text
                     Performance alert fired
                              │
                ┌─────────────┴─────────────┐
@@ -60,6 +60,7 @@ jq '.slices' reports/performance.json   # per-slice breakdown
 ```
 
 Identify which slices fired alerts. Each entry has:
+
 ```json
 { "slice_name": "by_country", "slice": "country=ES", "metric": "auc",
   "value": 0.58, "threshold": 0.65 }
@@ -88,7 +89,7 @@ jq '.features | to_entries[] | select(.value.psi > 0.15)' drift_report.json
 ```
 
 | Pattern | Likely cause | Action |
-|---------|--------------|--------|
+| --------- | -------------- | -------- |
 | High PSI + sliced AUC drop in same slice | Upstream data pipeline for that segment | Fix ETL, no retrain yet |
 | High PSI everywhere + global AUC drop | New data regime | Full retrain |
 | No PSI + AUC drop in one slice | Label noise or concept shift | Inspect labels_log for that slice |
@@ -129,13 +130,13 @@ model change.
 ## Step 6: Decide next action
 
 | Diagnosis | Action | Mode |
-|-----------|--------|------|
-| Noise (small n)                               | Wait, widen window | AUTO |
-| Subpopulation data pipeline issue             | Fix ETL; no retrain | CONSULT |
-| Real sliced concept drift                     | Retrain (possibly with reweighted sampling) | CONSULT |
-| Population-wide concept drift                 | Trigger `/retrain` | CONSULT |
-| Ground-truth pipeline broken                  | Fix ingester; mute alert for now | STOP-for-retrain |
-| Label noise                                   | Escalate to data team | STOP-for-retrain |
+| ----------- | -------- | ------ |
+| Noise (small n) | Wait, widen window | AUTO |
+| Subpopulation data pipeline issue | Fix ETL; no retrain | CONSULT |
+| Real sliced concept drift | Retrain (possibly with reweighted sampling) | CONSULT |
+| Population-wide concept drift | Trigger `/retrain` | CONSULT |
+| Ground-truth pipeline broken | Fix ingester; mute alert for now | STOP-for-retrain |
+| Label noise | Escalate to data team | STOP-for-retrain |
 
 Trigger retraining only after confirming real concept drift:
 

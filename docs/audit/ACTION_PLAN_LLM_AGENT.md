@@ -15,15 +15,16 @@
 > RAG**, the namespace-disjoint sibling of L-2, with mandatory enterprise
 > separation from operational memory; see ADR-037 and agent-local ADR-008).
 > v3.1: `agent-local` executed: refactored into a **reusable platform** `core/`
+>
 > + `usecases/<domain>/`, public repo, F1 routing gate **PASSED 20/20**, and
 > **F2.0** (ExecutiveController + circuit breaker) done; see "Execution
 > status" below. v3 base: survivors of the adversarial review R1–R10,
 > `ARCH_REVIEW_LLM_AGENT.md` → ADDENDUM v3).
 
-### Execution status (2026-06-15)
+## Execution status (2026-06-15)
 
 | Phase | Status | Evidence |
-|---|---|---|
+| --- | --- | --- |
 | F0 — Runtime + bench | ✅ E4B router PASSES speed gate | `agent-local/bench/RESULTS.md` |
 | F1 — Skeleton (read-only) | ✅ **COMPLETE** | `agent-local` repo, suite green |
 | F1 — Routing gate | ✅ **PASSED 20/20** (intent) | `agent-local/usecases/tienda/evals` |
@@ -49,15 +50,15 @@
 
 **What's built and green (do not touch except via ADR-backed refactor):**
 
-- `core/` (business-agnostic engine): `config · schemas · router · tiers · tools ·
++ `core/` (business-agnostic engine): `config · schemas · router · tiers · tools ·
   retrieval · policy · agent · controller · telemetry · circuit`.
-- `usecases/tienda/` (example): `config.yaml · tools.py · prompts/ · grammars/ ·
++ `usecases/tienda/` (example): `config.yaml · tools.py · prompts/ · grammars/ ·
   policies/policy.yaml · budgets.yaml · data/ · evals/sets/01..10`.
-- 8 ADRs in `agent-local/docs/decisions/` (001 platform · 002 infra · 003
++ 8 ADRs in `agent-local/docs/decisions/` (001 platform · 002 infra · 003
   policy-as-data · 004 cross-verification · 005 telemetry · 006 tool
   capability contract · 007 structured tool-calling · 008 caller isolation —
   see this repo's ADR-037).
-- **77 tests** green; `flake8` + `mypy` clean; CI without models.
++ **77 tests** green; `flake8` + `mypy` clean; CI without models.
 
 **Command to verify status at any time:**
 
@@ -92,6 +93,7 @@ repo).
 a single app and is now a **reusable platform**: the critical logic (loop,
 policy gate, objective escalation, grammar-constrained routing) lives in
 `core/` (business-agnostic) and each domain is a `usecases/<name>/` (config
+
 + tools + prompts + evals), **never a fork of `core/`**. Consumed via
 `from core import load_agent` or over HTTP. The store assistant is the
 example use case (`usecases/tienda/`).
@@ -100,13 +102,13 @@ example use case (`usecases/tienda/`).
 image); K8s/Terraform deferred until model topology and volume are decided;
 reuse of template modules where applicable.
 
-**Public repo**: https://github.com/DuqueOM/agent-local (Apache-2.0, tests+lint
+**Public repo**: <https://github.com/DuqueOM/agent-local> (Apache-2.0, tests+lint
 CI without models; docs in English).
 
 ### v3 decisions (adversarial review — executable summary)
 
 | Decision | Status | Where it lands |
-|---|---|---|
+| --- | --- | --- |
 | Two layers + **durable-state-as-data** (`sagas` table in SQLite; no Temporal) | adopted | F1.6 |
 | **ExecutiveController**: `admit/execute/release` facade, pure-middleware interior, ≤250 LOC, in-memory circuit breaker | adopted | F2.0 |
 | Deterministic pre-router chain (normalizer → alias → taxonomy → BM25) | adopted | F1.5 |
@@ -125,7 +127,7 @@ CI without models; docs in English).
 ## 0. Fixed context (do not change without an ADR)
 
 | Resource | Value |
-|---|---|
+| --- | --- |
 | Machine | ASUS TUF Gaming F16 (FX608JPR) · i7-14650HX (16C/24T) · WSL2 Ubuntu-24.04 |
 | GPU / VRAM | RTX 5070 **Laptop**, **8GB VRAM — soldered, fixed forever** (hard ceiling) |
 | RAM today | **2× 8GB DDR5-5600 SODIMM, both slots full, dual-channel (~90 GB/s)** — no free slot; any upgrade is a *replacement* |
@@ -147,7 +149,7 @@ a MoE model is governed by **active parameters**, not total parameters
 (`tok/s ≈ ~60 GB/s effective / (active × bytes_per_param)`).
 
 | RAM | Viable "primary" model | "Judge" model (tolerates latency) | Notes |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | 16GB (today) | E4B / 12B Q4 | — | the 26B-A4B doesn't fit comfortably |
 | **64GB (2×32, target)** | **Qwen3-30B-A3B** (3B active, Q4 ~17GB) or 26B-A4B (4B active, ~15GB) | Gemma-4 31B Q4 (~17GB) **or** gpt-oss-120B **Q3** (~48GB, 5B active, batch-only, monopolizes RAM) | sweet spot; a single large resident model at a time |
 | 96GB (2×48, bet) | same + huge context | **gpt-oss-120B Q4** (~60GB, 5B active, ~10-18 tok/s) | the only RAM tier that fits gpt-oss-120B Q4 comfortably |
@@ -200,7 +202,7 @@ every PR):
 ### 0.1 Tier table (reconciled with the artifacts on disk)
 
 | Tier | Role | Target model | Artifact TODAY | Action |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | 0 | Router/guardrail | E4B Q4_K_M | E4B QAT Q4_K_XL ✅ | bench the local one first |
 | 1 | Medium reasoning | 12B Q4_K_M | 12B QAT Q4_0 ✅ | bench the local one first |
 | 2 | Primary assistant | 26B-A4B Q4_K_M | 26B QAT Q4_0 ✅ | bench the local one first |
@@ -211,7 +213,7 @@ every PR):
 > as a latency-tolerant verifier (final verification, nightly evals, escalated
 > cases without a chat SLA). Do not download it before step F2.4. When it's
 > time: official `ggml-org` GGUF Q4_K_M repo (~17GB).
-
+>
 > 📝 **Quantization policy**: the framework calls for Q4_K_M. We already have
 > QAT-Q4_0/Q4_K_XL downloaded. Rule: bench the local one first (step F0.3);
 > download the `ggml-org` Q4_K_M ONLY if the local one fails its gate on
@@ -223,7 +225,7 @@ Each model has ONE fixed role with a contract. Violating the contract is an
 architecture bug, not a preference:
 
 | Model | Contractual role | CAN | CANNOT |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | **E4B** | Router / guardrail | classify, normalize aliases, emit routing JSON with confidence | draft customer-facing replies; approve anything |
 | **12B** | Medium-reasoning buffer | clarifications, drafts another tier will verify, E4B→26B fallback | be the final destination for commercial or high-stakes cases |
 | **26B-A4B** | Primary assistant | customer conversation, semantic matching, tool planning, multi-turn | approve its own policy violations; touch state without a policy gate |
@@ -231,16 +233,16 @@ architecture bug, not a preference:
 
 Clauses:
 
-- **12B clause**: stays in the architecture ONLY as long as per-tier evals
++ **12B clause**: stays in the architecture ONLY as long as per-tier evals
   demonstrate it reduces unnecessary escalations to the 26B and improves
   clarifications. If two consecutive eval cycles fail to justify it, it is
   retired and the router skips 0→2. It earns its place through measured
   utility, not "because it's there."
-- **Judge clause**: the 31B never receives a task that a lower tier has not
++ **Judge clause**: the 31B never receives a task that a lower tier has not
   already attempted, except for `risk=high` or final verification. Its
   compute time is expensive: every invocation is logged with its
   justification.
-- Whoever drafts is NEVER the one who approves: verification of a tier-N
++ Whoever drafts is NEVER the one who approves: verification of a tier-N
   response is done by the deterministic policy layer + (if `risk≥medium`) a
   critique pass at tier N or N+1 with a verifier prompt — never the same
   prompt that generated the response.
@@ -302,7 +304,7 @@ echo "$NAME: $(echo "$TOKENS/($END-$START)" | bc -l | cut -c1-5) tok/s" | tee -a
 **Gates (log them in `bench/RESULTS.md`; if one fails, STOP and report):**
 
 | Tier | Speed gate | Quality gate |
-|---|---|---|
+| --- | --- | --- |
 | E4B | ≥ 25 tok/s | 18/20 on the routing set (F1.6) |
 | 12B | ≥ 10 tok/s | beats E4B on the clarification set |
 | 26B | ≥ 8 tok/s @16k | beats 12B on the semantic-matching set |
@@ -326,7 +328,7 @@ python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"   # ver pyproject.tom
 
 Actual structure (`agent-local` repo):
 
-```
+```text
 agent-local/
 ├── core/                  # business-agnostic ENGINE (single source of truth)
 │   ├── config.py          #   UsecaseConfig: loads prompts/grammar/budgets/policy
@@ -407,7 +409,7 @@ class Verdict(BaseModel):
 
 `grammars/route.gbnf` (llama.cpp GBNF — forces the JSON shape):
 
-```
+```text
 root   ::= "{" ws "\"intent\"" ws ":" ws intent "," ws "\"tier\"" ws ":" ws tier "," ws "\"confidence\"" ws ":" ws conf "," ws "\"risk\"" ws ":" ws lvl "," ws "\"ambiguity\"" ws ":" ws lvl "," ws "\"tool_needed\"" ws ":" ws bool "," ws "\"finality\"" ws ":" ws fin "," ws "\"expected_followup\"" ws ":" ws bool ws "}"
 intent ::= "\"product_lookup\"" | "\"order_create\"" | "\"order_status\"" | "\"smalltalk\"" | "\"complaint\"" | "\"policy_question\"" | "\"maintenance_task\"" | "\"unknown\""
 tier   ::= "0" | "1" | "2" | "3"
@@ -526,23 +528,23 @@ policies, promotions, objection-handling templates) with `rank-bm25`; expose
 The full loop has 7 stations — in Phase 1, `reflect` and `critic` can be the
 same model with different prompts; in Phase 2, `critic` moves up a tier:
 
-```
+```text
 route → plan → tools → observe → reflect → critic → policy → finalize
   E4B    tierN   app     app      tierN    tierN/N+1  deterministic  tierN
 ```
 
-- **plan**: at most `budget.max_tool_calls` tools, named explicitly.
-- **observe**: tool results injected in a compact schema.
-- **reflect**: the model checks its plan against the observations — is a
++ **plan**: at most `budget.max_tool_calls` tools, named explicitly.
++ **observe**: tool results injected in a compact schema.
++ **reflect**: the model checks its plan against the observations — is a
   datum missing? did a tool contradict an assumption? (1 pass, no exposed
   chain-of-thought).
-- **critic**: a verifier prompt (NOT the generation one): consistency with
++ **critic**: a verifier prompt (NOT the generation one): consistency with
   live data, clarity, zero hallucinated inventory, zero illegal promises.
-- **policy**: deterministic gate (F2.2) — **invariant: NO final response goes
++ **policy**: deterministic gate (F2.2) — **invariant: NO final response goes
   out without passing `product_exists`, `stock_confirmed`, `price_confirmed`,
   `no_overpromise`, and `tone_brand`**. No exceptions, not even smalltalk that
   mentions products.
-- **finalize**: customer-facing format, short and commercial.
++ **finalize**: customer-facing format, short and commercial.
 
 Hard stop-conditions (from `RequestBudget`): `max_iterations`; if
 `finality=clarify` twice in a row → ONE direct question to the user; if it
@@ -562,13 +564,13 @@ processes asynchronously, and replies via the WhatsApp Business API (env
 
 **Queue and durable state (v3)** — a single SQLite (`app/state.db`, WAL):
 
-- `queue(conv_id, msg, status, ts)` table — one worker per conversation
++ `queue(conv_id, msg, status, ts)` table — one worker per conversation
   (guaranteed order); a crash does NOT lose messages.
-- `sagas(saga_id, tipo, paso, estado, deadline, retries)` table — the
++ `sagas(saga_id, tipo, paso, estado, deadline, retries)` table — the
   *durable-state-as-data* pattern for multi-day flows (order → confirmation →
   follow-up) with a periodic sweep by the worker. **No Temporal**: that is an
   ADR-trigger (≥3 saga types or distributed exactly-once).
-- `budgets.yaml`: per-intent budget (the schema defaults are the fallback);
++ `budgets.yaml`: per-intent budget (the schema defaults are the fallback);
   daily cloud cap as a counter in the controller.
 
 ### F1.7 Routing set + tests (phase gate)
@@ -606,6 +608,7 @@ class ExecutiveController:
 What does NOT go here: prompts, business logic, domain knowledge.
 
 ### F2.1 Tier 1 (12B) as an intermediate fallback — CONDITIONAL ENTRY (v3)
+
 **Startup WITHOUT 12B**: the router skips 0→2. The artifact stays on disk; the
 12B enters only once telemetry shows the 26B spends >25% of its time on tasks
 that set 07 classifies as "medium" (inverted burden of proof). If it enters:
@@ -641,6 +644,7 @@ in set 06 that fails without the change. OPA/Rego: rejected at this scale
 (revisit only with multi-tenant).
 
 ### F2.3 Critique pass (cross-verification)
+
 For `risk=medium|high`: the 26B's response passes through a verifier prompt
 ("is it consistent with the tool data? does it promise something unconfirmed?
 is it clear to the customer?") on the SAME 26B (Phase 2a) and on the 31B once
@@ -652,11 +656,13 @@ evals. In interactive mode, 3 passes of the 26B blow the 8s budget: a single
 pass + judge.
 
 ### F2.4 Tier 3 (31B) — conditional download
+
 Download `ggml-org` Q4_K_M (~17GB) ONLY if: (a) the high-stakes eval (set 10)
 fails with 26B-verified, or (b) nightly evals justify it. Use it exclusively
 for: final verification, nightly evals, escalations with no SLA.
 
 ### F2.5 The 10 evaluation sets
+
 In `evals/sets/`: `01_intent`, `02_alias_match`, `03_oos_substitution`,
 `04_upsell`, `05_objections`, `06_policy_violation`, `07_ambiguity`,
 `08_multiturn`, `09_tool_failure`, `10_high_stakes` (20–40 cases each, JSONL:
@@ -667,20 +673,20 @@ latency, policy adherence. Reports versioned in `evals/reports/`.
 
 **v3 — two additional instruments**:
 
-- **Frozen golden set** (`evals/golden/`, 50 cases, NEVER edited or grown):
++ **Frozen golden set** (`evals/golden/`, 50 cases, NEVER edited or grown):
   measures long-term system drift; the live sets measure coverage. Editing
   the golden set invalidates the historical series.
-- **Replay against real traffic**: `evals/replay.py --from logs/<day>.jsonl
++ **Replay against real traffic**: `evals/replay.py --from logs/<day>.jsonl
   --against <prompt|policy>` — every prompt/policy change is tested against
   yesterday's traffic BEFORE it sees today's.
-- The router's confusion matrix is published every cycle (not just accuracy):
++ The router's confusion matrix is published every cycle (not just accuracy):
   over-escalating costs latency; under-escalating costs quality.
 
 **Graduation gates PER TIER** (mandatory before promoting any prompt, model,
 or rule change — the global eval alone is not enough):
 
 | Tier | Wins in ITS role if... | Set that measures it |
-|---|---|---|
+| --- | --- | --- |
 | E4B | routing precision ≥ threshold and calibrated confidence (high confidence ⇒ high precision) | 01_intent |
 | 12B | reduces unnecessary escalations to the 26B and improves clarifications vs. E4B | 07_ambiguity + 01 |
 | 26B | beats the 12B on real semantic/commercial matching | 02, 03, 04, 05, 08 |
@@ -695,6 +701,7 @@ it, the 31B is kept solely for nightly evals.
 ---
 
 ## PHASE 3 — Observability and continuous improvement
+
 1. **Decision telemetry** (JSONL per request, PII redacted) — mandatory
    fields, because without this, refinement is guesswork:
 
@@ -735,6 +742,7 @@ it, the 31B is kept solely for nightly evals.
    above would have done" on a 10% sample.
 
 ## PHASE 4 — QLoRA (strategic gate, NOT before)
+
 Only with: ≥4 weeks of logs, stable evals, and a style/tone/policy pattern
 that prompting cannot resolve. Train ONLY stable behavior (tone, format,
 brand protocol). PROHIBITED to train on inventory, stock, or prices.
@@ -860,7 +868,7 @@ fine-tuning review triggers, >10k labeled events).
 ### Plane risks (inherited and still current)
 
 | Risk | Mitigation |
-|---|---|
+| --- | --- |
 | Gemma-4 architecture unsupported by converters | fallback chain: official GGUF → Ollama registry → cloud-only (the lanes are agnostic via the OpenAI-compatible client) |
 | Quantization degrades the 26B below usefulness | Phase 0 bench gate + side-by-side per task vs. E4B; if it loses, the tier is removed |
 | Laptop-runner availability | weekly/on-demand lanes, not latency-sensitive; a lost week is benign |
@@ -873,7 +881,7 @@ requires a new ADR.
 ## P2 INTEGRATION (template_MLOps, 1–2 months — unblocks v1.0.0)
 
 | # | Deliverable | Concrete steps |
-|---|---|---|
+| --- | --- | --- |
 | P2.1 | **L4 evidence**: real GKE+EKS rollout | `deploy-gke` and `deploy-aws` skills on the example service → capture `kubectl get pods/svc`, Grafana, cost → dated entries in `ops/VALIDATION_LOG.md` → screenshots to `docs/evidence/` |
 | P2.2 | 4 pending runbooks | `docs/runbooks/`: `gke-rollout.md`, `eks-rollout.md`, `rollback-validado.md`, `coste-ventana-l4.md` — format of the 5 existing ones |
 | P2.3 | 14-day shadow window (ADR-019 Phase 2) | activate the prediction logger on the example, daily capture cron, on day 14: drift report with `drift-check` |
@@ -902,7 +910,7 @@ Port the portfolio pipeline AS-IS (same features, same algorithm, same
 hyperparameters, same seed) onto the template's scaffold.
 
 | Dimension | Portfolio (manual) | Template (measure) |
-|---|---|---|
+| --- | --- | --- |
 | Time to deployable service | weeks (actual) | hours (`new-service.sh` + data) |
 | Lines written by hand | all | only `train.py` + features |
 | Serving incidents | 3 suffered | 0 (D-01..D-32 prevent them) |
@@ -957,7 +965,7 @@ them all under "drift" is the mistake that would make monitoring look
 useless.
 
 | Failure (source) | Class | How it's injected | Surface that MUST detect it | Expected result |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | 81% errors (D-01) | concurrency/serving | overlay with `uvicorn --workers 4` | load test: error-rate + p95 | error-rate ↑, not drift |
 | Zero SHAP values (D-04) | compatibility bug | TreeExplainer on the Stacking model | **contract test** | red test in CI, not runtime |
 | HPA doesn't scale down (D-03) | infra config | memory-based HPA in overlay | replica count over time | flat replicas after traffic drop |
@@ -988,7 +996,7 @@ finding that gets published.
 ## Global schedule and acceptance criteria
 
 | Week | Milestone |
-|---|---|
+| --- | --- |
 | 1 | F0 complete (bench + RESULTS.md) · P2.5 data-cleaning skill |
 | 2–3 | F1 complete (router+loop+retrieval+dev webhook, read-only) · P2.4 ingest |
 | 4–5 | F2 (policy, verifier, 10 sets) · P2.1–P2.2 L4 rollout + runbooks |

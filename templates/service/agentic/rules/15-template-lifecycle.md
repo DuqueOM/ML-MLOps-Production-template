@@ -34,6 +34,7 @@ quoted** in list contexts. An unquoted `- {@ service_name @}` is invalid
 YAML because the `@` character cannot start a token.
 
 **Rule**: All `{@ @}` tokens in YAML list items MUST be quoted:
+
 ```yaml
 # WRONG — invalid YAML
 service:
@@ -56,6 +57,7 @@ enforces the local-first contract (ADR-033): the `local` profile is the
 zero-cloud-dependency on-ramp for adopters evaluating the template.
 
 **Required fields in `configs/profiles/local.yaml`**:
+
 ```yaml
 requires:
   cloud_credentials: false
@@ -73,6 +75,7 @@ fields are `false`.
 
 `scripts/test_scaffold.sh` MUST validate:
 {% raw %}
+
 1. Zero unreplaced Jinja tokens (`{@ @}`, `{% %}`, `{# #}`) in rendered output.
 {% endraw %}
 2. Post-gen agentic tasks ran (`.devin/rules/` exists, manifest present).
@@ -88,6 +91,7 @@ every scaffolded service.
 
 The `scaffold-update` skill and `/scaffold-update` workflow codify the
 upgrade procedure:
+
 1. Pre-flight: clean working tree + `.copier-answers.yml` present.
 2. Dry-run diff to categorize changes (no-op / conflict / new).
 3. Review with operator (CONSULT mode).

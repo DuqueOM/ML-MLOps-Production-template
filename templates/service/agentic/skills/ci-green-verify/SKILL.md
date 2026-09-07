@@ -63,13 +63,14 @@ all of them, not the first one that returns.
 For the most recent run of each distinct `workflowName` at the target SHA:
 
 | `status` | `conclusion` | Classification |
-|---|---|---|
+| --- | --- | --- |
 | `completed` | `success` | GREEN |
 | `completed` | `failure` / `cancelled` / `timed_out` | RED |
 | `in_progress` / `queued` | — | PENDING |
 | (no run found for this SHA) | — | MISSING — treat as RED; a lane that never ran is not evidence of passing |
 
 Overall verdict:
+
 - **ALL GREEN** → proceed.
 - **ANY RED or MISSING** → STOP; do not proceed with the caller's
   promote/release/deploy action. Report exactly which workflow(s) failed,
@@ -86,7 +87,7 @@ If a failure looks like a known-flaky infra issue (timeout, runner
 capacity, a transient network fetch) — NOT a real test/lint failure — the
 skill may PROPOSE a re-run:
 
-```
+```text
 [AGENT MODE: CONSULT]
 Operation: gh run rerun <run-id> --failed
 Reason: <job> failed with <transient signature>; re-running rather than
@@ -104,7 +105,7 @@ If the caller (a human, or another skill/workflow acting on a human's
 instruction) wants to proceed DESPITE red/missing CI, this skill's answer
 is always:
 
-```
+```text
 [AGENT MODE: STOP]
 Operation: Proceed with {caller-action} while CI is RED/MISSING for {ref}
 Reason: Anti-pattern D-36 — promoting, tagging, or deploying without

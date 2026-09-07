@@ -44,7 +44,7 @@ apply to external comparisons.
 ### 2.1 Adopted
 
 | Addition | Source of the idea | What gap it closes |
-|---|---|---|
+| --- | --- | --- |
 | Skill `pr-review` | `mattpocock/skills` `code-review` (Standards + Spec, evaluated in isolation) | `rule-audit`/`security-audit` check fixed rubrics; nothing separated "violates a convention" from "implements the spec," evaluated independently so neither contaminates the other |
 | Skill `diagnose-bug` | `mattpocock/skills` `diagnosing-bugs` (reproduce→minimize→hypothesize→instrument→fix→regression-test) | Only `debug-ml-inference` existed (ML-serving-specific); no generic systematic-debugging skill for CI/infra/tooling bugs — exactly the discipline used ad hoc to diagnose the R10 gitleaks false positive, now made reusable |
 | Skill `new-service-spec` + `service_spec.schema.json`/`.example.yaml` | `github/spec-kit`'s spec-before-code discipline, NOT its tooling | `new-service.sh`/`copier copy` capture technical parameters but never the ML problem definition (label, fairness attribute, cost asymmetry) — `quality_gates.yaml` shipped with defaults nobody examined against a real answer |
@@ -55,7 +55,7 @@ apply to external comparisons.
 ### 2.2 Rejected
 
 | Item | Verdict | Why | Revisit trigger |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `mattpocock/sandcastle` (agent-execution sandboxing: Docker/Podman/Firecracker) | **Rejected, no trigger** | Solves a different layer than this repo governs. This template's AUTO/CONSULT/STOP decides *what* an agent may do; sandcastle decides *where* an agent's own process runs (OS/container level) — a concern for whoever hosts the coding agent, not for an ML service template. The sandboxing surface that matters for this repo's actual deliverable (an ML service) already exists and is calibrated: PSS, NetworkPolicy, non-root containers. | None — the mismatch is structural (wrong layer), not a maturity gap that closes over time |
 | `bmad-code-org/bmad-method` full persona/Party-Mode system (12+ named domain-expert personas, multi-persona sessions) | **Rejected** | Violates this repo's own Engineering Calibration Principle. A parallel orchestration system for role specialization is the "Airflow for 2-3 models" mistake applied to agent governance. The `domain:` taxonomy (§2.1) captures the one part of the idea (specialization) worth having, without the orchestration layer. | Revisit only if the skill count grows large enough (order of 50+) that flat discoverability genuinely breaks down — not proactively |
 | `github/spec-kit` full sequential pipeline (`/specify` → `/plan` → `/tasks` → `/implement`) | **Rejected** | This repo already converges on spec-kit's most valuable primitive without having imported it: `CLAUDE.md`'s "Critical Invariants" + `AGENTS.md`'s D-01..D-37 anti-patterns function as a "constitution," and the existing ADR + audit-wave-execution-verification-closure cycle (see the audit-methodology material this template's adopter-facing Guía cross-references) is functionally equivalent to specify→plan→tasks→implement. Importing spec-kit's tooling would duplicate an existing pattern under a different name. `new-service-spec` (§2.1) adopts the one genuine gap the comparison surfaced. | None identified — the two systems solve the same problem; a future revisit would only make sense if this repo's organic ADR/audit cycle broke down, which would be a different problem to solve on its own terms |
@@ -95,6 +95,7 @@ tooling; wiring `find-skills` into CI.
 ## 5. Consequences
 
 ### Positive
+
 - Two concrete, currently-uncovered gaps close (`pr-review`'s dual-axis
   review, `diagnose-bug`'s systematic non-ML debugging) using patterns
   already proven inside this repo's own audit history, not speculative
@@ -109,6 +110,7 @@ tooling; wiring `find-skills` into CI.
   re-litigating it.
 
 ### Negative
+
 - Four more skills to maintain (small — each is read-heavy/AUTO-mode,
   no new runtime dependency beyond what the repo already uses).
 - One new schema/example-config pair (`service_spec.*`) is a new
@@ -118,6 +120,7 @@ tooling; wiring `find-skills` into CI.
   rather than requiring the adopter to hand-author YAML.
 
 ### Neutral
+
 - Surface counts move: skills 21→25 (rules and workflows unchanged at
   17 each). Cascaded through `AGENTS.md`, `CLAUDE.md` (root +
   `templates/service/` mirror), and `templates/config/agentic_manifest.yaml`
@@ -126,6 +129,7 @@ tooling; wiring `find-skills` into CI.
 ## 6. Revisit triggers
 
 See the per-rejected-item triggers in §2.2. Additionally:
+
 - If `pr-review` or `diagnose-bug` prove to overlap too heavily with
   `rule-audit`/`debug-ml-inference` in practice (reviewers invoking the
   wrong one), merge rather than maintain four skills doing three jobs.
@@ -136,7 +140,7 @@ See the per-rejected-item triggers in §2.2. Additionally:
 ## 7. Alternatives considered
 
 | Alternative | Why rejected |
-|---|---|
+| --- | --- |
 | Adopt BMAD's full persona system to get role specialization | See §2.2 — violates the calibration principle; `domain:` gets the same benefit at a fraction of the cost |
 | Adopt spec-kit's slash-command pipeline wholesale | See §2.2 — duplicates the ADR + audit-wave cycle this repo already runs |
 | Wire `find-skills` into CI as a recurring "check for new skills" job | Registry search is a sourcing technique, not a gate; nothing in this repo's pipeline should depend on an external registry's uptime or content changing underneath it |

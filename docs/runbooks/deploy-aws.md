@@ -30,7 +30,8 @@ kubectl config current-context     # should be <env>-eks
 
 ## Procedure
 
-The trigger and chain mirror GKE: push to `main` → dev (AUTO), staging (CONSULT, 1 reviewer), `v*` tag → prod (STOP, 2 reviewers + 5 min wait). The IAM identity for each environment is IRSA-federated; no static AWS keys (D-18).
+The trigger and chain mirror GKE: push to `main` → dev (AUTO), staging (CONSULT, 1 reviewer), `v*` tag → prod (STOP, 2
+reviewers + 5 min wait). The IAM identity for each environment is IRSA-federated; no static AWS keys (D-18).
 
 ```bash
 # Manual trigger:
@@ -47,18 +48,21 @@ gh run watch
 In addition to the 8 checks in `deploy-gke.md`:
 
 | Check | Command | Expected |
-|-------|---------|----------|
+| ------- | --------- | ---------- |
 | IRSA bound | `kubectl --context <prod> -n "<service-name>-prod" get sa <service-name>-sa -o jsonpath='{.metadata.annotations.eks\.amazonaws\.com/role-arn}'` | matches `aws_iam_role.service[<service>].arn` from Terraform |
 | ECR pull succeeded | `kubectl --context <prod> -n "<service-name>-prod" describe pod -l app=<service-name>` | no `ImagePullBackOff`, no `ErrImagePull` |
 | ALB / NLB targets healthy | `aws elbv2 describe-target-health --target-group-arn <tg-arn>` | all targets `healthy` |
 
 ## Exit Criteria
 
-Same as `deploy-gke.md` §"Exit criteria". AWS deploy is COMPLETE when all 8 base checks + the 3 EKS-specific deltas above are GREEN for ≥ 10 min, the audit entry is in `ops/audit.jsonl`, and the digest-pinned image matches the `cosign verify` output.
+Same as `deploy-gke.md` §"Exit criteria". AWS deploy is COMPLETE when all 8 base checks + the 3 EKS-specific deltas
+above are GREEN for ≥ 10 min, the audit entry is in `ops/audit.jsonl`, and the digest-pinned image matches the
+`cosign verify` output.
 
 ## Failure paths
 
-- **`AccessDenied` on ECR pull**: IRSA role missing `ecr:GetAuthorizationToken` or the OIDC trust policy `sub` doesn't match the SA. See `docs/runbooks/aws-irsa-setup.md`.
+- **`AccessDenied` on ECR pull**: IRSA role missing `ecr:GetAuthorizationToken` or the OIDC trust policy `sub` doesn't
+  match the SA. See `docs/runbooks/aws-irsa-setup.md`.
 - **All other failure paths**: identical to `deploy-gke.md`.
 
 ## Anti-patterns
@@ -66,4 +70,5 @@ Same as `deploy-gke.md` §"Exit criteria". AWS deploy is COMPLETE when all 8 bas
 Same as `deploy-gke.md`. Plus:
 
 - ❌ Do NOT use long-lived `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` — D-18 forbids; use IRSA only.
-- ❌ Do NOT mutate the IAM role attached to a running ServiceAccount without rolling restart — pods cache the assumed-role token until expiry.
+- ❌ Do NOT mutate the IAM role attached to a running ServiceAccount without rolling restart — pods cache the
+  assumed-role token until expiry.

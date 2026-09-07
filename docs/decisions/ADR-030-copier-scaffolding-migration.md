@@ -132,7 +132,7 @@ the single source-of-truth answer; the other casings are **derived** in
 corresponding derived variable:
 
 | Legacy bespoke token | After (Copier/Jinja, `{@ @}` family) |
-|---|---|
+| --- | --- |
 | `{ServiceName}` | `{@ service_name @}`  (derived: PascalCase of slug) |
 | `{service-name}` | `{@ service_kebab @}` (derived: slug with `_`→`-`) |
 | `{service}` | `{@ service_slug @}` |
@@ -269,6 +269,7 @@ post-gen agentic sync, the `new-service.sh` wrapper, scaffold-test updates, and 
 CI lane that renders via Copier.
 
 **Out of scope** (own ADRs / waves):
+
 - Local-first stack profiles → ADR-031 (Wave 2).
 - CCDS-aligned layout → ADR-032 (Wave 3).
 - `uv`/`pyproject` modernization → Wave 4.
@@ -278,6 +279,7 @@ CI lane that renders via Copier.
 ## 5. Consequences
 
 ### Positive
+
 - Industry-standard scaffolding (`copier copy`) and, critically, a real upgrade
   path (`copier update`) — the main adoption lever in the action plan.
 - The agentic surfaces are regenerated on every scaffold and every update,
@@ -285,6 +287,7 @@ CI lane that renders via Copier.
 - Deletes the `${SERVICE}` negative-lookbehind special case.
 
 ### Negative
+
 - A one-time 227-file mechanical diff (token → Jinja). Mitigated: scripted,
   reviewed in a single focused PR, and gated by a real Copier render in CI plus
   the unchanged scaffold contract tests.
@@ -293,6 +296,7 @@ CI lane that renders via Copier.
   generated services.
 
 ### Neutral
+
 - `.copier-answers.yml` appears in generated projects. Expected and required for
   updates.
 
@@ -307,7 +311,7 @@ MIT; ZenML — Apache-2.0; Made With ML — MIT (see action plan §1.1, item W1.
 ## 7. Alternatives considered
 
 | Alternative | Why rejected |
-|-------------|--------------|
+| ------------- | -------------- |
 | Keep `new-service.sh`, add `cruft` for updates | Cruft is a Cookiecutter shim; Copier's native update is cleaner and the tool is simpler to pin |
 | Cookiecutter (no update) | No first-class update path; B1's main value is upgradability |
 | **Hybrid: Copier copies verbatim + post-gen task substitutes tokens** | Avoids the 227-file diff, but breaks `copier update`: the tracked render stays tokenized while project files are substituted, so update hunks near tokens fail to apply — defeats B1 |

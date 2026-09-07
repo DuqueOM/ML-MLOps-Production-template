@@ -68,6 +68,7 @@ name).
 "intentionally-templated" allowlist over time.
 
 **Pros**:
+
 - Zero external dependency. Adopters keep getting a self-contained
   service after `new-service.sh`.
 - Trivially debuggable: the file IS in the service, no PYTHONPATH
@@ -75,6 +76,7 @@ name).
 - Compatible with air-gapped clusters / private registries.
 
 **Cons**:
+
 - Bug-fix delivery latency unchanged. Scaffolded services still
   hold stale copies.
 - The CI gate guards the SCAFFOLD step, not the post-scaffold
@@ -92,6 +94,7 @@ documentation, semantic versioning policy + ~ongoing maintenance
 burden of a distinct release line.
 
 **Pros**:
+
 - Clean dependency story; security fixes propagate via `pip install
   -U`.
 - Forces an explicit public API surface (no more "secretly
@@ -99,6 +102,7 @@ burden of a distinct release line.
 - Tests live with the package, not duplicated in every service.
 
 **Cons**:
+
 - Adopters running air-gapped MUST mirror the package internally.
 - Two release cadences to manage (template AND package).
 - The "package" surface is small (~15 modules); PyPI overhead may
@@ -116,10 +120,12 @@ services include it as a submodule, pinned to a SHA.
 disliked by many contributors).
 
 **Pros**:
+
 - Versioning is content-addressable (SHA), no separate package.
 - Air-gap-friendly: adopters can mirror the submodule repo.
 
 **Cons**:
+
 - Submodule UX is notoriously confusing (forgotten `--recursive`
   clones, dangling refs after rebases).
 - Doesn't solve the bug-fix delivery latency problem any better
@@ -135,6 +141,7 @@ committing the project to a long-running package release line
 before adoption signals justify it.
 
 Revisit Option B at the FIRST of:
+
 - More than 5 distinct adopters request "how do I get the latest
   `common_utils` without re-scaffolding".
 - A security fix in `common_utils/` requires a coordinated upgrade

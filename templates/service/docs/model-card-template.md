@@ -5,7 +5,7 @@
 ## Model Details
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Model Name** | {@ service_name @} |
 | **Model Version** | v1.0.0 |
 | **Model Type** | {Classification / Regression / NLP} |
@@ -24,7 +24,7 @@
 ## Training Data
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Source** | {e.g., Internal CRM database, public dataset} |
 | **Size** | {e.g., 10,000 rows, 14 features} |
 | **Date Range** | {e.g., 2023-01 to 2024-12} |
@@ -34,7 +34,7 @@
 ### Feature Summary
 
 | Feature | Type | Description |
-|---------|------|-------------|
+| --------- | ------ | ------------- |
 | feature_1 | Numeric | {description} |
 | feature_2 | Categorical | {description} |
 | ... | ... | ... |
@@ -44,7 +44,7 @@
 ### Primary Metrics (Test Set)
 
 | Metric | Value | Threshold |
-|--------|-------|-----------|
+| -------- | ------- | ----------- |
 | ROC-AUC | {0.XX} | >= 0.80 |
 | F1 Score | {0.XX} | >= 0.55 |
 | Precision | {0.XX} | — |
@@ -53,21 +53,21 @@
 ### Fairness Metrics
 
 | Protected Attribute | Disparate Impact Ratio | Threshold |
-|---------------------|----------------------|-----------|
+| --------------------- | ---------------------- | ----------- |
 | {e.g., Gender} | {0.XX} | >= 0.80 |
 | {e.g., Age Group} | {0.XX} | >= 0.80 |
 
 ### Performance by Subgroup
 
 | Subgroup | ROC-AUC | F1 | N |
-|----------|---------|-----|---|
+| ---------- | --------- | ----- | --- |
 | {Group A} | {0.XX} | {0.XX} | {n} |
 | {Group B} | {0.XX} | {0.XX} | {n} |
 
 ## Inference Performance
 
 | Metric | Value | SLA |
-|--------|-------|-----|
+| -------- | ------- | ----- |
 | P50 Latency | {XX}ms | — |
 | P95 Latency | {XX}ms | <= 100ms |
 | P99 Latency | {XX}ms | — |
@@ -88,7 +88,7 @@
 ## Drift Monitoring
 
 | Feature | PSI Warning | PSI Alert | Current PSI |
-|---------|------------|-----------|-------------|
+| --------- | ------------ | ----------- | ------------- |
 | feature_1 | 0.10 | 0.20 | {0.XX} |
 | feature_2 | 0.10 | 0.20 | {0.XX} |
 

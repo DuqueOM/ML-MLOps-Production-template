@@ -14,7 +14,7 @@
 ## Legend
 
 | Symbol | Meaning |
-|--------|---------|
+| -------- | --------- |
 | ✅ | Already resolved — feedback is stale or based on outdated artifact |
 | 🟡 | Disclosed (limit acknowledged in an ADR or VALIDATION_LOG entry) |
 | ⚪ | Out of scope by design — see ADR reference; not worth implementing |
@@ -31,7 +31,7 @@ beyond the next release.
 ## Executive summary
 
 | Category | Total | ✅ | 🟡 | ⚪ | 🔧 | 🔵 |
-|----------|-------|----|----|----|-----|-----|
+| ---------- | ------- | ---- | ---- | ---- | ----- | ----- |
 | 1. Production & Real Validation | 4 | 0 | 3 | 0 | 1 | 0 |
 | 2. Agentic System & ML | 4 | 0 | 3 | 0 | 1 | 0 |
 | 3. Credibility & Releases | 3 | 0 | 1 | 0 | 2 | 0 |
@@ -42,7 +42,9 @@ beyond the next release.
 | 8. Strategic | 5 | 0 | 0 | 5 | 0 | 0 |
 | **Total** | **38** | **1** | **16** | **8** | **12** | **1** |
 
-**Update 2026-05-04 (afternoon)**: 12 of 12 🔧 items SHIPPED across 5 PRs (`feedback-PR-1` through `feedback-PR-5`). All ✅ in this revision are post-shipment status; the original triage column is preserved in commit history. See § "Closure summary" at the end of this document.
+**Update 2026-05-04 (afternoon)**: 12 of 12 🔧 items SHIPPED across 5 PRs (`feedback-PR-1` through `feedback-PR-5`). All
+✅ in this revision are post-shipment status; the original triage column is preserved in commit history. See § "Closure
+summary" at the end of this document.
 
 **The 12 🔧 items are the actionable shortlist.** They are clustered
 into ~5 PRs that each take < 1 day. Estimated total work: 3–4 days.
@@ -58,6 +60,7 @@ not a feedback-driven one.
 ## 1. Production & Real Validation
 
 ### 1.1 No L4 Evidence of Production 🟡
+
 - **Status**: disclosed by ADR-024 §"Review" and VALIDATION_LOG
   Entry 007/008 (both call out "L4 real-cluster execution" as the
   explicit `v1.0.0` gate).
@@ -70,6 +73,7 @@ not a feedback-driven one.
   v0.15.0 (HIGH-3/4/5).
 
 ### 1.2 Closed-loop ML Incomplete 🟡 → partial 🔧
+
 - **Status**: prediction logger (D-21/D-22), retrain quality gates
   (ADR-008 champion/challenger), and drift detection ship today.
   What is NOT documented is the **expected feedback-loop latency
@@ -83,6 +87,7 @@ not a feedback-driven one.
 - **Out of scope**: actually proving the SLA under load (= L4 gate).
 
 ### 1.3 Observability Not Validated Under Load 🟡
+
 - **Status**: same L4 gap. OpenTelemetry middleware (MED-6) is
   opt-in and shipped untested under load.
 - **Action**: NONE without a real cluster + load test framework.
@@ -92,6 +97,7 @@ not a feedback-driven one.
   warn-only fallback so adoption doesn't break startup.
 
 ### 1.4 Supply Chain Not Fully Executed 🔧
+
 - **Status**: cosign image signing, SBOM, model blob signing
   (HIGH-8), and Kyverno policies all exist as YAML. v0.15.1 added
   `model-verifier` init container so cosign verify-blob runs on
@@ -110,6 +116,7 @@ not a feedback-driven one.
 ## 2. Agentic System & ML
 
 ### 2.1 Memory Plane Not Implemented ⚪ disclosed via 🟡
+
 - **Status**: ADR-018 status line states **explicitly** "Phase 1
   (canonical contracts + redaction) — no storage, no retrieval".
   The May 2026 audit (HIGH-5) demoted Memory Plane from hero copy
@@ -120,13 +127,15 @@ not a feedback-driven one.
   ratified, etc.).
 
 ### 2.2 CI Self-healing Not Operational ⚪ disclosed via 🟡
-- **Status**: ADR-019 status line: **"Phase 1 (read-only classifier
-  + collector) — shadow mode, no writes"**. May 2026 audit (HIGH-5)
+
+- **Status**: ADR-019 status line: **"Phase 1 (read-only classifier +
+  collector) — shadow mode, no writes"**. May 2026 audit (HIGH-5)
   demoted from hero copy. CHANGELOG v0.15.0 explicitly lists this
   demotion.
 - **Action**: NONE for the same reason as 2.1.
 
 ### 2.3 Agentic System Without Production Runtime 🟡
+
 - **Status**: AUTO/CONSULT/STOP protocol is a **contract document**
   in AGENTS.md and ADR-005/010. It is enforced via the audit
   trail (`scripts/audit_record.py` + `risk_context.py`) on every
@@ -138,6 +147,7 @@ not a feedback-driven one.
   documents this.
 
 ### 2.4 Agentic Validation Is Structural Only, Not Behavioral 🔧
+
 - **Status**: today's tests validate file structure (rule frontmatter,
   workflow YAML, AGENTS.md cross-references). They do NOT exercise
   decision-making under simulated signals.
@@ -156,6 +166,7 @@ not a feedback-driven one.
 ## 3. Credibility & Releases
 
 ### 3.1 Zero GitHub Releases Published ✅ CLOSED in feedback-PR-1
+
 - **Reality after audit**: 11 of the v1.x tags WERE published as
   Releases; v0.13.0 and v0.14.0 also already had Releases. The
   perception gap was real for v0.15.0 and v0.15.1 only (no Release
@@ -171,6 +182,7 @@ not a feedback-driven one.
   v0.15.1 visible at github.com/DuqueOM/ML-MLOps-Production-Template/releases.
 
 ### 3.2 README Misaligned (Cache vs Current) ✅ → action 🔧
+
 - **Status**: the v0.15.0 commit DID update README. If GitHub still
   shows the old version, it is GitHub's CDN cache, not a real
   divergence. The "12 vs 32 anti-patterns" reference is to D-01
@@ -182,6 +194,7 @@ not a feedback-driven one.
   cache. **Documentation-only fix.**
 
 ### 3.3 Versioning Narratively Confusing 🟡
+
 - **Status**: disclosed in CHANGELOG header (v0.x line + v1.0.0
   reserved for L4 evidence) AND in `docs/RELEASING.md` AND in
   ADR-020. The "downgrade from v1.12 to v0.14" is intentional and
@@ -195,6 +208,7 @@ not a feedback-driven one.
 ## 4. Security & Compliance
 
 ### 4.1 No Formal Compliance Mapping 🔵 → 🔧
+
 - **Status**: ADR-001 explicitly defers SOC2/GDPR/HIPAA: "Compliance
   requires legal review, organizational policies, and audit
   infrastructure. Code templates can't substitute for compliance
@@ -210,6 +224,7 @@ not a feedback-driven one.
 - **Estimated effort**: 2–3 hours.
 
 ### 4.2 Historical Insecure GCP_SA_KEY 🟡
+
 - **Status**: was removed in earlier audit cycles (ADR-016 R2). Any
   early adopter who forked before v0.10 may have copied the bad
   pattern.
@@ -219,10 +234,12 @@ not a feedback-driven one.
   (`/secret-breach`). **Defensive transparency.**
 
 ### 4.3 Prometheus Without Prior TLS/Auth 🟡
+
 - **Status**: fixed v0.15.0 HIGH-9. Same disclosure case as 4.2.
 - **Action**: covered by 4.2's SECURITY.md addition.
 
 ### 4.4 Cosign Edge Case Without Access to Rekor 🔵
+
 - **Status**: real edge case. Today the verifier does keyless
   verification which requires Rekor + the OIDC issuer to be
   reachable. Air-gapped clusters or aggressive egress lockdown will
@@ -236,6 +253,7 @@ not a feedback-driven one.
   arch complexity until a real adopter requests it.
 
 ### 4.5 No Infracost in Terraform CI ⚪ disclosed via skill
+
 - **Status**: ADR-001 Engineering Calibration: this template ships
   `cost-audit` skill + `/cost-review` workflow, both consume
   cloud billing data manually. Infracost would add CI-time cost
@@ -250,6 +268,7 @@ not a feedback-driven one.
 ## 5. Testing & Quality
 
 ### 5.1 Insufficient Coverage in Core Modules 🔧
+
 - **Status**: `risk_context.py`, `secrets.py`, and
   `prediction_logger.py` have meaningful logic but lower test
   coverage than the rest of `common_utils/`. The HIGH-9 work in
@@ -264,6 +283,7 @@ not a feedback-driven one.
 - **Estimated effort**: 1 day total for all three.
 
 ### 5.2 Windows CI Absent ⚪ scope-deferred
+
 - **Status**: K8s pods run Linux. Docker images are Linux-amd64.
   Local dev on Windows works through WSL2 (devcontainer ships in
   `.devcontainer/`). Adding a Windows CI runner doubles CI cost
@@ -273,11 +293,13 @@ not a feedback-driven one.
   a supported target."
 
 ### 5.3 Performance / chaos / failure injection 🟡
+
 - **Status**: same L4 gap. `/load-test` workflow exists; chaos
   testing requires a cluster.
 - **Action**: NONE without L4.
 
 ### 5.4 DORA Metrics Without Dashboard 🔧
+
 - **Status**: DORA exporter ships data but no Grafana dashboard
   template references it.
 - **Action 🔧**: add `templates/monitoring/dashboards/dora.json`
@@ -291,6 +313,7 @@ not a feedback-driven one.
 ## 6. Infrastructure & Operations
 
 ### 6.1 common_utils Dual-source (Debt) 🔵 → 🔧 (write ADR first)
+
 - **Status**: lives in BOTH `templates/common_utils/` (template
   source of truth) AND in scaffolded services (rendered copy).
   Documented as known debt; no formal resolution.
@@ -303,6 +326,7 @@ not a feedback-driven one.
   varies (drift-check is shortest, ~1 day; PyPI is multi-week).
 
 ### 6.2 Argo Rollouts Hidden (OPT-IN Not Prominently Documented) 🔧
+
 - **Status**: `argo-rollout.yaml` is OPT-IN via base/kustomization
   comment header. Adopters who don't read kustomization comments
   miss it.
@@ -314,6 +338,7 @@ not a feedback-driven one.
 - **Estimated effort**: 1–2 hours.
 
 ### 6.3 Agentic Adapter Drift Between IDEs 🔧
+
 - **Status**: `make agentic-sync` regenerates `.cursor/`,
   `.claude/`, `.windsurf/` adapters from `.windsurf/rules/` source
   of truth. There is NO CI gate that fails if an adapter is stale.
@@ -324,6 +349,7 @@ not a feedback-driven one.
 - **Estimated effort**: 1 hour.
 
 ### 6.4 Grafana Dashboard Without Centralized Inventory 🔧
+
 - **Status**: dashboards exist scattered. No INDEX.
 - **Action 🔧**: add `templates/monitoring/dashboards/INDEX.md`
   with one row per shipped dashboard: name, source query
@@ -332,18 +358,21 @@ not a feedback-driven one.
 - **Estimated effort**: 1 hour.
 
 ### 6.5 Multi-cloud Design Not Operational 🟡
+
 - **Status**: same L4 gap. Both GKE and EKS overlays render +
   pass kustomize build, but neither has been deployed to a real
   cluster of that cloud.
 - **Action**: NONE without L4.
 
 ### 6.6 Incident SLAs Not Validated Under Load 🟡
+
 - **Status**: SLO PrometheusRule (CRIT-1) ships but has never been
   evaluated against real burn rate. ADR-006 §closed-loop documents
   the targets.
 - **Action**: NONE without L4.
 
 ### 6.7 PSI Thresholds Without Quantitative Justification 🟡
+
 - **Status**: ADR-022-psi-thresholds.md exists with the rationale
   (Western/Wilson reference, simulation evidence). The feedback
   may be that not every per-feature threshold is tuned.
@@ -352,6 +381,7 @@ not a feedback-driven one.
   ships sane defaults + the procedure to tune.
 
 ### 6.8 Model Catalog Not Reconciled With Providers 🟡
+
 - **Status**: documented limitation. Catalog is a local view; live
   MLflow / Vertex / SageMaker registry is the source of truth at
   the adopter site.
@@ -362,12 +392,14 @@ not a feedback-driven one.
 ## 7. Adoption & Developer Experience
 
 ### 7.1 Bus factor = 1 ✅
+
 - **Status**: disclosed v0.15.0 HIGH-2 in `.github/CODEOWNERS`,
   `deploy-gcp.yml`, `deploy-aws.yml`, README, and CHANGELOG.
 - **Action**: NONE — additional maintainers is an adoption
   outcome, not a code change.
 
 ### 7.2 No Clear Happy Path 🔧
+
 - **Status**: `examples/minimal/` exists but isn't surfaced as
   THE happy path. `QUICK_START.md` exists but mixes minimal +
   full template paths.
@@ -380,6 +412,7 @@ not a feedback-driven one.
 - **Estimated effort**: 2 hours.
 
 ### 7.3 Cognitive Density 🔵 → partial 🔧
+
 - **Status**: real. The template surfaces ML + K8s + Terraform +
   CI/CD + security + agentic system at once.
 - **Action 🔧** (partial): add `docs/PROGRESSION.md` — a single
@@ -392,12 +425,14 @@ not a feedback-driven one.
 - **Estimated effort**: 3 hours.
 
 ### 7.4 No Modern UX ⚪ scope-deferred
+
 - **Status**: ADR-001 explicitly scopes to CLI + YAML + scripts.
   May 2026 audit (HIGH-3) demoted "IDP" framing.
 - **Action**: NONE — building a UX would change what this template
   IS, not improve it. See category 8.
 
 ### 7.5 No Documented External Adoption 🟡
+
 - **Status**: fact. README is honest. Single contributor.
 - **Action**: NONE — encouraging adoption is outside the template's
   surface.
@@ -411,21 +446,25 @@ and ADR-015. Resolving any of them would CHANGE WHAT THIS TEMPLATE
 IS, not improve it. They are explicitly NOT in the actionable list.
 
 ### 8.1 No Cost History (FinOps) ⚪
+
 - **ADR**: ADR-001 Engineering Calibration. cost-audit skill ships;
   per-prediction cost is an adopter analysis, not a template artifact.
 
 ### 8.2 No Support for GPU Workloads ⚪
+
 - **ADR**: ADR-001 §LLM/GenAI deferral implicitly covers this.
   GPU = different node pool taints, different driver versions,
   different scaling math. A separate `LLM-MLOps-Template` is the
   correct vehicle.
 
 ### 8.3 No Integration With Vertex/SageMaker ⚪
+
 - **ADR**: ADR-001 §"What We Have Instead". Self-hosted MLflow on
   K8s is the deliberate choice. Vertex/SageMaker integration is a
   different productization roadmap (ADR-015 candidate, not v0.x).
 
 ### 8.4 IDP-like Without Declaring It ⚪ already corrected
+
 - **Status**: May 2026 audit (HIGH-3/4/5) explicitly demoted the
   "Production-ready by design" framing. README now reads
   "Designed-ready (L1+L2+L3) classical-ML template". Calling it
@@ -433,6 +472,7 @@ IS, not improve it. They are explicitly NOT in the actionable list.
 - **Action**: NONE — already corrected in v0.15.0.
 
 ### 8.5 Complexity vs Target Imbalance ⚪
+
 - **Status**: same as 8.4. The template targets ML engineers
   shipping their first 2–5 models on K8s. The "junior friendly"
   framing was implicit in older copy and is exactly what
@@ -446,6 +486,7 @@ IS, not improve it. They are explicitly NOT in the actionable list.
 The 12 🔧 items batch into 5 PRs. Estimates are conservative.
 
 ### PR 1 — External credibility hygiene (~1 day)
+
 - 3.1 Publish GitHub Releases for v0.14, v0.15.0, v0.15.1
 - 3.2 Verify README cache parity (force refresh if stale)
 - 6.4 Grafana dashboard INDEX.md
@@ -453,19 +494,23 @@ The 12 🔧 items batch into 5 PRs. Estimates are conservative.
 - Pairs naturally because all are documentation-surface fixes.
 
 ### PR 2 — Behavioral test coverage (~1 day)
+
 - 2.4 + 5.1 (overlap on `test_risk_context_behavior.py`)
 - 5.1 secrets resolver tests
 - 5.1 prediction_logger redaction tests
 
 ### PR 3 — Discoverability (~1 day)
+
 - 6.2 Argo Rollouts prominent README section + runbook
 - 7.2 Quick start dual track
 - 7.3 PROGRESSION.md
 
 ### PR 4 — Supply chain enforcement smoke (~½ day)
+
 - 1.4 kind-based Kyverno admission test in CI
 
 ### PR 5 — Disclosures + small docs (~½ day)
+
 - 1.2 closed-loop SLA runbook
 - 4.1 informal compliance crosswalk
 - 4.2 SECURITY.md historical disclosures section
@@ -473,6 +518,7 @@ The 12 🔧 items batch into 5 PRs. Estimates are conservative.
 - 6.1 ADR-025 common_utils distribution (DRAFT only)
 
 ### PR 6 (deferred to v0.16+) — common_utils distribution implementation
+
 - 6.1 implement chosen option from ADR-025
 - 4.4 cosign offline mode
 
@@ -508,7 +554,7 @@ All 12 🔧 items from the original triage SHIPPED in 5 PRs across
 a single working session.
 
 | PR | Items closed | Commit | Verification |
-|----|--------------|--------|--------------|
+| ---- | -------------- | -------- | -------------- |
 | feedback-PR-1 | 3.1, 5.4, 6.4 | `c589b02` | Releases visible at `/releases`; CI gate `dashboard-inventory` green |
 | feedback-PR-2 | 2.4, 5.1 (×3) | `7ee29d0` | 214 unit tests pass (was 112); +69 new tests; preexisting Prometheus-mock regression also fixed |
 | feedback-PR-3 | 6.2, 7.2, 7.3 | `3c8217f` | New `docs/PROGRESSION.md`, `docs/runbooks/progressive-delivery.md`; QUICK_START Track A/B; README "Optional: Progressive delivery" section |

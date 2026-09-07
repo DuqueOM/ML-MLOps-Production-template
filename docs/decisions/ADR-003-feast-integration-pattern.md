@@ -29,7 +29,7 @@ without modifying the core template.
 **Feast lives in a separate repository** (`<org>/feature-repo`). Services in this
 template consume Feast as a **client library**, not as embedded infrastructure.
 
-```
+```text
 ┌──────────────────────────────┐       ┌──────────────────────────────┐
 │  <org>/feature-repo          │       │  <org>/<service-name>        │
 │  (Feast feature repository)  │       │  (scaffolded from template)  │
@@ -56,7 +56,7 @@ template consume Feast as a **client library**, not as embedded infrastructure.
 ### Why separate repo, not a subdirectory
 
 | Concern | Subdirectory | Separate Repo |
-|---|---|---|
+| --- | --- | --- |
 | Release cadence | Coupled to service | Independent — features ship on their own cycle |
 | Access control | Whoever owns service owns features | Feature team has their own RBAC |
 | Reusability across services | Hard (cross-service imports) | Natural — multiple services are Feast clients |
@@ -121,6 +121,7 @@ runs**.
 For a service currently using local `features.py` to migrate to Feast:
 
 ### Phase 1 — External feature repo
+
 - [ ] Create `<org>/feature-repo` repository
 - [ ] `feast init` inside it; configure `feature_store.yaml` with offline
       (BigQuery/Snowflake/Parquet) and online (Redis/DynamoDB) stores
@@ -130,6 +131,7 @@ For a service currently using local `features.py` to migrate to Feast:
 - [ ] Run `feast materialize-incremental` for first backfill
 
 ### Phase 2 — Service client integration
+
 - [ ] Add `feast~=0.40` to `requirements.txt` (compatible release per invariant)
 - [ ] Add `FEAST_REPO_PATH` to `.env.example`
 - [ ] Update `training/features.py` to use `get_historical_features()`
@@ -139,12 +141,14 @@ For a service currently using local `features.py` to migrate to Feast:
 - [ ] Update `tests/` to mock `FeatureStore` (don't require Redis in unit tests)
 
 ### Phase 3 — Deployment
+
 - [ ] Add Feast online store connection string to Secret
 - [ ] Update `templates/k8s/overlays/*/` to mount the secret
 - [ ] Add Feast materialization CronJob (separate from drift CronJob)
 - [ ] Grafana dashboard: Feast retrieval latency (critical for P95 SLA)
 
 ### Phase 4 — Observability (critical — Feast adds a network hop)
+
 - [ ] Add `feast_retrieval_duration_seconds` Prometheus histogram
 - [ ] Alert: P95 retrieval latency > 50ms (online store should be fast)
 - [ ] Alert: Feast materialization failure (freshness SLO)

@@ -15,6 +15,7 @@ reconstruct **what** changed, **why**, and **under which authority**.
 ## 1. Collect the change surface
 
 // turbo
+
 ```bash
 git status --short && git diff --stat HEAD
 ```
@@ -22,7 +23,7 @@ git status --short && git diff --stat HEAD
 Classify every touched path:
 
 | Touched | Documentation obligation |
-|---|---|
+| --- | --- |
 | Behavior/contract code (`app/`, `common_utils/`, `scripts/`) | CHANGELOG entry (Added/Changed/Fixed) |
 | Anything under `agentic/`, adapters, manifests | CHANGELOG + surface-count cascade (step 3) + adapter sync |
 | CI workflows, gates, `.gitleaks.toml`, branch protection | CHANGELOG + note the gate semantics change explicitly |
@@ -56,6 +57,7 @@ If the change touched any fact restated across documents:
 - Agentic surface changed → regenerate adapters:
 
 // turbo
+
 ```bash
 python3 scripts/sync_agentic_adapters.py && python3 scripts/sync_agentic_adapters.py --check
 ```
@@ -63,6 +65,7 @@ python3 scripts/sync_agentic_adapters.py && python3 scripts/sync_agentic_adapter
 ## 4. Verify
 
 // turbo
+
 ```bash
 python3 scripts/check_doc_coherence.py
 ```
@@ -73,6 +76,7 @@ Exit 1 → fix per the cascade map in `/doc-coherence` (or load the
 ## 5. Record the audit-trail entry
 
 // turbo
+
 ```bash
 python3 scripts/audit_record.py \
   --agent Agent-DocUpdater \

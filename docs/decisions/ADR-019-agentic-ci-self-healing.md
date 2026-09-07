@@ -75,7 +75,7 @@ that enforces:
 ### Failure-class table (canonical)
 
 | Class | Mode | Examples | Allowed edits | Required verifier |
-|-------|------|----------|---------------|-------------------|
+| ------- | ------ | ---------- | --------------- | ------------------- |
 | `formatter_drift` | AUTO | black, isort, ruff format, whitespace | `*.py *.md *.yaml *.toml` | `lint-style` |
 | `docs_quality_minor` | AUTO | markdownlint, internal links, doc references | `docs/** README* CHANGELOG*` | `docs-quality` |
 | `syntax_config_minor` | AUTO | invalid YAML/TOML/JSON in non-prod CI | non-prod configs, tests, doc workflows | `yaml-parse` + `workflow-lint` |
@@ -110,7 +110,7 @@ that enforces:
 ### Phase plan
 
 | Phase | Title | Ships | Acceptance |
-|-------|-------|-------|------------|
+| ------- | ------- | ------- | ------------ |
 | 0 | Policy artifacts + contract test | this ADR + the two YAMLs + `test_ci_autofix_policy_contract.py` | contract test green |
 | 1 | Context collection + classification | `scripts/ci_collect_context.py`, `scripts/ci_classify_failure.py` | classifier-only mode (NO writes), 2 weeks of dry-run data |
 | 2 | Verifier helpers | `scripts/ci_verify_yaml.py`, `_workflows.py`, `_targeted.py` | verifiers callable from `make` and CI |

@@ -12,7 +12,7 @@
 The Terraform IaC gate in the `Self-audit` job ran **tfsec v1.28.14**, pinned
 because tfsec is archived. The workflow said so itself:
 
-```
+```text
 # tfsec archived; pinned to last working release (v1.28.14).
 # TODO: migrate to trivy config (tfsec successor) per ADR-TBD.
 ```
@@ -40,7 +40,7 @@ Run before deciding, on this repository, at the gate's own threshold
 (`HIGH,CRITICAL`), with tfsec v1.28.14 and Trivy 0.71.0:
 
 | Scanner | Suppressions removed | GCP | AWS |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | tfsec v1.28.14 | yes | **4** | 0 |
 | Trivy 0.71.0 `config` | yes | **1** | 0 |
 
@@ -48,7 +48,7 @@ The four tfsec findings are the three suppressed checks
 (`metadata-endpoints-disabled` fires twice, once per node pool). Under Trivy:
 
 | tfsec check | Under Trivy | Why |
-|---|---|---|
+| --- | --- | --- |
 | `google-gke-enforce-pod-security-policy` | **gone** | PSP was removed in Kubernetes 1.25; Trivy dropped the check. Suppressing it was compensating for a rule that should not have existed. |
 | `google-gke-metadata-endpoints-disabled` (×2) | **gone** | Trivy correlates `google_container_node_pool` resources to their cluster. tfsec only inspected `node_config` on the cluster, which this module does not have (`remove_default_node_pool = true`). |
 | `google-gke-enable-master-networks` | **survives** as `GCP-0061` | Neither tool evaluates `dynamic` blocks. `master_authorized_networks_config` is a `dynamic` block at `compute.tf:38`; the finding fires against the cluster at `compute.tf:10`. |

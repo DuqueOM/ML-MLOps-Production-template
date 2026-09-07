@@ -9,6 +9,7 @@ description: Rules for working in the examples directory — educational, simpli
 These are educational, simplified demonstrations — NOT the full production template.
 
 ## DO
+
 - Keep examples self-contained (no external dependencies beyond pip)
 - Use synthetic or public datasets only (never real/proprietary data)
 - Show the pattern with minimal boilerplate
@@ -17,6 +18,7 @@ These are educational, simplified demonstrations — NOT the full production tem
 - Demonstrate key invariants (async inference, SHAP, quality gates)
 
 ## DO NOT
+
 - Apply full Terraform/K8s complexity to examples
 - Require GCP/AWS credentials to run
 - Add production-scale monitoring (Prometheus metrics OK, AlertManager rules not needed)
@@ -24,5 +26,6 @@ These are educational, simplified demonstrations — NOT the full production tem
 - Require Docker to run the example
 
 ## Reminder
+
 The full production templates are in `templates/`, not here.
 Examples exist to prove the template works and to onboard new users quickly.

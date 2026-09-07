@@ -7,7 +7,7 @@ of the v1.0 roadmap for the consolidation history.
 
 ## Layout
 
-```
+```text
 data/
 ├── raw/                    # Untouched inputs (DVC-versioned)
 │   ├── latest.csv          # Current training snapshot
@@ -28,7 +28,7 @@ data/
 ## Producers and consumers
 
 | Path | Produced by | Consumed by |
-|------|-------------|-------------|
+| ------ | ------------- | ------------- |
 | `raw/latest.csv` | DVC pull / data engineering pipeline | `train.py --data data/raw/latest.csv`, `cli.py train --input data/raw/latest.csv` |
 | `raw/holdout.csv` | DVC pull | `champion_challenger.py --holdout data/raw/holdout.csv` |
 | `processed/*.parquet` | (optional) `make features` | training cache |
@@ -75,7 +75,7 @@ as a contract:
 ## Refresh cadence
 
 | Path | Refreshed | Triggered by |
-|------|-----------|--------------|
+| ------ | ----------- | -------------- |
 | `raw/latest.csv` | weekly | data engineering pipeline |
 | `reference/*.csv` | per model promotion | `make freeze-reference` (manual; documented in runbook) |
 | `production/latest.csv` | daily 02:00 UTC | `cronjob-export-production.yaml` (TODO: Phase 4) |

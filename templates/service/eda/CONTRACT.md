@@ -8,7 +8,7 @@ drift, and retrain via the loaders in
 ## The five artifacts
 
 | File | Format | Producer (phase) | Consumer | Loader |
-|------|--------|------------------|----------|--------|
+| ------ | -------- | ------------------ | ---------- | -------- |
 | `eda_summary.json` | JSON | `main()` (post-phase 6) | retrain (provenance) | `load_eda_summary` |
 | `schema_ranges.json` | JSON | phase 6 | training (Pandera synthesis), drift (range checks) | `load_schema_ranges` |
 | `baseline_distributions.parquet` | Parquet | phase 2 | drift CronJob (PSI) | `load_baseline_distributions` |

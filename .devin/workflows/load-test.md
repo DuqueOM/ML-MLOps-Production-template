@@ -7,6 +7,7 @@ description: Run Locust load tests against ML services to validate SLAs
 ## 1. Select Target
 
 Determine which service and environment to test:
+
 - Service: ${SERVICE}
 - Cloud: GCP / AWS / both
 - Users: start with 10, ramp to 100
@@ -64,7 +65,8 @@ locust -f tests/load_test.py \
 ## 5. Analyze Results
 
 Check SLA compliance:
-```
+
+```text
 - Error rate: must be < 1% under 100 concurrent users
 - P50 latency: must be < ${P50_SLA}ms
 - P95 latency: must be < ${P95_SLA}ms
@@ -74,7 +76,7 @@ Check SLA compliance:
 ## 6. Compare Clouds
 
 | Metric | GCP | AWS | SLA |
-|--------|-----|-----|-----|
+| -------- | ----- | ----- | ----- |
 | P50 (idle) | ___ms | ___ms | <${P50_SLA}ms |
 | P95 (idle) | ___ms | ___ms | <${P95_SLA}ms |
 | P50 (100u) | ___ms | ___ms | <${P50_LOAD_SLA}ms |
@@ -83,6 +85,7 @@ Check SLA compliance:
 ## 7. Document Results
 
 Update service README and relevant ADR with measured values, including:
+
 - Date of measurement
 - Instance types used
 - Number of replicas during test
@@ -91,6 +94,7 @@ Update service README and relevant ADR with measured values, including:
 ## 8. Action Items
 
 If SLA violated:
+
 - Check HPA scaling behavior
 - Review ThreadPoolExecutor worker count
 - Consider resource limit adjustments

@@ -70,7 +70,7 @@ Per the **Engineering Calibration Principle** (AGENTS.md), we weighed
 heavier alternatives and chose the minimum viable path:
 
 | Alternative | Rejected because |
-|---|---|
+| --- | --- |
 | Kafka + Bytewax streaming pipeline | Over-engineered for 1–5 model template; cognitive + ops burden out of scope |
 | ClickHouse / Druid as the log store | Mandates a new infra component; parquet on GCS/S3 covers 90% of target audience |
 | Evidently Monitoring service deployed cluster-wide | Multi-tenant ML ops product, not a per-service component; adds deploy surface |

@@ -85,20 +85,26 @@ export GITHUB_PERSONAL_ACCESS_TOKEN="github_pat_..."
 > before running bootstrap.
 
 1. Create `~/.secrets.env` (chmod 600):
+
    ```bash
    touch ~/.secrets.env
    chmod 600 ~/.secrets.env
    ```
+
 2. Add export lines per provider you use:
+
    ```bash
    # ~/.secrets.env
    export GITHUB_PERSONAL_ACCESS_TOKEN=""
    # export OTHER_API_KEY=""
    ```
+
 3. Source from shell rc file:
+
    ```bash
    echo '[ -f ~/.secrets.env ] && source ~/.secrets.env' >> ~/.zshrc
    ```
+
 4. Populate tokens by editing `~/.secrets.env` (keep chmod 600)
 5. `source ~/.secrets.env` in your current shell
 6. Restart your IDE / agent so the MCP subprocess inherits the env
@@ -131,7 +137,7 @@ echo "✅ clean (no output above means no literal credentials found)"
 ## Provider-specific tips
 
 | Provider | Token prefix | Recommended scope | Rotation cadence |
-|----------|--------------|-------------------|------------------|
+| ---------- | -------------- | ------------------- | ------------------ |
 | GitHub (fine-grained PAT) | `github_pat_` | `repo` + `read:org` (template default) | 90 days |
 | GitHub (classic PAT) | `ghp_` | Avoid classic PATs — use fine-grained | — |
 | Pinecone | `pcsk_` | Project-scoped | 180 days |
