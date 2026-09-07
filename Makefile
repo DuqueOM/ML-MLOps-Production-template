@@ -182,6 +182,7 @@ GATES := \
 	check_gitleaks_pin \
 	check_adopter_scaffold_ref \
 	check_service_adr_references \
+	check_template_render_safety \
 	check_test_clock_isolation \
 	validate_agentic
 
