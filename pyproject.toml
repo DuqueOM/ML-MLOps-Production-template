@@ -22,6 +22,28 @@ exclude_lines = [
     "if __name__ == .__main__.:",
 ]
 
+# Ratchet, not aspiration.
+#
+# CLAUDE.md promised ">= 90% lines, >= 80% branches" and nothing enforced it.
+# Measured on CI (2026-09-07), the scoped source is at **40%**, identically on
+# Python 3.11, 3.12 and 3.13 — a 50-point gap between the documented standard
+# and the code, invisible because no threshold existed.
+#
+# `fail_under` is set at the measured floor rather than at the target. A
+# threshold above reality fails every build and gets deleted within a week; a
+# threshold at reality stops the number sliding backwards and makes every
+# improvement permanent. Raise it as coverage rises — that is the point of a
+# ratchet.
+#
+# Two limits worth stating rather than leaving to be discovered:
+#   * The scope is three paths (examples/minimal, common_utils, app). The 26
+#     modules under scripts/ — including every gate this repo relies on — are
+#     not measured at all, so 40% is 40% OF A SUBSET.
+#   * Branch coverage is not enabled, so the "80% branches" half of the claim
+#     was never measurable. Enabling it will move the line number too, which
+#     is why it is a separate decision rather than a silent flip here.
+fail_under = 40
+
 # ── Ruff: lint + format, replacing black + isort + flake8 (ADR-044) ──────────
 #
 # One tool, one config, one exclude list. The three it replaces each carried

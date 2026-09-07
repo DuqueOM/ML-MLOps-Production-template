@@ -67,6 +67,28 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
   `SCAFFOLD_SMOKE` install step, where a collection error can only mean the
   scaffold is broken. CI sets `SCAFFOLD_SMOKE=1`, so CI gets the hard gate;
   the pre-install check stays an honestly-labelled warning.
+### Fixed — the coverage standard was documented at 90% and measured at 40%, enforced nowhere
+
+- `CLAUDE.md` promised *"Coverage: >= 90% lines, >= 80% branches"*. There was
+  **no `fail_under`** in `pyproject.toml`, no root `codecov.yml`, and no
+  `--cov-fail-under` in CI — the pipeline produced a coverage report and
+  never looked at the number.
+- Read from CI rather than estimated: the scoped source sits at **40%**,
+  identically on Python 3.11, 3.12 and 3.13. A **50-point gap** between the
+  documented standard and the code, invisible because nothing compared them.
+- `fail_under = 40` — a **ratchet at the measured floor, not the target**. A
+  threshold above reality fails every build and gets deleted within a week; a
+  threshold at reality stops the number sliding backwards and makes every
+  improvement permanent.
+- Two limits are stated in the config rather than left to be discovered:
+  - the measured scope is three paths, so the **26 modules under `scripts/` —
+    including every gate this repo relies on — are not measured at all**.
+    40% is 40% of a subset.
+  - **branch coverage is not enabled**, so the "80% branches" half of the
+    claim was never measurable. Enabling it moves the line number too, which
+    makes it a separate decision rather than a silent flip.
+- `CLAUDE.md` now states the enforced floor alongside the target, so the
+  headline quality metric says what is true and what is aimed at.
 
 ### Changed — the scaffolded service gets the same IaC bar, and the machinery to hold it
 
