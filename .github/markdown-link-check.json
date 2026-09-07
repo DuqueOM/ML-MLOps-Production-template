@@ -1,14 +1,35 @@
 {
   "ignorePatterns": [
-    { "pattern": "^http://localhost" },
-    { "pattern": "^https://localhost" },
-    { "pattern": "^http://127\\.0\\.0\\.1" },
-    { "pattern": "^https://your-dashboard" },
-    { "pattern": "\\{ServiceName\\}|\\{service\\}|\\{namespace\\}|\\{ORG\\}|\\{REPO\\}|\\{PROJECT_ID\\}|\\{REGION\\}|\\{ACCOUNT\\}|\\{REPO\\}|\\{ENV\\}|\\{VERSION\\}|\\{NAMESPACE\\}|\\{N\\}|\\{X\\}|\\{Y\\}|\\{date\\}|\\{service-name\\}|\\{slug\\}" },
-    { "pattern": "^https://github\\.com/\\{ORG\\}" },
-    { "pattern": "youtu\\.be/XXX" },
-    { "pattern": "example\\.com" },
-    { "pattern": "^https://ai\\.google\\.dev/" }
+    {
+      "pattern": "^http://localhost"
+    },
+    {
+      "pattern": "^https://localhost"
+    },
+    {
+      "pattern": "^http://127\\.0\\.0\\.1"
+    },
+    {
+      "pattern": "^https://your-dashboard"
+    },
+    {
+      "pattern": "\\{ServiceName\\}|\\{service\\}|\\{namespace\\}|\\{ORG\\}|\\{org\\}|\\{REPO\\}|\\{repo\\}|\\{PROJECT_ID\\}|\\{REGION\\}|\\{ACCOUNT\\}|\\{REPO\\}|\\{ENV\\}|\\{VERSION\\}|\\{NAMESPACE\\}|\\{N\\}|\\{X\\}|\\{Y\\}|\\{date\\}|\\{service-name\\}|\\{slug\\}"
+    },
+    {
+      "pattern": "^https://github\\.com/\\{ORG\\}"
+    },
+    {
+      "pattern": "youtu\\.be/XXX"
+    },
+    {
+      "pattern": "example\\.com"
+    },
+    {
+      "pattern": "^https://ai\\.google\\.dev/"
+    },
+    {
+      "pattern": "^https://github\\.com/\\{org\\}"
+    }
   ],
   "replacementPatterns": [
     {
@@ -18,7 +39,10 @@
   ],
   "httpHeaders": [
     {
-      "urls": ["https://github.com/", "https://raw.githubusercontent.com/"],
+      "urls": [
+        "https://github.com/",
+        "https://raw.githubusercontent.com/"
+      ],
       "headers": {
         "Accept": "text/html"
       }
@@ -28,5 +52,12 @@
   "retryOn429": true,
   "retryCount": 3,
   "fallbackRetryDelay": "5s",
-  "aliveStatusCodes": [200, 206, 301, 302, 308, 999]
+  "aliveStatusCodes": [
+    200,
+    206,
+    301,
+    302,
+    308,
+    999
+  ]
 }

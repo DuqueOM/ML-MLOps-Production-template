@@ -15,6 +15,26 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
 
 ## [Unreleased]
 
+### Fixed — three generators emitted Markdown their own lint rejects, and two pre-existing dead-link classes
+
+- `sync_agentic_adapters.py`, `generate_adr_index.py` and `mcp_doctor.py`
+  wrote unpadded table separators and stray double blank lines. Left alone the
+  gates deadlock: regenerate to satisfy the index/registry contract, break the
+  docs gate; fix the file by hand, break the contract. All three now emit
+  lint-clean Markdown, and their contract tests still pass (11/11 for
+  `test_mcp_registry_contract.py`).
+- `docs/audit/AUDIT_R8_STAFF_LEAD.md` carried **9 `file:///home/<user>/…`
+  links** — dead for every reader, and a local path published in a public
+  repository. Now plain code spans.
+- The Link Check ignore list matched `{ORG}` and `{REPO}` but **not `{org}`
+  and `{repo}`**, so the service README template's CI badge — placeholders an
+  adopter substitutes — was fetched and 404'd. Same defect class as an id
+  pattern that only matched uppercase.
+- Neither dead-link class was new. `check-modified-files-only` means Link
+  Check only ever sees files a PR touches, so both had been invisible for as
+  long as those files sat unmodified. Reformatting brought them into scope
+  for the first time.
+
 ### Fixed — the Markdown gate reported 8,584 findings and blocked nothing
 
 - `Markdown Lint (style)` shipped with `continue-on-error: true` and the

@@ -215,7 +215,11 @@ def _render_docs(registry: dict, surfaces: dict, manifest: dict) -> str:
     buf.append("## Registered MCPs")
     buf.append("")
     buf.append("| MCP | Purpose | Risk | Required for |")
-    buf.append("|-----|---------|------|--------------|")
+    # Padded separators: the emitted Markdown has to satisfy
+    # `.markdownlint-cli2.jsonc` (MD060 `compact`), or this renderer and
+    # the docs lint deadlock — regenerating fixes one gate and breaks the
+    # other.
+    buf.append("| ----- | --------- | ------ | -------------- |")
     for mcp_id, spec in (registry.get("mcps") or {}).items():
         required = ", ".join(f"`{r}`" for r in (spec.get("required_for") or [])) or "—"
         buf.append(
@@ -226,7 +230,7 @@ def _render_docs(registry: dict, surfaces: dict, manifest: dict) -> str:
     buf.append("")
     surfs = sorted((surfaces.get("surfaces") or {}).keys())
     buf.append("| MCP | " + " | ".join(surfs) + " |")
-    buf.append("|-----|" + "|".join("---" for _ in surfs) + "|")
+    buf.append("| ----- | " + " | ".join("---" for _ in surfs) + " |")
     for mcp_id, spec in (registry.get("mcps") or {}).items():
         im = spec.get("install_mode") or {}
         cells = [str(im.get(s, "—")) for s in surfs]
@@ -283,7 +287,10 @@ def main() -> int:
         else:
             DOCS_FILE.parent.mkdir(parents=True, exist_ok=True)
             prelude = ""
-        DOCS_FILE.write_text(prelude + docs_body + "\n", encoding="utf-8")
+        # `_render_docs` already ends with a blank line, so appending a
+        # newline produced two in a row (MD012). Normalise to exactly
+        # one trailing newline.
+        DOCS_FILE.write_text(prelude + docs_body.rstrip("\n") + "\n", encoding="utf-8")
         print(f"wrote {DOCS_FILE.relative_to(REPO_ROOT)}")
         return 0
 

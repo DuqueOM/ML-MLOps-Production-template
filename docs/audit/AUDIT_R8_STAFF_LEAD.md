@@ -291,7 +291,7 @@ competitiveness gap is not one of features but of **social proof**
   modules, no file > 500 LOC, and a new use case = ~130 LOC in a thin
   folder (`usecases/tienda/tools.py` 121 + YAMLs). The promise of
   ADR-001 ("new domain = folder, never fork") is measurable and holds.
-- `ExecutiveController` ([controller.py:100-195](file:///home/duqueom/projects/agent-local/core/controller.py))
+- `ExecutiveController` (`controller.py:100-195`)
   with admit/execute/release is a genuinely thin facade: routing +
   budget in admit; an adaptive loop with a **deadline checked before
   each optional station** and a latency budget propagated as a
@@ -317,7 +317,7 @@ by graph (the `transitive_loop_depth` values of 3-5 are all tests or
 
 **Findings** (full detail in §6):
 
-- **R8-01 (HIGH)** — [app/main.py:78-108](file:///home/duqueom/projects/agent-local/app/main.py):
+- **R8-01 (HIGH)** — `app/main.py:78-108`:
   `async def dev_message(...)` runs `AGENT.handle(...)` — a synchronous
   chain of N HTTP calls to llama-server (plan→tools→reflect→generate→
   critic, wall-clock seconds) — **directly on the event loop**. Every
@@ -330,12 +330,12 @@ by graph (the `transitive_loop_depth` values of 3-5 are all tests or
   threadpool) or use `run_in_executor`. And — a lesson from the
   template — **pair it with a contract test** that prevents
   reintroduction.
-- **R8-02 (MEDIUM)** — [app/main.py:108](file:///home/duqueom/projects/agent-local/app/main.py):
+- **R8-02 (MEDIUM)** — `app/main.py:108`:
   `raise HTTPException(status_code=500, detail=str(e))` leaks the
   internal exception message to the client. The template has a
   dedicated test against exactly this
   (`test_predict_error_does_not_leak_exception_message`).
-- **R8-03 (MEDIUM)** — [core/controller.py:353-366](file:///home/duqueom/projects/agent-local/core/controller.py):
+- **R8-03 (MEDIUM)** — `core/controller.py:353-366`:
   `reflect()` calls the tier (`max_tokens=128`), **discards the return
   value**, and only increments `reflections_made`. The reflection does
   not feed into `generate()` (which only reads `observations`) and is
@@ -345,12 +345,12 @@ by graph (the `transitive_loop_depth` values of 3-5 are all tests or
   observation / generator context) or removed — the current state is
   the worst of both worlds.
 - **R8-04 (MEDIUM)** — triple version drift: `pyproject.toml:7` says
-  `0.2.0`, [app/main.py:34](file:///home/duqueom/projects/agent-local/app/main.py)
+  `0.2.0`, `app/main.py:34`
   and `:62` hardcode `"0.2.0"`, while CHANGELOG and commits are at
   **v0.4.0**. This is exactly the class of drift that motivated the
   template's rule-16 gate (whose R7 audit found `llms.txt` frozen at an
   earlier era). agent-local has no gate to catch it.
-- **R8-09 (LOW)** — [app/main.py:111-122](file:///home/duqueom/projects/agent-local/app/main.py):
+- **R8-09 (LOW)** — `app/main.py:111-122`:
   the webhook stub documents "returns 501" but responds with **200**
   and body `not_implemented` — a real WhatsApp client would interpret
   this as successful delivery. It should be
@@ -359,7 +359,7 @@ by graph (the `transitive_loop_depth` values of 3-5 are all tests or
   English in `core/` — a convention inconsistency (the template is
   English-first).
 - **R8-10 (INFO)** — `Verdict.escalate_to_tier=3`
-  ([policy.py:106](file:///home/duqueom/projects/agent-local/core/policy.py))
+  (`policy.py:106`)
   is not consumed by anything: `release()` goes straight to
   safe_fallback. A dead contract field — either document it as reserved
   or wire it in.
@@ -410,7 +410,7 @@ by graph (the `transitive_loop_depth` values of 3-5 are all tests or
 
 ### 4.6 Telemetry / observability — 9.0
 
-[telemetry.py](file:///home/duqueom/projects/agent-local/core/telemetry.py)
+`telemetry.py`
 is the best file in the repo: a Pydantic contract validated before
 writing, **PII redaction at write time, never after**, conservative
 patterns with `_SAFE_KEYS` so trace_ids/timestamps are never corrupted
@@ -439,7 +439,7 @@ emit this much.
   (`usecases/tienda/evals/sets/`), timestamped JSON reports, and an F0.3
   gate historically at 20/20 — this is already more than most agent
   repos have.
-- **R8-07 (LOW)** — [evals/run.py](file:///home/duqueom/projects/agent-local/evals/run.py):
+- **R8-07 (LOW)** — `evals/run.py`:
   the gate is **hardcoded as an absolute `correct_intent >= 18`**
   (line 136) — with a 40-case set, 45% accuracy would "pass the gate";
   it should be a ratio (`>= 0.90`). Also `datetime.utcnow()` (deprecated
