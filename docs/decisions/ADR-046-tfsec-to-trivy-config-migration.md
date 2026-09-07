@@ -161,10 +161,19 @@ by a second number, so misconfiguration ids (`GCP-0061`) matched nothing.
   LOW stays out: 8 findings whose triage has not been done. An unenforced
   threshold is honest about that in a way a suppressed finding is not.
 
-  The scaffolded service's `ci-infra.yml` stays at `CRITICAL,HIGH`. The higher
-  bar here is affordable because this repo has `.security-baselines/` and an
-  expiry gate; a generated service has neither, and a MEDIUM gate with no way
-  to record an accepted finding trains adopters to delete the step.
+  The scaffolded service's `ci-infra.yml` stayed at `CRITICAL,HIGH` at the
+  time, because this repo had `.security-baselines/` and an expiry gate and a
+  generated service had neither — a stricter gate with nowhere to record an
+  acceptance gets deleted rather than obeyed.
+
+  **Closed 2026-09-07.** That was a fixable gap, not a reason. The service
+  now ships `.security-baselines/` and a vendored
+  `scripts/check_baselines_expiry.py` (byte-identical, enforced by
+  `check_vendored_runtime_drift.py`), and its gate runs at
+  `CRITICAL,HIGH,MEDIUM,LOW` — the same bar as this repo. A template that
+  holds itself to more than it prescribes is a milder version of the
+  credibility problem the `Self-audit` job exists to avoid, but it is the
+  same problem.
 
 ## Alternatives considered
 

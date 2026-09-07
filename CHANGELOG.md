@@ -10,6 +10,35 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
 
 ## [Unreleased]
 
+### Changed — the scaffolded service gets the same IaC bar, and the machinery to hold it
+
+- The service's gate ran at `CRITICAL,HIGH` while this repo ran at
+  `CRITICAL,HIGH,MEDIUM,LOW`. The stated reason was that a service had
+  nowhere to record an accepted finding, so a stricter gate would be deleted
+  rather than obeyed. **That was a fixable gap, not a reason.**
+- A scaffolded service now ships `.security-baselines/` and a vendored
+  `scripts/check_baselines_expiry.py` — byte-identical to this repo's,
+  enforced by `check_vendored_runtime_drift.py` so the two cannot diverge.
+  Its `REPO_ROOT` resolves to the service root in both layouts, so the same
+  file works unchanged in either.
+- The service gate now runs at `CRITICAL,HIGH,MEDIUM,LOW` with the expiry
+  check as its own CI step. **A baseline is only a control if its entries
+  expire**; without that the ignore file is an ordinary suppression list that
+  grows and never shrinks.
+- Its baseline is seeded with the three log-sink acceptances the template's
+  own modules carry, and says so — *"if you replace or remove those
+  resources, remove the entries with them; a baseline that outlives its
+  subject is a suppression nobody remembers making"*.
+- The service `README` for that directory carries the two lessons this
+  repository paid for: try to fix it first (**10 of 13 sub-threshold findings
+  upstream were real defects**), and **verify the compensating control
+  exists in the file you named** — a justification citing a control nobody
+  built is worse than none, because it stops the next reviewer from looking.
+- ADR-046 records the asymmetry as closed rather than deleting the paragraph
+  that justified it. A template holding itself to more than it prescribes is
+  a milder version of the credibility problem the `Self-audit` job exists to
+  avoid, but it is the same problem.
+
 ### Added — control invariants are asserted now, not asserted about
 
 - Three times in one review cycle a **comment claimed a control that was not

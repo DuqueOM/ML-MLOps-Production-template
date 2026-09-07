@@ -1,0 +1,60 @@
+# Trivy config (Terraform IaC) baseline — this service.
+#
+# Seeded from the upstream template. The entries below are the findings the
+# template's own modules carry; if you replace or remove those resources,
+# remove the entries with them — a baseline that outlives its subject is a
+# suppression nobody remembers making.
+#
+# Contract: explicit, dated and reviewable. Each entry carries
+# `# expiry: YYYY-MM-DD` on the line above it or inline, and CI fails once
+# past that date. Do NOT use trivy's own `expiredAt:` field — 0.71.0 accepts
+# it and does not honour it (measured; see ADR-046).
+#
+# The gate runs at --severity CRITICAL,HIGH,MEDIUM,LOW (see .github/workflows/ci-infra.yml).
+#
+# KNOWN LIMITATION, stated rather than hidden: the plain ignore format
+# suppresses a check id REPO-WIDE, not per resource. Every entry below is
+# justified for LOG-SINK buckets only, and a suppression of that shape would
+# also silence the same finding on a bucket that is not a log sink. The
+# compensating discipline is the review question attached to each entry —
+# verify WHICH buckets the check currently fires on, not just that the
+# justification still reads well. Trivy's YAML format supports `paths:`
+# scoping and would be tighter; it is not used because its sibling field
+# `expiredAt:` is silently ignored, and one parser over one format is worth
+# more here than per-path precision on a four-entry file.
+
+# --- Access-log sinks: object versioning ------------------------------------
+#
+# Fires on the GCP access-logs bucket, the AWS access-logs bucket, and the
+# AWS bootstrap tfstate access-log bucket. All three are append-only,
+# write-once, never mutated in place, and bounded by a lifecycle rule.
+# Versioning protects against overwrite and modification of EXISTING objects
+# — not a failure mode for an append-only sink — and multiplies storage cost
+# on the highest-volume buckets in the project.
+#
+# Accepted risk, not a tool limitation: the check is correct in general and
+# does not apply to this object lifecycle. The buckets holding state, models
+# and MLflow artifacts DO have versioning, and that is where it matters.
+#
+# Review question: are all three still access-log-only? If any starts holding
+# something mutable, this acceptance is void.
+# expiry: 2027-03-05  reason: upstream ADR-046 — append-only log sinks, versioning is not a control here
+GCP-0078
+# expiry: 2027-03-05  reason: upstream ADR-046 — append-only log sinks, versioning is not a control here
+AWS-0090
+
+# --- Access-log sinks: logging the log bucket -------------------------------
+#
+# Fires on the AWS bootstrap tfstate access-log bucket, which does not log its
+# own access. Enabling that requires a third bucket, which would then require
+# a fourth: the regress has no fixed point, and AWS rejects self-logging.
+#
+# The bucket it protects — the Terraform state bucket — IS logged, which was
+# the point of adding it (2026-09-05 LOW triage). Note that adding it to close
+# one LOW finding introduced three new ones, one of them HIGH; two were fixed
+# (CMK encryption, public-access block) and this is the residue.
+#
+# Review question: is the STATE bucket still logged? That is the control this
+# entry must not be allowed to hide.
+# expiry: 2027-03-05  reason: upstream ADR-046 — log-sink self-logging has no fixed point; the bucket it protects is logged
+AWS-0089

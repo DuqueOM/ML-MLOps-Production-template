@@ -46,17 +46,28 @@ jobs:
         with:
           scan-type: config
           scan-ref: infra/terraform/${{ matrix.cloud }}
-          # Deliberately CRITICAL,HIGH while the template repo's own gate runs
-          # at MEDIUM. The higher bar there is affordable because that repo has
-          # `.security-baselines/` plus an expiry gate, so an accepted finding
-          # can be recorded, dated and reviewed. A generated service gets no
-          # such machinery, and a MEDIUM gate with no way to accept anything
-          # trains adopters to delete the step — which costs more than the two
-          # findings it would catch. Raise it once you have somewhere to write
-          # down what you accept and why.
-          severity: CRITICAL,HIGH
+          # Every severity, same as the upstream template.
+          #
+          # This ran at CRITICAL,HIGH until 2026-09-07, on the argument that a
+          # service had nowhere to record an accepted finding, so a stricter
+          # gate would just get deleted. True — and a fixable gap rather than
+          # a reason, so it was fixed: `.security-baselines/` and
+          # `scripts/check_baselines_expiry.py` now ship with the service.
+          #
+          # Worth knowing before you lower it: upstream, 10 of the 13 findings
+          # that sat below a severity threshold turned out to be real defects,
+          # including a GKE node pool running as the default Compute Engine
+          # service account. "Below the threshold" predicted nothing.
+          severity: CRITICAL,HIGH,MEDIUM,LOW
           exit-code: "1"
+          trivyignores: .security-baselines/trivy-config.trivyignore
           format: table
+
+      # The baseline is only a control if its entries expire. Without this the
+      # ignore file is an ordinary suppression list that grows and never
+      # shrinks.
+      - name: Security baseline expiry
+        run: python3 scripts/check_baselines_expiry.py
 
       - name: Checkov
         # Pinned to immutable tag (D-19, ADR-014 §1.1). Dependabot updates
