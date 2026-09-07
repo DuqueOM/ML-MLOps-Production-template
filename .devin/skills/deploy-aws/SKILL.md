@@ -31,17 +31,19 @@ authorization_mode:
 This skill enforces the Agent Behavior Protocol (AGENTS.md).
 
 | Env | Mode | What the agent does |
-|-----|------|---------------------|
+| ----- | ------ | --------------------- |
 | `dev` | AUTO | Execute all steps |
 | `staging` | CONSULT | Show diff + image tag + namespace, wait for approval before `kubectl apply` |
 | `prod` | **STOP** | Never apply directly. Require merge to `main` + GitHub Environment `production` approval |
 
 On `prod` invocation, emit:
-```
+
+```text
 [AGENT MODE: STOP]
 Operation: Direct kubectl apply to EKS production
 Reason: Prod deploys flow through GitHub Actions with required_reviewers (ADR-002)
 ```
+
 and halt.
 
 ## Pre-Flight Checklist
@@ -78,6 +80,7 @@ kubectl config current-context
 ```
 
 Switch context:
+
 ```bash
 aws eks update-kubeconfig --name {CLUSTER} --region {REGION}
 ```
@@ -154,6 +157,7 @@ kubectl exec -it {pod} -n {namespace} -- aws s3 ls s3://{model-bucket}/
 ## IRSA Troubleshooting
 
 If S3 access fails:
+
 1. Verify OIDC provider: `aws eks describe-cluster --name {CLUSTER} --query "cluster.identity.oidc"`
 2. Verify trust policy on the IAM role allows the service account
 3. Verify the role has S3 read permissions on the model bucket

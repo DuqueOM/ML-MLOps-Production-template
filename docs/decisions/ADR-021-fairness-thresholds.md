@@ -3,7 +3,8 @@
 - **Status**: Accepted
 - **Date**: 2026-04-29
 - **Supersedes**: none (formalizes the previously implicit DIR ≥ 0.80 used in `AGENTS.md`)
-- **Related**: ADR-002 (model promotion governance), ADR-008 (champion/challenger), ADR-020 (R4 audit remediation §S2-3), AGENTS.md §"Model Quality Invariants"
+- **Related**: ADR-002 (model promotion governance), ADR-008 (champion/challenger), ADR-020 (R4 audit remediation
+  §S2-3), AGENTS.md §"Model Quality Invariants"
 - **Authors**: Staff/Lead, AI staff engineer
 
 ## Context
@@ -18,7 +19,7 @@ not be a literal pulled from generic guidance.
 
 The DIR is defined as:
 
-```
+```text
 DIR(group_A, group_B) = P(positive outcome | group_A) / P(positive outcome | group_B)
 ```
 
@@ -43,7 +44,7 @@ service-level service.yaml entries**.
    service may override via a service-level ADR addendum:
 
    | Domain | DIR floor | Rationale |
-   |---|---|---|
+   | --- | --- | --- |
    | Credit / lending | ≥ 0.85 | ECOA + Reg B; FFIEC examiner expectations on adverse-action consistency |
    | Employment / hiring | ≥ 0.80 (with documented BFOQ exceptions) | Title VII + EEOC four-fifths rule |
    | Healthcare allocation | ≥ 0.90 | Institutional review + ACA §1557 |

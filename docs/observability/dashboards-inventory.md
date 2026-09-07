@@ -23,7 +23,7 @@ a file that no longer exists.
 ## Dashboards shipped
 
 | File | Title | Primary use | Tags |
-|------|-------|-------------|------|
+| ------ | ------- | ------------- | ------ |
 | [`dashboard-template.json`](../../templates/service/monitoring/grafana/dashboard-template.json) | `{ServiceName} — ML Service Dashboard` | Day-to-day operations view: request rate, error rate, latency, drift, capacity. This is the first dashboard to open when a P1/P2 alert fires. | `ml-service`, `{service}` |
 | [`dashboard-closed-loop.json`](../../templates/service/monitoring/grafana/dashboard-closed-loop.json) | `{ServiceName} — Closed-Loop & SLO Dashboard` | Long-horizon health: SLO burn, champion/challenger, sliced AUC, prediction-logger error rate, PSI heatmap. Reviewed in the monthly performance review (see `/performance-review`). | `ml-service`, `{service}`, `closed-loop`, `slo` |
 | [`dashboard-dora.json`](../../templates/service/monitoring/grafana/dashboard-dora.json) | `{ServiceName} — DORA Metrics` | Delivery-performance view: deployment frequency, lead time for changes, change failure rate, MTTR, deploys vs rollbacks. Reviewed in retros and the monthly cost/performance reviews. | `dora`, `delivery`, `{service}` |
@@ -37,7 +37,7 @@ a file that no longer exists.
 Eleven panels, ordered top-to-bottom as they render:
 
 | # | Type | Title | Purpose |
-|---|------|-------|---------|
+| --- | ------ | ------- | --------- |
 | 1 | `timeseries` | Request Rate | Per-replica + aggregate `{service}_requests_total` rate. |
 | 2 | `timeseries` | Error Rate (%) | Ratio of 5xx responses over total; ties to the P1 error-rate alert. |
 | 3 | `timeseries` | Prediction Latency (Percentiles) | P50 / P95 / P99 of `{service}_request_duration_seconds`; ties to P2 latency alert. |
@@ -52,7 +52,9 @@ Eleven panels, ordered top-to-bottom as they render:
 
 **Prometheus dependencies**:
 
-- Service metrics: `{service}_requests_total`, `{service}_request_duration_seconds_bucket`, `{service}_prediction_score`, `{service}_psi_score`, `{service}_inference_in_flight`, `{service}_inference_executor_capacity`.
+- Service metrics: `{service}_requests_total`, `{service}_request_duration_seconds_bucket`,
+  `{service}_prediction_score`, `{service}_psi_score`, `{service}_inference_in_flight`,
+  `{service}_inference_executor_capacity`.
 - Kubernetes metrics: `container_cpu_usage_seconds_total`, `container_memory_working_set_bytes`, `kube_horizontalpodautoscaler_status_current_replicas`.
 
 ---
@@ -63,7 +65,7 @@ Ten panels covering the slower feedback loop. Consumed by the
 `/performance-review` workflow and the drift incident playbook.
 
 | # | Type | Title | Purpose |
-|---|------|-------|---------|
+| --- | ------ | ------- | --------- |
 | 1 | `stat` | SLO — Availability (30-day) | 30-day rolling SLO; displays against target (default 99.5%). |
 | 2 | `timeseries` | SLO Error Budget Burn (14d) | 14-day error budget burn; ties to the dynamic risk signal `error_budget_exhausted` (ADR-010). |
 | 3 | `timeseries` | Global AUC (per model_version) | Ground-truth-backed performance over time, stratified by version. |
@@ -78,7 +80,8 @@ Ten panels covering the slower feedback loop. Consumed by the
 **Prometheus dependencies**:
 
 - Recording rules: `slo:availability:ratio_30d`, `slo:error_budget:burn_14d`.
-- Service metrics: `{service}_auc_global`, `{service}_auc_slice`, `{service}_prediction_score`, `{service}_psi_score`, `{service}_prediction_logger_errors_total`, `{service}_input_quality_flags_total`.
+- Service metrics: `{service}_auc_global`, `{service}_auc_slice`, `{service}_prediction_score`, `{service}_psi_score`,
+  `{service}_prediction_logger_errors_total`, `{service}_input_quality_flags_total`.
 - Heartbeat: `performance_monitor_last_run_timestamp`.
 
 ---
@@ -88,7 +91,7 @@ Ten panels covering the slower feedback loop. Consumed by the
 Five panels measuring delivery performance (DORA four keys + trend):
 
 | # | Type | Title | Purpose |
-|---|------|-------|---------|
+| --- | ------ | ------- | --------- |
 | 1 | `stat` | Deployment Frequency (per week) | How often the service ships to production; derived from deploy audit events. |
 | 2 | `stat` | Lead Time for Changes (hours, p50) | Median time from commit to production rollout. |
 | 3 | `stat` | Change Failure Rate (%) | Share of deploys that triggered a rollback or incident. |
@@ -105,7 +108,7 @@ including which ones are proxies computed from data the template
 already collects versus what an adopter must customize:
 
 | # | Type | Title | Purpose |
-|---|------|-------|---------|
+| --- | ------ | ------- | --------- |
 | 1 | `timeseries` | Request Volume (daily) | `{service}_requests_total` increase per day — the closest generic proxy for "usage" without knowing the adopter's actual business unit. |
 | 2 | `gauge` | SLA Compliance (30d) | Reuses the `{service}:sli:availability` recording rule already computed for the SLO burn-rate alerts — no new metric, just a longer window and a business-legible unit (%). |
 | 3 | `stat` | Monthly Cloud Cost vs. Budget | `{service}_monthly_cloud_cost_usd`, pushed by the `cost-audit` skill's Pushgateway step. The yellow/red thresholds are a manual, adopter-set value (not auto-synced to `company_context.monthly_budget_usd` — see the caveat in `business-kpis.md`). |
@@ -114,7 +117,8 @@ already collects versus what an adopter must customize:
 
 **Prometheus dependencies**:
 
-- Service metrics: `{service}_requests_total`, `{service}_predictions_total`, `{service}_monthly_cloud_cost_usd` (new — see below).
+- Service metrics: `{service}_requests_total`, `{service}_predictions_total`, `{service}_monthly_cloud_cost_usd` (new —
+  see below).
 - Recording rules: `{service}:sli:availability` (from `slo-prometheusrule.yaml`).
 
 **What this dashboard deliberately does NOT do**: render the adopter's
@@ -133,7 +137,7 @@ Four panels — Edge station of the monitoring-stations audit
 `edge-audit` skill's Step 4b Pushgateway push (ADR-042, D-38):
 
 | # | Type | Title | Purpose |
-|---|------|-------|---------|
+| --- | ------ | ------- | --------- |
 | 1 | `stat` | Edge Protection Coverage | `edge_protection_enabled{overlay}` — 1 if the last audit found a valid, correctly-wired edge component; 0 if not. Ties to the `EdgeProtectionMissing` alert. |
 | 2 | `stat` | Last Audit Age | `time() - edge_protection_last_audit_timestamp{overlay}` — staleness of the coverage verdict above. Ties to the `EdgeAuditHeartbeatMissing` alert. |
 | 3 | `timeseries` | Requests Reaching Origin | `{service}_requests_total` rate — same series `dashboard-template.json` panel 1 shows, re-surfaced here as "traffic that made it past the edge layer." |
@@ -159,7 +163,7 @@ contract (an edge component correctly wired in) currently holds.
 ## How dashboards are used operationally
 
 | Incident class | Open first | Then |
-|----------------|-----------|------|
+| ---------------- | ----------- | ------ |
 | P1 service-down, error-rate, pod-restart | `dashboard-template.json` → panels 1, 2, 8–10 | Cross-check `dashboard-closed-loop.json` panel 7 (prediction logger) for async-side errors |
 | P2 latency | `dashboard-template.json` → panel 3 | Prometheus query builder for per-endpoint breakdown |
 | P2 drift-heartbeat-missing | `dashboard-closed-loop.json` → panels 9, 10 | `kubectl describe cronjob` |
@@ -173,9 +177,11 @@ contract (an edge component correctly wired in) currently holds.
 
 1. Place the JSON under `templates/service/monitoring/grafana/`.
 2. Append a row to the "Dashboards shipped" table above (file, title, purpose, tags).
-3. Add a per-dashboard "panels" subsection documenting each panel's type, title, and purpose. Keep it terse — the canonical source is the JSON.
+3. Add a per-dashboard "panels" subsection documenting each panel's type, title, and purpose. Keep it terse — the
+   canonical source is the JSON.
 4. Run `python -m pytest templates/service/tests/test_dashboards_inventory.py` to confirm the contract test still passes.
-5. Open a PR. The PR evidence policy (ADR-020 §S1-2) applies because the dashboard file lives in the allow-listed `templates/service/monitoring/` surface.
+5. Open a PR. The PR evidence policy (ADR-020 §S1-2) applies because the dashboard file lives in the allow-listed
+   `templates/service/monitoring/` surface.
 
 ---
 

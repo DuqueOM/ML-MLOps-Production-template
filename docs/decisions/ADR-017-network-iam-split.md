@@ -77,7 +77,7 @@ variable "network_mode" {
 Create 5 separate identities per environment, each with minimal permissions:
 
 | Identity | GCP Resource | AWS Resource | Purpose | Permissions |
-|----------|--------------|--------------|---------|-------------|
+| ---------- | -------------- | -------------- | --------- | ------------- |
 | **CI** | `google_service_account.ci` | `aws_iam_role.ci` (OIDC) | Terraform plan/apply, image build | `roles/container.admin`, `roles/storage.admin`, `roles/iam.serviceAccountUser` (GCP); `eks:*`, `ecr:*`, `s3:*` (AWS) |
 | **Deploy** | `google_service_account.deploy` | `aws_iam_role.deploy` (OIDC) | Push images, update K8s | `roles/artifactregistry.writer`, `roles/container.developer` (GCP); `ecr:PutImage`, `eks:UpdateCluster` (AWS) |
 | **Runtime** | `google_service_account.runtime` | `aws_iam_role.runtime` (IRSA) | Pod access to secrets, storage | `roles/secretmanager.secretAccessor`, `roles/storage.objectViewer` (GCP); `secretsmanager:GetSecretValue`, `s3:GetObject` (AWS) |

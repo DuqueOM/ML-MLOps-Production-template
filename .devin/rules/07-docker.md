@@ -37,26 +37,30 @@ CMD ["uvicorn", "app.main:app", "--host=0.0.0.0", "--port=8000"]
 
 ## Rules
 
-### NEVER include in Docker image:
+### NEVER include in Docker image
+
 - Model artifacts (`models/`) — downloaded via init container
 - Raw data (`data/raw/`) — stored in GCS/S3
 - Test files (`tests/`) — not needed in production
 - `.git/` directory
 - Secrets or credentials
 
-### ALWAYS include:
+### ALWAYS include
+
 - `.dockerignore` excluding: `models/`, `data/raw/`, `*.pyc`, `__pycache__`, `tests/`, `.git/`
 - `HEALTHCHECK` instruction
 - Non-root `USER`
 - `--no-cache-dir` on pip install
 - Single `CMD` with uvicorn (no `--workers`)
 
-### Image Tagging:
+### Image Tagging
+
 - Tags are IMMUTABLE — never overwrite an existing tag
 - Use semantic versioning: `v1.2.3`
 - Always tag with git commit SHA as well: `sha-abc1234`
 
-### Multi-stage builds (when needed):
+### Multi-stage builds (when needed)
+
 ```dockerfile
 FROM python:3.11-slim AS builder
 COPY requirements.txt .
@@ -68,7 +72,8 @@ COPY app/ app/
 COPY src/ src/
 ```
 
-### Security:
+### Security
+
 - Scan with `trivy` in CI before pushing
 - Pin base image to specific digest when possible
 - No `apt-get install` without `--no-install-recommends`

@@ -9,6 +9,7 @@ description: Create a new Architecture Decision Record with proper structure and
 ```bash
 ls docs/decisions/ | sort -n | tail -1
 ```
+
 // turbo
 
 Next number = last + 1, zero-padded to 3 digits.
@@ -26,6 +27,7 @@ cp templates/service/docs/decisions/adr-template.md docs/decisions/${ADR_NUM}-${
 ## 3. Fill in Sections
 
 Required sections:
+
 1. **Title**: `ADR-${ADR_NUM}: ${TITLE}`
 2. **Status**: Proposed (will change to Accepted after review)
 3. **Date**: Today's date (YYYY-MM-DD)

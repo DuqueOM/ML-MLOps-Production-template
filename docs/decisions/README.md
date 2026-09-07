@@ -16,11 +16,10 @@ Numbering is dense and gaps are deliberate — a withdrawn ADR keeps its
 number and says so, rather than being deleted and leaving a hole
 (`scripts/check_doc_coherence.py` C5 enforces this).
 
-
 **46 decisions recorded.**
 
 | ADR | Decision |
-|---|---|
+| --- | --- |
 | 001 | [Template Scope Boundaries](ADR-001-template-scope-boundaries.md) |
 | 002 | [Model Promotion Governance as Opt-in Module](ADR-002-model-promotion-governance.md) |
 | 003 | [Feast Integration Pattern (External Feature Repo)](ADR-003-feast-integration-pattern.md) |

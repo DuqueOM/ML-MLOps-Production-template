@@ -1,7 +1,7 @@
 # ADR-035: uv adoption + Copier index publication
 
 | | |
-|---|---|
+| --- | --- |
 | **Status** | Accepted |
 | **Date** | 2026-06-30 |
 | **Deciders** | @DuqueOM |
@@ -30,6 +30,7 @@ Two modernization gaps remain after Waves 1–3:
 Add `uv` as a **first-class option** alongside pip:
 
 1. The Makefile gains an `install-uv` target:
+
    ```makefile
    install-uv: ## Install dependencies with uv (faster, reproducible)
        uv sync
@@ -43,6 +44,7 @@ Add `uv` as a **first-class option** alongside pip:
    only pip).
 
 4. The `README.md` and `QUICK_START.md` mention both paths:
+
    ```bash
    # Option A: uv (recommended, 10× faster)
    uv sync
@@ -63,6 +65,7 @@ The template is already structured as a valid Copier template
 
 1. Documenting the `copier copy` invocation in `README.md` and
    `QUICK_START.md`:
+
    ```bash
    copier copy https://github.com/DuqueOM/ML-MLOps-Production-Template.git my_service
    ```

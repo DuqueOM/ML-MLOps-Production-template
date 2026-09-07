@@ -80,6 +80,7 @@ release.
 `docs/ADOPTION.md`.
 
 **Out of scope** (deliberately):
+
 - Organizational-only ISO/IEC 42001 controls (A.1–A.3, management
   commitment/policy/roles) that no template artifact can satisfy — listing
   them would imply a false completeness.
@@ -94,6 +95,7 @@ release.
 ## 4. Consequences
 
 ### Positive
+
 - An adopter's compliance/risk team can complete a first-pass gap
   assessment in minutes instead of days.
 - Makes explicit (and therefore reviewable) a claim that was previously
@@ -103,6 +105,7 @@ release.
   benchmark, none of which publish this.
 
 ### Negative
+
 - One more document that could theoretically drift from the code it
   references. Mitigated by the Revisit-triggers section and by the
   document's own instruction: "if this document and the code ever
@@ -111,6 +114,7 @@ release.
   the timeline note is dated and the trigger is explicit).
 
 ### Neutral
+
 - Adds no code, no CI job, no new dependency — pure documentation.
 
 ## 5. Revisit triggers
@@ -129,7 +133,7 @@ release.
 ## 6. Alternatives considered
 
 | Alternative | Why rejected |
-|---|---|
+| --- | --- |
 | Do nothing; let adopters do their own mapping | Repeats work every serious adopter would otherwise redo independently; the R9 benchmark found this is a real, common gap |
 | Claim ISO 42001 / AI Act "compliance" or "readiness" outright | False and legally risky — no template can BE compliant, only a deployed system can; would damage credibility the moment a careful reader checked |
 | Build a GRC-platform integration or automated evidence exporter | Over-engineering at this scale — no adopter has asked for it (Engineering Calibration Principle); a well-written static mapping serves the same first-pass need |

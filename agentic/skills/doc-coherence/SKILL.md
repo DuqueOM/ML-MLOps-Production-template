@@ -40,6 +40,7 @@ release/version decisions escalate to CONSULT.
 ```bash
 python3 scripts/check_doc_coherence.py
 ```
+
 // turbo
 
 Exit 0 → coherent, stop. Exit 1 → it prints each violation tagged
@@ -48,28 +49,33 @@ Exit 0 → coherent, stop. Exit 1 → it prints each violation tagged
 ## 2. Fix by violation class (the cascade map)
 
 ### C1 — version SSoT (`VERSION` ≠ latest released CHANGELOG heading)
+
 - If a release was cut: set `VERSION` to the latest dated `## [vX.Y.Z]` heading.
 - If `VERSION` is ahead: the CHANGELOG is missing the dated heading — move the
   `[Unreleased]` lines under a new `## [vX.Y.Z] — YYYY-MM-DD`.
 - **Never** rewrite an already-released dated heading (STOP).
 
 ### C2 — `llms.txt` version drift
+
 - Update the `> Version:` line to match `VERSION`.
 - If `llms.txt` is intentionally a spec snapshot, add the `legacy-snapshot`
   marker (CONSULT — confirm intent first).
 
 ### C3 — anti-pattern count drift
+
 - Canonical = highest `D-NN` in `AGENTS.md`. Propagate to: README
   "N anti-patterns", `llms.txt` `(D-01 to D-NN)`, CLAUDE.md header + table,
   `rule-audit` + `debug-ml-inference` skills.
 
 ### C4 — agentic surface count drift
+
 - Recount on disk: `ls agentic/rules/*.md`,
   `ls -d agentic/skills/*/SKILL.md`, `ls agentic/workflows/*.md`.
 - Update the "N rules + N skills + N workflows" line in CLAUDE.md (and any
   mirror in `llms.txt` / AGENTS.md index).
 
 ### C5 — ADR traceability / numbering gap
+
 - A missing ADR number with no tombstone → add a `Status: Withdrawn`
   tombstone file documenting why (see `ADR-012`). **Never** renumber or
   delete an ADR (STOP).

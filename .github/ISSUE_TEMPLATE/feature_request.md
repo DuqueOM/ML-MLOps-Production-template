@@ -10,6 +10,7 @@ assignees: ''
 A clear and concise description of the problem. Ex. "When deploying to EKS, I need to manually..."
 
 **Which layer does this affect?**
+
 - [ ] Templates (`templates/`)
 - [ ] Agentic system (`agentic/rules/`, `agentic/skills/`, `agentic/workflows/`)
 - [ ] CI/CD (`templates/service/.github/workflows/`)
@@ -24,6 +25,7 @@ Other approaches and why they don't fit.
 
 **Engineering Calibration**
 Is this proportional to the problem? (See [Engineering Calibration Principle](../../AGENTS.md#engineering-calibration-principle))
+
 - Scale of the problem: [e.g., "2 models", "50 features", "100 RPS"]
 - Proposed solution complexity: [e.g., "CronJob", "Full orchestrator"]
 

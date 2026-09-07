@@ -18,7 +18,8 @@ YYYY-MM-DD
 ### Conflict 1: {Package A} vs {Package B}
 
 **Symptom:**
-```
+
+```text
 ERROR: pip's dependency resolver does not currently account for all packages.
 {package_a} X.Y.Z requires {shared_dep}>=A.B, but {package_b} requires {shared_dep}<A.B
 ```
@@ -27,7 +28,8 @@ ERROR: pip's dependency resolver does not currently account for all packages.
 {Explain why the conflict exists — different packages pinning incompatible ranges}
 
 **Resolution:**
-```
+
+```text
 {shared_dep} ~= {version_that_works}  # Compatible with both A and B
 ```
 
@@ -45,7 +47,8 @@ numpy 2.0 changed internal array representation. `joblib.load()` succeeds but re
 corrupted arrays for models pickled with numpy 1.x.
 
 **Resolution:**
-```
+
+```text
 numpy ~= 1.26.0  # Pin to 1.x — NEVER allow 2.x until models are retrained
 ```
 
@@ -56,7 +59,7 @@ between training and serving environments.
 ## Dependency Matrix
 
 | Package | Pinned Version | Reason | Conflicts With |
-|---------|---------------|--------|---------------|
+| --------- | --------------- | -------- | --------------- |
 | numpy | ~= 1.26.0 | joblib model compatibility | numpy 2.x |
 | scikit-learn | ~= 1.5.0 | Training + serving parity | — |
 | pydantic | ~= 2.7.0 | FastAPI compatibility | pydantic 1.x |

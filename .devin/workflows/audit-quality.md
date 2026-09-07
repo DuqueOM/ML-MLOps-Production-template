@@ -12,6 +12,7 @@ sequence.
 ## 1. Verify the deterministic gates
 
 // turbo
+
 ```bash
 python3 scripts/check_doc_coherence.py && \
 python3 scripts/check_cicd_template_drift.py && \
@@ -19,6 +20,7 @@ python3 scripts/sync_agentic_adapters.py --check
 ```
 
 // turbo
+
 ```bash
 gitleaks detect --no-git --source=. --redact
 ```
@@ -28,6 +30,7 @@ Red gate → that IS a finding. Record it before fixing anything.
 ## 2. Quick Q-pattern sweep
 
 // turbo
+
 ```bash
 grep -rhoE "uses: [^@]+@(v[0-9][^ ]*|main|master)" .github/workflows templates | sort -u
 ```
@@ -35,6 +38,7 @@ grep -rhoE "uses: [^@]+@(v[0-9][^ ]*|main|master)" .github/workflows templates |
 Any output = Q-01 violation (unpinned action).
 
 // turbo
+
 ```bash
 grep -h "License" llms.txt pyproject.toml | head -4; head -2 LICENSE
 ```
@@ -42,6 +46,7 @@ grep -h "License" llms.txt pyproject.toml | head -4; head -2 LICENSE
 Mismatch = Q-02 violation (license drift).
 
 // turbo
+
 ```bash
 git ls-files | grep -iE "\.(tar\.gz|tgz|zip|jar|bin|exe)$|coverage\.xml$"
 ```
@@ -69,6 +74,7 @@ For each finding:
 Write the report to `docs/audit/AUDIT_R<N>_<TITLE>.md` (skill §4 format).
 
 // turbo
+
 ```bash
 python3 scripts/audit_record.py \
   --agent Agent-QualityGuardian \
@@ -84,7 +90,7 @@ python3 scripts/audit_record.py \
 
 If anything was changed in step 4, finish with:
 
-```
+```text
 /document-changes
 ```
 

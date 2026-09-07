@@ -8,7 +8,7 @@ Each skill file is a pointer to the canonical `agentic/.../SKILL.md`;
 no skill body lives here.
 
 | Skill | Mode | Canonical |
-|-------|------|-----------|
+| ----- | ---- | --------- |
 | `batch-inference` | `AUTO` | `agentic/skills/batch-inference/SKILL.md` |
 | `ci-green-verify` | `STOP` | `agentic/skills/ci-green-verify/SKILL.md` |
 | `concept-drift-analysis` | `AUTO` | `agentic/skills/concept-drift-analysis/SKILL.md` |

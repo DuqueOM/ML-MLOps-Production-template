@@ -34,7 +34,7 @@ as defense in depth.
 
 ### Structure
 
-```
+```text
   [build]                   one-time image build + push + cosign sign
       │
   [deploy-dev]              Environment: {cloud}-dev        AUTO
@@ -47,7 +47,7 @@ as defense in depth.
 ### Gate settings
 
 | Env | Reviewers | Wait timer | Branches |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `{cloud}-dev` | 0 | 0 | all |
 | `{cloud}-staging` | 1 | 0 | main + tags |
 | `{cloud}-production` | 2 | 5 min | version tags ONLY |

@@ -3,8 +3,8 @@
 ## Supported Versions
 
 | Version | Supported |
-|---------|-----------|
-| Latest  | :white_check_mark: |
+| --------- | ----------- |
+| Latest | :white_check_mark: |
 | Previous | :x: |
 
 ## Reporting a Vulnerability
@@ -14,10 +14,12 @@ If you discover a security vulnerability in this template, please report it priv
 ### How to Report
 
 **Preferred Method:**
-- Send an email to: DuqueOrtegaMutis@gmail.com
+
+- Send an email to: <DuqueOrtegaMutis@gmail.com>
 - Use the subject line: `Security Vulnerability Report - ML-MLOps-Template`
 
 **Alternative Methods:**
+
 - GitHub's private vulnerability reporting: [Report Vulnerability](https://github.com/DuqueOM/ml-service-template/security/advisories/new)
 
 ### What to Include
@@ -31,7 +33,7 @@ If you discover a security vulnerability in this template, please report it priv
 ### Response Timeline
 
 | Severity | Response Time | Description |
-|----------|---------------|-------------|
+| ---------- | --------------- | ------------- |
 | Critical | 48 hours | Hardcoded credentials, RCE in templates |
 | High | 7 days | Insecure defaults that expose data |
 | Medium | 14 days | Missing security best practices |
@@ -42,12 +44,15 @@ If you discover a security vulnerability in this template, please report it priv
 ### Built-In Protections
 
 **Secret management (D-17, D-18)**
+
 - `.gitleaks.toml` + pre-commit hook for secret detection
-- CI `security-audit` job: `gitleaks-action` + credential pattern grep (AWS/GCP/GitHub tokens) + `os.environ` secret-name detection
+- CI `security-audit` job: `gitleaks-action` + credential pattern grep (AWS/GCP/GitHub tokens) + `os.environ`
+  secret-name detection
 - `templates/service/common_utils/secrets.py` — cloud-native loader that refuses to fall through to `os.environ` in staging/production
 - Workload Identity (GCP) and IRSA (AWS) — no hardcoded credentials in pods
 
 **Container & image security (D-11, D-19)**
+
 - Multi-stage Docker builds, non-root USER, HEALTHCHECK
 - Trivy vulnerability scan (blocks HIGH/CRITICAL) — CI gate
 - **Syft SBOM** in CycloneDX + SPDX formats (90-day artifact retention)
@@ -56,6 +61,7 @@ If you discover a security vulnerability in this template, please report it priv
 - Init container pattern for model artifacts (no models baked into images)
 
 **Admission control (D-19)**
+
 - `templates/k8s/policies/kyverno-image-verification.yaml` — Kyverno ClusterPolicy
   - Rejects unsigned images in namespaces labeled `environment: production`
   - Verifies keyless Cosign identity + Rekor transparency log
@@ -63,16 +69,19 @@ If you discover a security vulnerability in this template, please report it priv
   - Companion policy `require-image-digest` — forbids tag-only refs in staging/prod
 
 **Infrastructure (D-10)**
+
 - Trivy config + Checkov for Terraform misconfigurations (ADR-046)
 - Remote state (GCS / S3 + DynamoDB) enforced by rule `03-terraform.md`
 - `.gitignore` blocks `terraform.tfstate`, `.tfvars` with secrets
 
 **Code quality**
+
 - bandit for Python security linting
 - Type hints + mypy
 - Pre-commit hooks (see `.pre-commit-config.yaml`)
 
 **Automated updates**
+
 - `dependabot.yml` for weekly dependency updates
 - Renovate-compatible PR format
 
@@ -112,6 +121,7 @@ The full procedure is codified in `agentic/skills/secret-breach-response/SKILL.m
 ### SLSA Compliance
 
 This template targets **SLSA Level 2** out of the box:
+
 - ✅ Source: GitHub (version-controlled, retention)
 - ✅ Build: GitHub Actions hosted runners
 - ✅ Provenance: Syft SBOM + Cosign attestation (keyless OIDC)
@@ -133,7 +143,7 @@ This template targets **SLSA Level 2** out of the box:
 > pattern.
 
 | ID | Disclosed | Versions affected | Issue | Remediation in template |
-|----|-----------|-------------------|-------|-------------------------|
+| ---- | ----------- | ------------------- | ------- | ------------------------- |
 | HD-001 | 2026-04 | < v0.10 | `GCP_SA_KEY` JSON service account key was the documented auth pattern in deploy workflows | Replaced with Workload Identity Federation (no static keys). Earlier forks should rotate any leaked key via `/secret-breach` and migrate to WIF. (D-18) |
 | HD-002 | 2026-05 | < v0.15.0 | Prometheus scraping over plain HTTP, no Bearer auth, no CA verification | `risk_context.py` now requires Bearer token + TLS verification; `INSECURE_SKIP_VERIFY` refused outside dev/local. Forks should add the same controls. (HIGH-9 in ADR-024) |
 | HD-003 | 2026-05 | < v0.15.0 | `argo-rollout.yaml` shipped without PSS-restricted `securityContext` while the canonical `deployment.yaml` had it | Both manifests now have full security parity (CRIT-3 in ADR-024). Forks that enabled progressive delivery before v0.15.0 should re-render. |
@@ -145,7 +155,7 @@ Vulnerability section above so it can be added.
 ## Security Contacts
 
 - **Lead**: Duque Ortega Mutis
-- **Email**: DuqueOrtegaMutis@gmail.com
+- **Email**: <DuqueOrtegaMutis@gmail.com>
 - **GitHub**: [@DuqueOM](https://github.com/DuqueOM)
 
 ---

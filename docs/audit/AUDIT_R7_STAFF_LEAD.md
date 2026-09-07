@@ -23,7 +23,7 @@ coherence drift** (Low) — exactly the class of issue that accumulates between 
 releases — three items of which are already fixed in this pass.
 
 | Dimension | Grade | One-line basis |
-|-----------|-------|----------------|
+| ----------- | ------- | ---------------- |
 | Agentic identity coherence | A | 16 rules / 17 skills / 13 workflows / 4 adapters; all 4 validators green; canonical store + thin adapters, no policy duplication |
 | Structure & hierarchy | A | Canonical `agentic/` + generated adapters; META vs render-root layering is deliberate and validated |
 | Security / supply chain | A | IRSA/WIF default, no static creds, Cosign + SBOM + Kyverno chain, pre-commit gitleaks and bandit, per-purpose IAM (D-31) tested |
@@ -65,6 +65,7 @@ closed prior 15-finding audit (R2–R6 lineage). This is how regulated orgs run 
 ## 2. Findings (all Low; no Critical/High)
 
 ### F-1 — Version identity is fragmented across three schemes *(Low, open — needs a decision)*
+
 - `VERSION` → `0.18.0`
 - `CHANGELOG.md` top → `## [Unreleased]` (contains a v0.19.0 Copier-migration entry)
 - `llms.txt` → `Version: v1.3.0`
@@ -77,6 +78,7 @@ an explicit `# spec-version, not release-version` comment; cut the pending
 `[Unreleased]` → tagged release so CHANGELOG and VERSION agree.
 
 ### F-2 — Anti-pattern count stale in CLAUDE.md *(Low — FIXED this pass)*
+
 `AGENTS.md`, `README.md` ("34 anti-patterns", `D-34` row), and the `rule-audit` skill
 were all correctly at **D-34**. Only the two `CLAUDE.md` files lagged: their compact
 table stopped at `D-31..D-32` and the prose said *"all 32 invariants."* Fixed: added a
@@ -84,10 +86,12 @@ table stopped at `D-31..D-32` and the prose said *"all 32 invariants."* Fixed: a
 `templates/service/CLAUDE.md`.
 
 ### F-3 — Dockerfile header comment contradicted its base image *(Low — FIXED this pass)*
+
 `templates/service/Dockerfile:4` said *"Python 3.11 slim"* while `:25`/`:66` are
 `FROM python:3.13-slim-bookworm` (PR #45). Comment corrected to 3.13.
 
 ### F-4 — Runtime/test Python version skew *(Low, open — needs a decision)*
+
 PR #45 moved the **runtime image** to 3.13, but the test matrix
 (`ci-examples.yml:16` → `["3.11","3.12"]`) never exercises 3.13, and
 `templates/service/pyproject.toml` still has `requires-python = ">= 3.11"` and mypy
@@ -113,7 +117,7 @@ not a gap. The Staff-level question is *on-ramps vs scope-creep*. Recommendation
 audience — **widen the on-ramp, never the identity**:
 
 | Audience | Current posture | Recommended on-ramp (no identity dilution) |
-|----------|-----------------|--------------------------------------------|
+| ---------- | ----------------- | -------------------------------------------- |
 | **DS exploring / notebooks** | Out of scope (`:39`) | Ship a `notebooks/` quickstart that *consumes* `common_utils` (seed, persistence, Pandera schema) so a notebook user touches the contracts early, then "graduates" to the service. Keeps identity; lowers the cliff. |
 | **Batch-only pipelines** | Out of scope (`:39`) | The training + DVC pipeline + quality gates are already batch. Add one ADR + a `batch/` Kustomize overlay running the existing container as a `CronJob`/`Job` instead of a Deployment. ~1 day; reuses 90%. |
 | **Vertex AI / SageMaker teams** | Out of scope (`:39`) | Don't reimplement their orchestrators. Document an "export surface": the container, `model_card`, Pandera schema, and SLO rules are portable; show how to register the same image in Vertex Model Registry / SageMaker Model Package. Positioning doc, not code. |
@@ -133,7 +137,7 @@ ML / Cookiecutter DS / ZenML) with explicit "start there if…" routing. Extendi
 the full list the maintainer named:
 
 | Template | Their advantage | What to adopt here (without losing identity) |
-|----------|-----------------|----------------------------------------------|
+| ---------- | ----------------- | ---------------------------------------------- |
 | **Made With ML** | Pedagogy; end-to-end teaching narrative | Already routed to in README. Borrow nothing structural — keep the "production, not course" stance. |
 | **Cookiecutter Data Science** | Minimal, deployment-agnostic skeleton; instant familiarity | The Copier migration (ADR-030) is your equivalent; your `copier.yml` answers-file UX now matches CCDS ergonomics. Parity reached. |
 | **ZenML** | Orchestrator portability (run same pipeline on Airflow/K8s/etc.) | Don't adopt the abstraction layer (it's your "calibration" anti-pattern: 2–3 models → CronJob, not a portability framework). Cite ZenML as the upgrade path when a team outgrows you — you already do. |
@@ -194,7 +198,7 @@ apologize for it.
 ## 6. Recent-PR validation (Sub-ask 5)
 
 | PR | Change | Verdict |
-|----|--------|---------|
+| ---- | -------- | --------- |
 | **#44** | Wrap `{@ @}` tokens in `{% raw %}` in AGENTS/CLAUDE/ADR-014/new-service docs; exclude rendered files from placeholder checks; dynamic `{@ @}` regex in `test_metrics_contract.py`; `_normalise_metric_name` for Copier tokens in PromQL; red-team path updates; link-checker ignore `../SECURITY.md` | **Optimal.** This is the correct fix for the Copier `{@ @}` delimiter colliding with doc tooling and metric-name validation. `_normalise_metric_name` is the right seam (normalize tokens, don't loosen the contract). 677 tests green confirm no regression. |
 | **#45** | Python 3.11 → 3.13-slim base image | **Right direction, incomplete.** Image is 3.13 but (a) the header comment still said 3.11 [F-3, fixed], and (b) CI never tests 3.13 [F-4, open]. Add `"3.13"` to the `ci-examples.yml` matrix to close the skew. Otherwise sound — 3.13-slim-bookworm is a good base. |
 | **#46** | checkov-action `v12.3112.0` | **Acceptable; verify pinning style.** Pinning to a tag is fine for a scanner; for supply-chain parity with your own digest-pinning discipline, consider pinning the action to a commit SHA (you already do digest-pinning for *images* — actions deserve the same rigor). Not blocking. |
@@ -204,6 +208,7 @@ apologize for it.
 ## 7. Prioritized recommendations
 
 **Do now (cheap, closes drift):**
+
 1. ~~CLAUDE.md anti-pattern count 32→34 + D-33/34 row~~ — **done this pass.**
 2. ~~Dockerfile 3.11→3.13 comment~~ — **done this pass.**
 3. Add `"3.13"` to `ci-examples.yml` test matrix (F-4).

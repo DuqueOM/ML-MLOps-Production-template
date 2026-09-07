@@ -17,11 +17,11 @@ agent protocols (AUTO / CONSULT / STOP).
 The audit identified **23 findings**:
 
 | Severity | Count | Focus areas |
-|----------|-------|-------------|
+| ---------- | ------- | ------------- |
 | Critical | 4 | K8s serving chain, drift pipeline, admission security |
-| High     | 9 | Supply chain, auth, audit trail, posture honesty |
-| Medium   | 8 | Threadpool sizing, NetworkPolicy, tests, observability |
-| Low      | 2 | Runbooks, missing action-plan stub |
+| High | 9 | Supply chain, auth, audit trail, posture honesty |
+| Medium | 8 | Threadpool sizing, NetworkPolicy, tests, observability |
+| Low | 2 | Runbooks, missing action-plan stub |
 
 The most important structural finding was **posture dishonesty**: the
 README claimed "Production-ready by design" and shipped a numeric
@@ -78,8 +78,8 @@ validated against a real cloud cluster under load (L4 evidence absent).
   clusters**. The drift CronJob now passes Pod Security Admission
   without adopter modifications; previously the chain was "shipped
   broken, alert silenced by adopters".
-- **Supply chain is provably verifiable end to end**. Image digest
-  + SBOM attestation + model blob signature are all rooted in Rekor
+- **Supply chain is provably verifiable end to end**. Image digest +
+  SBOM attestation + model blob signature are all rooted in Rekor
   via Sigstore keyless signing. An attacker who compromises the
   model bucket cannot silently substitute a model.
 - **Runbooks are usable under incident pressure**. Previously each
@@ -134,7 +134,7 @@ validated against a real cloud cluster under load (L4 evidence absent).
 ## Compliance & evidence
 
 | Finding | Evidence |
-|---------|----------|
+| --------- | ---------- |
 | CRIT-1 | `templates/k8s/base/kustomization.yaml` `resources:` |
 | CRIT-2 | `templates/k8s/base/cronjob-drift.yaml` `securityContext:` (pod + container) |
 | CRIT-3 | `templates/k8s/base/cronjob-drift.yaml` `initContainers:` + `volumes:` |

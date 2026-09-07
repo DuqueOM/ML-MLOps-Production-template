@@ -14,6 +14,7 @@ proposes; the human approves each destructive command.
 ## 1. Triage (15 min budget)
 
 Before rollback, the agent MUST confirm:
+
 - Is the alert a real user impact or a dashboard blip?
 - Has Argo Rollouts already aborted the canary automatically?
 - Is a targeted retrain (`/retrain`) a better fix?

@@ -47,7 +47,7 @@ that bypass is itself logged.
 Introduce a **verb-separated** agentic gate, not a single new mode:
 
 | Verb | Mode | Rationale |
-|---|---|---|
+| --- | --- | --- |
 | **Verify** CI status (`gh run list`/`gh api`, read-only) | **AUTO** | No side effects; an agent must always be able to look |
 | **Re-run** a suspected-flaky job | **CONSULT** | Has real effects (consumes CI minutes, re-triggers a pipeline); a human confirms the "this looks flaky, not a regression" judgment |
 | **Override** — proceed with promote/release/deploy while CI is RED or MISSING | **STOP**, unconditionally, no environment-based downgrade | Mirrors `rollback`'s `execute_rollback: STOP` regardless of dev/staging/prod — removing a safety signal is always a human decision with an audit trail, never a convenience |
@@ -103,6 +103,7 @@ rather than new pipeline stages.
 `deploy-gke`/`deploy-aws`.
 
 **Out of scope**:
+
 - Autofixing red CI — that is ADR-019's (Agentic CI Self-Healing) surface,
   gated through its own shadow-mode timeline; this ADR's skill only
   observes and reports.
@@ -115,6 +116,7 @@ rather than new pipeline stages.
 ## 5. Consequences
 
 ### Positive
+
 - Closes a real gap: an agent-driven release or deploy could previously
   proceed on top of red CI with nothing stopping it except a human
   remembering to check.
@@ -125,12 +127,14 @@ rather than new pipeline stages.
   credibility to the claim that the protocol scales to new gates cheaply.
 
 ### Negative
+
 - One more skill + workflow to maintain (small — read-only, `gh` CLI only,
   no new dependency).
 - `/release` and the deploy skills gain one more step; mitigated by AUTO
   mode meaning it adds negligible latency for the common (green) case.
 
 ### Neutral
+
 - Surface counts move: skills 20→21, workflows 16→17, anti-patterns
   D-01..D-35→D-01..D-36. Cascaded through `AGENTS.md`, `CLAUDE.md` (×2),
   `llms.txt`, and `templates/config/agentic_manifest.yaml` in the same PR
@@ -150,7 +154,7 @@ rather than new pipeline stages.
 ## 7. Alternatives considered
 
 | Alternative | Why rejected |
-|---|---|
+| --- | --- |
 | Single CONSULT mode for the whole gate (verify + override together) | Makes routine status checks unnecessarily interactive; erodes the value of AUTO-mode read operations that the rest of the repo relies on |
 | Single STOP mode for the whole gate | Same problem in the other direction — a human would have to approve merely LOOKING at CI status, which trains people to click through STOP prompts, weakening the signal for when it actually matters |
 | A new required CI job that blocks merge if a prior job failed | Circular (see §2.3); also duplicates what branch protection required-status-checks already does at the platform level |

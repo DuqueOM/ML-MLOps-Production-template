@@ -47,7 +47,7 @@ is out of scope per ADR-001.
 Identify the credential type from the leaked prefix and revoke immediately:
 
 | Pattern | Source | Revoke command |
-|---------|--------|----------------|
+| --------- | -------- | ---------------- |
 | `AKIA[0-9A-Z]{16}` + `wJalrXUt…` (40 chars) | AWS access key | `aws iam delete-access-key --user-name <user> --access-key-id <KEY_ID>` |
 | `AIza[0-9A-Za-z_-]{35}` | Google API key | GCP Console → APIs & Services → Credentials → Delete |
 | `ghp_[A-Za-z0-9]{36}` or `github_pat_…` | GitHub PAT | github.com/settings/tokens → Revoke |
@@ -80,7 +80,8 @@ echo -n "$(openssl rand -base64 32)" | \
 gcloud secrets versions disable <leaked-version> --secret=<name> --project=<project>
 ```
 
-For credentials issued by an external vendor (LLM keys, third-party APIs), follow the vendor's rotation flow and store the new value in the secret manager — never copy-paste into env vars.
+For credentials issued by an external vendor (LLM keys, third-party APIs), follow the vendor's rotation flow and store
+the new value in the secret manager — never copy-paste into env vars.
 
 ### Step 3 — Force re-deploy of consuming services (≤ 30 min)
 
@@ -161,7 +162,8 @@ python scripts/audit_record.py \
   --approver "<security-on-call-handle>"
 ```
 
-Post-mortem template: `docs/incidents/<YYYY-MM-DD>-secret-breach-<type>.md` (use `docs/incidents/EXAMPLE.md` as scaffold). Mandatory sections:
+Post-mortem template: `docs/incidents/<YYYY-MM-DD>-secret-breach-<type>.md` (use `docs/incidents/EXAMPLE.md` as
+scaffold). Mandatory sections:
 
 1. Timeline (UTC).
 2. Detection path (gitleaks / vendor / human / log).

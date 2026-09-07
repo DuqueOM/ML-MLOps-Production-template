@@ -31,6 +31,7 @@ authorization_mode:
 # Drift Detection
 
 Two complementary layers (ADR-006):
+
 - **Data drift** (PSI on feature distributions) — early signal, no labels needed
 - **Concept drift** (sliced AUC/F1 vs baseline, using delayed labels) — ground truth
 
@@ -43,12 +44,13 @@ drift analysis when (a) PSI alert fires and you need to confirm impact, or
 ### PSI Interpretation Guide
 
 | PSI Value | Status | Action | Exit Code |
-|-----------|--------|--------|-----------|
+| ----------- | -------- | -------- | ----------- |
 | < 0.10 | Stable | No action | 0 |
 | 0.10 – 0.20 | Warning | Monitor, increase check frequency | 1 |
 | > 0.20 | Alert | Trigger retraining | 2 |
 
 ALWAYS use quantile-based bins (not uniform):
+
 ```python
 breakpoints = np.percentile(reference, np.linspace(0, 100, bins + 1))
 ```
@@ -58,13 +60,14 @@ Uniform bins can produce empty bins at extremes → PSI dominated by epsilon noi
 ### Special Cases — When PSI Doesn't Apply
 
 | Feature Type | Problem with PSI | Alternative |
-|-------------|-----------------|-------------|
+| ------------- | ----------------- | ------------- |
 | **Time series** (seasonal) | PSI flags every seasonal change as "drift" | Year-over-Year comparison (same period last year) |
 | **Text/NLP** features | PSI not meaningful for text | OOV (Out-of-Vocabulary) rate: warning > 20%, alert > 35% |
 | **Low-cardinality categorical** | Quantile bins don't work with 3-5 categories | Categorical PSI variant: bins = unique categories |
 | **Boolean** features | Only 2 bins → unstable PSI | Simple proportion test (chi-squared) |
 
 ### Exit Codes for CronJob Integration
+
 - `exit 0` → all features stable
 - `exit 1` → warning-level drift (monitor)
 - `exit 2` → alert-level drift (retraining needed, GitHub Issue created)
@@ -81,6 +84,7 @@ python src/{service}/monitoring/drift_detection.py \
 ## Step 3: Interpret Results
 
 For each feature, review:
+
 ```json
 {
   "feature_name": "age",
@@ -95,7 +99,7 @@ For each feature, review:
 ### Common Root Causes
 
 | Pattern | Likely Cause | Action |
-|---------|-------------|--------|
+| --------- | ------------- | -------- |
 | Single feature PSI high | Upstream data change | Investigate ETL pipeline |
 | All features PSI high | Data source change | Full retraining |
 | Temporal features PSI high | Seasonal pattern | Use YoY comparison |
@@ -104,6 +108,7 @@ For each feature, review:
 ## Step 4: Configure Thresholds
 
 Each feature needs per-feature thresholds with domain reasoning:
+
 ```python
 THRESHOLDS = {
     "stable_feature": {"warning": 0.10, "alert": 0.20},
@@ -113,6 +118,7 @@ THRESHOLDS = {
 ```
 
 For temporal data (e.g., time series, seasonal patterns):
+
 - Standard PSI will flag EVERY seasonal change as drift
 - Use Year-over-Year comparison instead
 
@@ -159,6 +165,7 @@ python -m src.{service}.monitoring.performance_monitor \
 ```
 
 Interpret `reports/performance.json`:
+
 - `status: ok`                          → no action
 - `status: warning`                     → investigate within 4h (P2)
 - `status: alert`                       → retraining candidate (P1/P2)
@@ -191,6 +198,7 @@ numeric bins.
 ## Step 9: Trigger Retraining
 
 If data drift AND concept drift agree (PSI up + AUC down for same slice):
+
 ```bash
 gh workflow run retrain-{service}.yml \
   -f reason="Concept drift: AUC={auc} for slice {slice}={value}; PSI={psi} on {feature}"

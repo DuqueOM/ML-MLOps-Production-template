@@ -65,6 +65,7 @@ If any match → STOP. Chain to `/secret-breach`.
 ## 6. Report
 
 Print:
+
 - Context file path
 - Cloud provider
 - Profile

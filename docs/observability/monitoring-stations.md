@@ -15,7 +15,7 @@
 ## Summary
 
 | Station | Status | Primary gap (if any) |
-|---|---|---|
+| --- | --- | --- |
 | 🌐 Edge | ⚠️ Partial — WAF/rate-limit not wired by default | Closing in Wave B (`edge-protection` components) |
 | ☁️ Infrastructure | ✅ Covered | Node-level metrics delegated (by design) |
 | 🚀 Inference | ✅ Covered | GPU metrics N/A (CPU stack) |
@@ -54,7 +54,7 @@
 **Status: covered.**
 
 | Signal | Source |
-|---|---|
+| --- | --- |
 | Horizontal scale | [`k8s/base/hpa.yaml:29`](../../templates/service/k8s/base/hpa.yaml) — CPU-only `averageUtilization: 60` (D-01/D-02: never memory-based, since fixed RAM prevents scale-down) |
 | Pod-level isolation | [`k8s/base/networkpolicy-deny-default.yaml`](../../templates/service/k8s/base/networkpolicy-deny-default.yaml) + [`networkpolicy.yaml`](../../templates/service/k8s/base/networkpolicy.yaml) — default-deny with explicit allows |
 | Availability during disruption | [`k8s/base/pdb.yaml`](../../templates/service/k8s/base/pdb.yaml) — PodDisruptionBudget |
@@ -75,7 +75,7 @@ Calibration Principle (`CLAUDE.md`) warns against.
 **Status: covered**, including a gap closed this audit (saturation).
 
 | Signal | Source |
-|---|---|
+| --- | --- |
 | Throughput | `dashboard-template.json` — "Request Rate" panel |
 | Latency | "Prediction Latency (Percentiles)" panel + `{@ service_slug @}HighLatency` alert |
 | Saturation *(new, Wave A2)* | `app/fastapi_app.py` — `inference_in_flight` / `inference_executor_capacity` gauges, wrapped around both `run_in_executor` call sites in `predict()`/`predict_batch()`; "Saturation (in-flight / executor capacity)" panel; `{@ service_slug @}ExecutorSaturated` alert (`>= 1.0` for 5m, severity `info`, runbook §P4) |
@@ -93,7 +93,7 @@ not add it speculatively now.
 **Status: covered.**
 
 | Signal | Source |
-|---|---|
+| --- | --- |
 | Model version | `predictions_total{model_version=...}` label (`fastapi_app.py:557,618`, sourced from `MODEL_VERSION` env var); dedicated "Model Version" dashboard panel |
 | Drift | PSI-based (`src/{@ service_slug @}/monitoring/drift_detection.py` — `calculate_psi`, `calculate_psi_from_bins`, quantile-binned per CLAUDE.md's calibration: "Simple drift → PSI with quantile bins, not feature store"); "PSI Drift Score (per feature)" panel; `{@ service_slug @}DriftAlert` / `DriftWarning` / `DriftDetectionHeartbeatMissing` alerts |
 | Score distribution | "Prediction Score Distribution" panel |
@@ -136,7 +136,7 @@ write-up. Summary:
 [business-kpis.md](business-kpis.md) for the full mapping.
 
 | Signal | Source |
-|---|---|
+| --- | --- |
 | Request volume | `dashboard-business.json` — "Request Volume (daily)" |
 | SLA compliance | "SLA Compliance (30d)" gauge, reusing the existing `{@ service_slug @}:sli:availability` recording rule (`k8s/base/slo-prometheusrule.yaml`) — no new SLO math, just a business-facing rollup of the SRE-facing one |
 | Cost | "Monthly Cloud Cost vs. Budget" — new `{@ service_slug @}_monthly_cloud_cost_usd` metric, pushed by the `cost-audit` skill via Pushgateway (`agentic/skills/cost-audit/SKILL.md`, Step 2b) |

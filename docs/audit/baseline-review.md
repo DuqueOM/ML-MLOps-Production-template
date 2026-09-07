@@ -53,7 +53,7 @@ All three are tfsec exclusions. `checkov.yml` carries `skip-check: []` —
 no suppressions — and no trivy ignore file is present.
 
 | Check | Severity | Why suppressed | Compensating control | Expiry |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | `google-gke-enforce-pod-security-policy` | HIGH | PodSecurityPolicy was deprecated in Kubernetes 1.21 and **removed** in 1.25. GKE REGULAR channel runs 1.27+, so enabling it would fail the apply outright. | Pod Security Standards enforced via namespace labels in every overlay (D-29, `templates/service/k8s/overlays/*/namespace.yaml`) | 2027-01-01 |
 | `google-gke-enable-master-networks` | HIGH | `master_authorized_networks_config` **is** present, as a `dynamic` block. tfsec v1.28 does not evaluate dynamic blocks and reports it absent even when the HCL is correct. | The block is real; staging and prod must supply a non-empty `master_authorized_networks`, enforced by a variable validation rule in `variables.tf` | 2027-01-01 |
 | `google-gke-metadata-endpoints-disabled` | HIGH | tfsec reads `node_config.metadata` on `google_container_cluster` only. This module uses `remove_default_node_pool = true` plus two `google_container_node_pool` resources, so the cluster has no `node_config` and the attribute lives on the pools. | Workload Identity on both pools (alone sufficient against metadata SSRF) **plus** `disable-legacy-endpoints = "true"` on each pool | 2027-01-01 |
@@ -77,7 +77,7 @@ day; see ADR-046 for the full comparison.
 **Two of the three suppressions dissolved rather than being renewed:**
 
 | Suppression | Outcome |
-|---|---|
+| --- | --- |
 | `google-gke-enforce-pod-security-policy` | **removed** — Trivy has no PSP check; PSP was deleted from Kubernetes in 1.25 |
 | `google-gke-metadata-endpoints-disabled` | **removed** — Trivy correlates node pools to their cluster; tfsec could not |
 | `google-gke-enable-master-networks` | **survives** as `GCP-0061` — neither tool evaluates `dynamic` blocks |
@@ -141,7 +141,7 @@ ADR-046 had deferred the sub-threshold findings as "separate work". Doing it
 changed the picture: **three of the five MEDIUM were real.**
 
 | Finding | Verdict |
-|---|---|
+| --- | --- |
 | `GCP-0050` ×2 — GKE node pools with no `service_account` | **Real.** Nodes ran as the default Compute Engine service account, typically `roles/editor` project-wide. A D-31 violation inside the module that implements D-31. Fixed: a sixth identity, `nodes`, with Google's documented minimum. |
 | `GCP-0011` — project-wide `roles/iam.serviceAccountUser` | **Real.** The comment claimed "Scoped via condition"; there was no condition block, so CI could impersonate any service account in the project. Fixed: three per-account bindings (`deploy`, `runtime`, `nodes`). |
 | `GCP-0078` / `AWS-0090` — access-log buckets not versioned | **Accepted.** Append-only sinks, already lifecycle-bounded. Versioning guards against overwrite and modification of existing objects, neither of which is a failure mode here. Dated to 2027-03-05. |
@@ -177,7 +177,7 @@ not". True, and still an evasion: *"we have not looked"* is a description,
 not a decision. **Seven of the eight LOW findings were real.**
 
 | Finding | Verdict |
-|---|---|
+| --- | --- |
 | `GCP-0066` ×4 — live buckets without customer-managed encryption | **Real.** `models`, `data`, `mlflow_artifacts` and `logs` held Google-managed keys while the *bootstrap state bucket* has had CMEK since ADR-015. The asymmetry was backwards: the state file was better protected than the models and training data it describes. Fixed with a `storage` key on the existing ring. |
 | `GCP-0054` ×2 — node image type not pinned | **Real.** COS is GKE's current default, which is why pinning matters: a default is not a decision, and inheriting it means a future change lands a different node OS without anyone choosing it. |
 | `GCP-0051` — cluster without resource labels | **Real, minor.** Every bucket, key and service account in the module carries them; the cluster did not, so cost attribution had a hole exactly where the spend is. |

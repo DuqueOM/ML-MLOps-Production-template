@@ -32,7 +32,7 @@ time does not scale and had already failed.
 ## Options Considered
 
 | Option | Pros | Cons |
-|--------|------|------|
+| -------- | ------ | ------ |
 | **A. Adopt an external tool wholesale** (towncrier, release-please, semantic-release, Log4brains) | Battle-tested; community support | None covers *cross-document* coherence as a single gate; each owns one slice (changelog OR ADRs OR version) and adds a dependency + workflow the 2–3-person calibration target doesn't warrant |
 | **B. Documentation-as-prose convention only** (a CONTRIBUTING note) | Zero code | Exactly what failed — conventions without a gate drift |
 | **C. A coherence *contract* enforced by a deterministic gate + an agentic skill that fixes drift** (chosen) | Single source of truth per fact; CI-blocking; reuses the existing `check_*_drift.py` + agentic surface patterns; no new deps | We author and maintain the gate ourselves |

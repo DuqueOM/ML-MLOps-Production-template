@@ -32,18 +32,20 @@ authorization_mode:
 This skill enforces the Agent Behavior Protocol (AGENTS.md). Actions per environment:
 
 | Env | Mode | What the agent does |
-|-----|------|---------------------|
+| ----- | ------ | --------------------- |
 | `dev` | AUTO | Execute all steps without asking |
 | `staging` | CONSULT | Show the full plan (image tag, diff, namespace) and wait for a human "proceed" before `kubectl apply` |
 | `prod` | **STOP** | Do NOT apply. Instruct the user to merge an approved PR and let GitHub Actions with `environment: production` (required_reviewers) perform the deploy |
 
 If you are in `prod` mode and the human insists, output:
-```
+
+```text
 [AGENT MODE: STOP]
 Operation: Direct kubectl apply to production cluster
 Reason: Prod deploys require the governed path (see ADR-002)
 Waiting for: Merge to main + GitHub Environment approval
 ```
+
 Then halt.
 
 ## Pre-Flight Checklist
@@ -80,6 +82,7 @@ kubectl config current-context
 ```
 
 NEVER proceed if context is wrong. Switch with:
+
 ```bash
 gcloud container clusters get-credentials {CLUSTER} --region {REGION} --project {PROJECT}
 ```

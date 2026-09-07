@@ -56,7 +56,7 @@ itself teaches.
 ### Scorecard
 
 | Dimension | Weight | template_MLOps | agent-local |
-|---|:-:|:-:|:-:|
+| --- | :-: | :-: | :-: |
 | Architecture and structure | 1.2 | **9.5** | **9.0** |
 | Code quality | 1.2 | **8.5** | **7.0** |
 | Testing and verification | 1.2 | **9.0** | **8.0** |
@@ -81,7 +81,7 @@ that gap.
 ## 2. Methodology and evidence base
 
 | Source | template_MLOps | agent-local |
-|---|---|---|
+| --- | --- | --- |
 | Local suite | `pytest -q` from root **fails at collection** (R8-05); scoped suites green via CI | 112 tests, **all green** locally |
 | Validators | 6/6 green: doc-coherence (6 checks), validate_agentic, manifest `--strict`, sync `--check`, vendored-drift, common_utils-drift | none exist (finding R8-04/R8-06) |
 | GitHub Actions (main) | 4/4 workflows green (pr-smoke-lane, CI-Examples 3m46s, Validate-Templates 2m26s, Template-Context 2m33s) | CI green (lint+mypy+tests, matrix py3.11/3.12) |
@@ -129,6 +129,7 @@ which covers a single file.
 ### 3.2 Code quality — 8.5
 
 **Strengths (graph-verified, repo-wide scope):**
+
 - **Zero dead code**: three distinct query cuts (templates/service
   without tests; common_utils+src; the whole repo with
   `is_entry_point=false`) all return zero uncalled functions.
@@ -146,6 +147,7 @@ which covers a single file.
   a comment** (`numpy ~= 1.26.0  # numpy 2.x silently corrupts joblib models`).
 
 **Weaknesses:**
+
 - **R8-05 (MEDIUM)** — `pytest -q` from the repo root **breaks at
   collection** with `ModuleNotFoundError: No module named 'tests.conftest'` /
   `'tests.test_alertmanager_routing'`. Confirmed root cause: three
@@ -266,7 +268,7 @@ Templates` CI lane.
 ### 3.10 Competitiveness — 9.0
 
 | Reference | What it offers | What this template has that it doesn't |
-|---|---|---|
+| --- | --- | --- |
 | Cookiecutter Data Science | recognizable layout | agentic governance, full CI/CD, signed supply chain, K8s/TF, quality gates |
 | ZenML | stack profiles, orchestration | profiles without a heavy framework; fairness/leakage gates; Copier update; deterministic enforcement |
 | Made With ML | pedagogy of the *why* | an executable product + a private, personal pedagogical companion (not part of this public repo) kept as a separate plane |
@@ -289,7 +291,7 @@ competitiveness gap is not one of features but of **social proof**
   modules, no file > 500 LOC, and a new use case = ~130 LOC in a thin
   folder (`usecases/tienda/tools.py` 121 + YAMLs). The promise of
   ADR-001 ("new domain = folder, never fork") is measurable and holds.
-- `ExecutiveController` ([controller.py:100-195](file:///home/duqueom/projects/agent-local/core/controller.py))
+- `ExecutiveController` (`controller.py:100-195`)
   with admit/execute/release is a genuinely thin facade: routing +
   budget in admit; an adaptive loop with a **deadline checked before
   each optional station** and a latency budget propagated as a
@@ -315,7 +317,7 @@ by graph (the `transitive_loop_depth` values of 3-5 are all tests or
 
 **Findings** (full detail in §6):
 
-- **R8-01 (HIGH)** — [app/main.py:78-108](file:///home/duqueom/projects/agent-local/app/main.py):
+- **R8-01 (HIGH)** — `app/main.py:78-108`:
   `async def dev_message(...)` runs `AGENT.handle(...)` — a synchronous
   chain of N HTTP calls to llama-server (plan→tools→reflect→generate→
   critic, wall-clock seconds) — **directly on the event loop**. Every
@@ -328,12 +330,12 @@ by graph (the `transitive_loop_depth` values of 3-5 are all tests or
   threadpool) or use `run_in_executor`. And — a lesson from the
   template — **pair it with a contract test** that prevents
   reintroduction.
-- **R8-02 (MEDIUM)** — [app/main.py:108](file:///home/duqueom/projects/agent-local/app/main.py):
+- **R8-02 (MEDIUM)** — `app/main.py:108`:
   `raise HTTPException(status_code=500, detail=str(e))` leaks the
   internal exception message to the client. The template has a
   dedicated test against exactly this
   (`test_predict_error_does_not_leak_exception_message`).
-- **R8-03 (MEDIUM)** — [core/controller.py:353-366](file:///home/duqueom/projects/agent-local/core/controller.py):
+- **R8-03 (MEDIUM)** — `core/controller.py:353-366`:
   `reflect()` calls the tier (`max_tokens=128`), **discards the return
   value**, and only increments `reflections_made`. The reflection does
   not feed into `generate()` (which only reads `observations`) and is
@@ -343,12 +345,12 @@ by graph (the `transitive_loop_depth` values of 3-5 are all tests or
   observation / generator context) or removed — the current state is
   the worst of both worlds.
 - **R8-04 (MEDIUM)** — triple version drift: `pyproject.toml:7` says
-  `0.2.0`, [app/main.py:34](file:///home/duqueom/projects/agent-local/app/main.py)
+  `0.2.0`, `app/main.py:34`
   and `:62` hardcode `"0.2.0"`, while CHANGELOG and commits are at
   **v0.4.0**. This is exactly the class of drift that motivated the
   template's rule-16 gate (whose R7 audit found `llms.txt` frozen at an
   earlier era). agent-local has no gate to catch it.
-- **R8-09 (LOW)** — [app/main.py:111-122](file:///home/duqueom/projects/agent-local/app/main.py):
+- **R8-09 (LOW)** — `app/main.py:111-122`:
   the webhook stub documents "returns 501" but responds with **200**
   and body `not_implemented` — a real WhatsApp client would interpret
   this as successful delivery. It should be
@@ -357,7 +359,7 @@ by graph (the `transitive_loop_depth` values of 3-5 are all tests or
   English in `core/` — a convention inconsistency (the template is
   English-first).
 - **R8-10 (INFO)** — `Verdict.escalate_to_tier=3`
-  ([policy.py:106](file:///home/duqueom/projects/agent-local/core/policy.py))
+  (`policy.py:106`)
   is not consumed by anything: `release()` goes straight to
   safe_fallback. A dead contract field — either document it as reserved
   or wire it in.
@@ -408,7 +410,7 @@ by graph (the `transitive_loop_depth` values of 3-5 are all tests or
 
 ### 4.6 Telemetry / observability — 9.0
 
-[telemetry.py](file:///home/duqueom/projects/agent-local/core/telemetry.py)
+`telemetry.py`
 is the best file in the repo: a Pydantic contract validated before
 writing, **PII redaction at write time, never after**, conservative
 patterns with `_SAFE_KEYS` so trace_ids/timestamps are never corrupted
@@ -437,7 +439,7 @@ emit this much.
   (`usecases/tienda/evals/sets/`), timestamped JSON reports, and an F0.3
   gate historically at 20/20 — this is already more than most agent
   repos have.
-- **R8-07 (LOW)** — [evals/run.py](file:///home/duqueom/projects/agent-local/evals/run.py):
+- **R8-07 (LOW)** — `evals/run.py`:
   the gate is **hardcoded as an absolute `correct_intent >= 18`**
   (line 136) — with a 40-case set, 45% accuracy would "pass the gate";
   it should be a ratio (`>= 0.90`). Also `datetime.utcnow()` (deprecated
@@ -456,7 +458,7 @@ domain (hardware for GGUF), not the repo.
 ### 4.10 Competitiveness — 8.5
 
 | Reference | Its strength | What agent-local has that it doesn't |
-|---|---|---|
+| --- | --- | --- |
 | LangGraph | state graphs, ecosystem | **deterministic** post-generation policy gate (not another LLM), per-station latency budget, per-tier breaker, contract telemetry with PII redaction — in 1.7k auditable LOC |
 | CrewAI | fast multi-agent assembly | governed single-agent discipline: evals with a gate written BEFORE autonomy, objective escalation |
 | Google ADK | full-stack managed, integrated evaluation | 100% local/air-gapped, zero vendor, zero marginal cost, and the same pattern (policy outside the model) with no platform |
@@ -480,7 +482,7 @@ to a new domain." This matrix measures how much of the philosophy
 traveled **with enforcement** and how much traveled only as culture:
 
 | Discipline | template_MLOps | agent-local | Gap |
-|---|:-:|:-:|---|
+| --- | :-: | :-: | --- |
 | ADRs with format + revisit triggers | ✅ 36 | ✅ 8 | — |
 | Keep-a-Changelog CHANGELOG | ✅ | ✅ | — |
 | Versioned policy-as-data | ✅ (quality_gates.yaml) | ✅ (policy.yaml + decision_id) | — |
@@ -506,7 +508,7 @@ gates."
 ## 6. Findings register
 
 | ID | Sev. | Repo | Evidence | Summary |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | R8-01 | **HIGH** | agent-local | `app/main.py:78-108` | Synchronous multi-LLM loop inside `async def` — blocks the event loop (D-24 class) |
 | R8-02 | MEDIUM | agent-local | `app/main.py:108` | `HTTPException(detail=str(e))` leaks internals to the client |
 | R8-03 | MEDIUM | agent-local | `core/controller.py:353-366` | `reflect()` discards the tier's output — cost with no effect |
@@ -548,21 +550,21 @@ that would affect an adopter at runtime.
 
 ### P1 — close the enforcement gap (the ❌ row in §5)
 
-4. **[agent-local] R8-04** — a single source of version truth: read
+1. **[agent-local] R8-04** — a single source of version truth: read
    `importlib.metadata.version("agent-local")` in `app/main.py`; bump
    pyproject to the real CHANGELOG version; add a minimal
    `scripts/check_coherence.py` (pyproject version ==
    latest CHANGELOG heading == ADR count in README) as a CI job — the
    template's rule-16 ported to agent-local's scale (30 lines, not the
    full system).
-5. **[agent-local] R8-06** — CI lint over the full surface:
+2. **[agent-local] R8-06** — CI lint over the full surface:
    `black --check .` / `isort --check-only .` / `flake8 .` (with
    explicit excludes if needed) + apply pending formatting to
    `conftest.py` and `evals/run.py` in the same PR.
-6. **[agent-local] R8-12** — gitleaks in CI (official action, 1 job) +
+3. **[agent-local] R8-12** — gitleaks in CI (official action, 1 job) +
    a pre-commit config mirroring the template's, trimmed down
    (black/isort/flake8/mypy/gitleaks).
-7. **[agent-local] R8-03** — a design decision via mini-ADR: (a) wire
+4. **[agent-local] R8-03** — a design decision via mini-ADR: (a) wire
    the reflection in (its output enters as a synthetic observation
    `Observation(tool="reflection", ...)` that `generate()` would
    already consume), or (b) remove the station and its budget.
@@ -571,18 +573,18 @@ that would affect an adopter at runtime.
 
 ### P2 — hardening and minor debt
 
-8. **[agent-local] R8-07** — ratio-based evals gate (`accuracy_intent >=
+1. **[agent-local] R8-07** — ratio-based evals gate (`accuracy_intent >=
    0.90`), `datetime.now(timezone.utc)`, clamped p95
    (`min(idx, n-1)` or `statistics.quantiles`), black formatting (falls
    out of P1-5).
-9. **[agent-local] R8-10/R8-11** — document `escalate_to_tier` as
+2. **[agent-local] R8-10/R8-11** — document `escalate_to_tier` as
    reserved (or consume it in `release()` by regenerating at tier 3
    before the fallback); unify docstrings to English in `app/` and
    `evals/`.
-10. **[agent-local] tags + releases** — once P1-4 closes, tag the
+3. **[agent-local] tags + releases** — once P1-4 closes, tag the
     corrected version and adopt the template's `releases/` pattern (one
     note per version) — cheap now, expensive to reconstruct later.
-11. **[ecosystem] MCP interop ADR** — evaluate exposing `ToolRegistry`
+4. **[ecosystem] MCP interop ADR** — evaluate exposing `ToolRegistry`
     as an MCP server / consuming MCP tools (validated as a de facto
     industry standard in 2026). Proposed-first, ADR-032 pattern: an
     invariants contract before code.
@@ -630,7 +632,7 @@ record: this repo's `CHANGELOG.md` [Unreleased] and agent-local's
 `CHANGELOG.md` v0.6.0 (+ its `releases/v0.6.0.md`).
 
 | ID | Status | How |
-|---|---|---|
+| --- | --- | --- |
 | R8-01 | ✅ Fixed | `dev_message` → `def` (threadpool) + AST contract test (`tests/test_app_serving_contract.py`) |
 | R8-02 | ✅ Fixed | Generic 500 with a correlation `error_id` + regression test |
 | R8-03 | ✅ Fixed | `reflection_notes` channel → `generate()` (**ADR-009**) + 2 tests (incl. no-evidence-for-verifier) |

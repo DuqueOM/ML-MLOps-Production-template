@@ -14,4 +14,5 @@ Use this when `/predict` returns unexpected scores, 422s, or model errors.
 
 ## Exit Criteria
 
-The debug session ends with a classified cause: bad input, schema drift, feature drift, model regression, or infrastructure error.
+The debug session ends with a classified cause: bad input, schema drift, feature drift, model regression, or
+infrastructure error.

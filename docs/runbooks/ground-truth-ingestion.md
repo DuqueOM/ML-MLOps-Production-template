@@ -2,7 +2,9 @@
 
 - **Authority**: ADR-020 §S2-5, R4 audit finding M2.
 - **Mode**: CONSULT (ground-truth ingestion is per-domain; the SLA is template-level).
-- **Scope**: define the contract between the closed-loop monitoring layer (ADR-006) and the per-service ground-truth ingestion pipeline. R4 M2 flagged that `D-20`/`D-21` cover code (prediction logger), not the **SLA** the ingestion side must meet for the closed loop to be meaningful.
+- **Scope**: define the contract between the closed-loop monitoring layer (ADR-006) and the per-service ground-truth
+  ingestion pipeline. R4 M2 flagged that `D-20`/`D-21` cover code (prediction logger), not the **SLA** the ingestion
+  side must meet for the closed loop to be meaningful.
 - **Audit trail**: SLA breaches recorded in `VALIDATION_LOG.md`.
 
 ---
@@ -31,7 +33,7 @@ metrics would silently lag.
 ## Canonical SLAs
 
 | Tier | Ground-truth latency | Backfill window | Use case |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Real-time domain (fraud, abuse) | ≤ 24 hours | ≤ 30 days | Prediction → outcome is observable same-day |
 | Operational domain (churn, intent) | ≤ 7 days | ≤ 90 days | Outcome takes a billing cycle to materialize |
 | Long-horizon domain (lifetime value, default) | ≤ 90 days | ≤ 365 days | Outcome takes a quarter or more |
@@ -56,7 +58,7 @@ For each tier, the adopter's ground-truth pipeline MUST:
 4. Write to the same backend as the prediction logger (parquet, BigQuery,
    etc) using a JOIN-stable schema:
 
-   ```
+   ```text
    {
      "prediction_id": "<uuid>",
      "entity_id": "<str>",

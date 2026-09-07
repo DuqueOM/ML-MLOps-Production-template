@@ -9,9 +9,13 @@
 
 ## Why this runbook exists
 
-R4 finding **H6** flagged that `git log --all -p | gitleaks detect --pipe` had never been executed against the full repository history, despite gitleaks running on every commit (workdir-only). A secret committed before gitleaks adoption could still live in history without anyone knowing.
+R4 finding **H6** flagged that `git log --all -p | gitleaks detect --pipe` had never been executed against the full
+repository history, despite gitleaks running on every commit (workdir-only). A secret committed before gitleaks adoption
+could still live in history without anyone knowing.
 
-R4 finding **H5** flagged that the pipeline's three primary security gates — **deploy-bypass-staging**, **model-fails-fairness**, **secret-in-commit** — had never been actively probed. They were assumed to work; no adversarial test had ever produced evidence.
+R4 finding **H5** flagged that the pipeline's three primary security gates — **deploy-bypass-staging**,
+**model-fails-fairness**, **secret-in-commit** — had never been actively probed. They were assumed to work; no
+adversarial test had ever produced evidence.
 
 This runbook closes both findings via a single coordinated procedure.
 
@@ -19,10 +23,12 @@ This runbook closes both findings via a single coordinated procedure.
 
 ## Why STOP-delegated
 
-The procedure is harmless in itself (gitleaks is read-only; bypass tests run on a sandbox branch), but it produces evidence that touches secrets disclosure. Therefore:
+The procedure is harmless in itself (gitleaks is read-only; bypass tests run on a sandbox branch), but it produces
+evidence that touches secrets disclosure. Therefore:
 
 1. The procedure MUST NOT be executed by an autonomous agent.
-2. The output MUST be reviewed by Security before being committed to `VALIDATION_LOG.md` (in case a real leak is discovered, the runbook switches to incident-response mode — see §"If a real leak is found").
+2. The output MUST be reviewed by Security before being committed to `VALIDATION_LOG.md` (in case a real leak is
+   discovered, the runbook switches to incident-response mode — see §"If a real leak is found").
 3. Any positive finding triggers `/secret-breach` per the global rule on secrets.
 
 ---

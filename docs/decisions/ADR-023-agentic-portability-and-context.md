@@ -96,7 +96,7 @@ No template code path installs, configures, or enables an MCP server
 without explicit human approval. The matrix:
 
 | Scope | Mode |
-|-------|------|
+| ------- | ------ |
 | Validate MCP config exists | AUTO |
 | Render setup docs | AUTO |
 | Install local MCP without credentials | CONSULT |
@@ -200,7 +200,7 @@ that omit the canonical source or the `AGENTS.md` authority chain.
 ## 7. Alternatives considered
 
 | Alternative | Why rejected |
-|-------------|--------------|
+| ------------- | -------------- |
 | Keep paraphrasing per-surface, add Codex the same way | Drift compounds linearly in #surfaces × #rules; already 3 surfaces × 15 rules = 45 paraphrases today |
 | Copy canonical content into every IDE surface | Rejected after Codex parity work; duplication drift is the exact failure ADR-023 exists to remove |
 | Put company context in environment variables instead of YAML | Env variables are flat; nested structures (KPIs with owner + threshold + direction) need a typed schema |
@@ -224,12 +224,14 @@ that omit the canonical source or the `AGENTS.md` authority chain.
 ## 9. Sprint 4 closure log
 
 ### F4 — MCP portability registry (shipped)
+
 - `templates/config/mcp_registry.yaml`, `surface_capabilities.yaml`
 - `scripts/mcp_doctor.py` — read-only diagnostics + docs renderer
 - `docs/agentic/mcp-portability.md`
 - Contract: `templates/service/tests/test_mcp_registry_contract.py`
 
 ### F5 — Codex adapter (shipped)
+
 - `.codex/{README.md, rules/, skills/, workflows/, automations/, mcp.example.json}`,
   `.codex_context.md`
 - Full parity with 15 canonical rule files, 16 skills, and 12 workflows
@@ -238,12 +240,14 @@ that omit the canonical source or the `AGENTS.md` authority chain.
 - Contract: `templates/service/tests/test_codex_adapter_contract.py`
 
 ### F6 — Reports v1 typed contract (shipped)
+
 - `templates/config/report_schema.json`,
   `templates/common_utils/reports.py`, `scripts/generate_report.py`
 - `docs/agentic/reports.md`
 - Contract: `templates/service/tests/test_reports_contract.py`
 
 ### F7 — Runtime monitoring companion (shipped, docs-only)
+
 - `docs/agentic/runtime-monitoring-companion.md`
 - Pattern: read-only consumption of `prometheus`, `github`, `kubectl`
   MCPs by existing skills (`debug-ml-inference`, `incident`,
@@ -252,6 +256,7 @@ that omit the canonical source or the `AGENTS.md` authority chain.
 - Contract: `templates/service/tests/test_companions_contract.py`.
 
 ### F8 — GCP Gemini Enterprise / Vertex AI Agent Builder companion (shipped, docs-only)
+
 - `docs/agentic/cloud-companions.md` §F8
 - Mapping table: AGENTS.md → IAM, Skill → Vertex Tool, Workflow →
   Playbook, MCP → Extension/HTTP tool, audit → Cloud Logging,
@@ -261,6 +266,7 @@ that omit the canonical source or the `AGENTS.md` authority chain.
 - Manifest entry: `companions[].id == gcp-gemini-enterprise`.
 
 ### F9 — AWS Bedrock AgentCore companion (shipped, docs-only)
+
 - `docs/agentic/cloud-companions.md` §F9
 - Mapping table: AGENTS.md → IAM permission boundary, Skill → Action
   Group, Workflow → Flow, MCP → Lambda action group, audit →

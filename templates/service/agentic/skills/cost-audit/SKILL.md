@@ -28,6 +28,7 @@ authorization_mode:
 ## Step 1: Collect Current Costs
 
 ### GCP
+
 ```bash
 gcloud billing accounts list
 gcloud billing budgets list --billing-account={ACCOUNT_ID}
@@ -35,6 +36,7 @@ gcloud billing budgets list --billing-account={ACCOUNT_ID}
 ```
 
 ### AWS
+
 ```bash
 aws ce get-cost-and-usage \
   --time-period Start=$(date -d '30 days ago' +%Y-%m-%d),End=$(date +%Y-%m-%d) \
@@ -45,7 +47,7 @@ aws ce get-cost-and-usage \
 
 ## Step 2: Cost Breakdown by Category
 
-```
+```text
 Compute serving (N APIs × 2 clouds):  $___/mo
 Compute training (Spot, monthly avg):  $___/mo
 Databases (Cloud SQL + RDS):           $___/mo
@@ -73,7 +75,7 @@ echo "{@ service_slug @}_monthly_cloud_cost_usd ${TOTAL_MONTHLY_COST_USD}" | \
 ## Step 3: Check FinOps Rules
 
 | Rule | Status | Action if Violated |
-|------|--------|-------------------|
+| ------ | -------- | ------------------- |
 | Training on Spot/Preemptible | ✅/❌ | Switch to spot instances (70% savings) |
 | Serving on On-Demand | ✅/❌ | Do not change — availability required |
 | CPU-only HPA (no idle pods) | ✅/❌ | Fix HPA to avoid over-provisioning |
@@ -92,6 +94,7 @@ echo "{@ service_slug @}_monthly_cloud_cost_usd ${TOTAL_MONTHLY_COST_USD}" | \
 ## Step 5: Update Documentation
 
 Update the TCO section in service READMEs and relevant ADRs with:
+
 - Real measured costs (not estimates)
 - Date of measurement
 - Comparison with previous period

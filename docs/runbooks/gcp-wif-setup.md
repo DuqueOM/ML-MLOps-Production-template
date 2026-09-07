@@ -93,7 +93,7 @@ Go to: `https://github.com/${GH_OWNER}/${GH_REPO}/settings/variables/actions`
 Add **repository variables** (NOT secrets — these are not sensitive):
 
 | Variable | Value |
-|----------|-------|
+| ---------- | ------- |
 | `GCP_WIF_PROVIDER` | `projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/${POOL_ID}/providers/${PROVIDER_ID}` |
 | `GCP_SERVICE_ACCOUNT` | `${SA_EMAIL}` |
 | `GCP_PROJECT_ID` | `${PROJECT_ID}` |
@@ -111,7 +111,7 @@ re-introduce static-key auth in a later PR.
 Trigger any workflow that authenticates to GCP (e.g. `deploy-gcp.yml` via
 `workflow_dispatch`). The auth step should print:
 
-```
+```text
 Successfully authenticated to GCP via Workload Identity Federation.
 ```
 

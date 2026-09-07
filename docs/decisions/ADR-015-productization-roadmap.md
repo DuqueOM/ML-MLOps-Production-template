@@ -43,7 +43,7 @@ What a new adopter needs to deploy a real service without forking
 the template.
 
 | PR | Scope | Critical-path |
-|----|-------|---------------|
+| ---- | ------- | --------------- |
 | **A5** | Golden path E2E in CI: scaffold → build → kind+local-registry → cosign sign by digest → Kyverno admit → smoke | YES — proves all prior audit work converges |
 | **A1** | Network mode `managed \| existing` + per-env IAM split (CI / deploy / runtime / drift / retrain) | NO — depends on A5 to validate |
 | **A2** | Bootstrap/live Terraform split (state + KMS + AR/ECR + CI identities only in bootstrap) | NO — depends on A1 |
@@ -57,7 +57,7 @@ add operational quality. If A5 fails on day one, A1–A4 are premature.
 ### Phase B — ML quality as executable contract (4 PRs)
 
 | PR | Scope |
-|----|-------|
+| ---- | ------- |
 | **B1** | `quality_gates.yaml` per service + Pandera-equivalent JSON schema + CI validation step (✅ shipped — `templates/service/configs/quality_gates.schema.json` + `scripts/validate_quality_gates.py` + drift-gate `test_quality_gates_schema_sync.py` + CI lint step) |
 | **B2** | EDA produces 5 versioned artifacts (`eda_summary.json`, `schema_ranges.json`, `baseline_distributions.parquet`, `feature_catalog.yaml`, `leakage_report.json`); training/drift/retrain consume them by reference (✅ shipped — `templates/common_utils/eda_artifacts.py` contract + loaders; `eda_pipeline.py` emits all 5; `drift_detection.py --eda-baseline` consumer; `train.py` `_enforce_eda_gate` consumer; full test coverage) |
 | **B3** | Leakage hardening (temporal split when timestamp present; grouped split when entity_id present; random split requires explicit config) + reproducibility manifest per run (✅ shipped — `SplitConfig` Pydantic model in `{service}.config` + JSON Schema; `Trainer._split_data` dispatch with future-leak / group-disjoint invariants; `common_utils.training_manifest` versioned manifest with SHAs, deps, EDA cross-ref; full test coverage incl. determinism check) |
@@ -66,7 +66,7 @@ add operational quality. If A5 fails on day one, A1–A4 are premature.
 ### Phase C — Operational observability (3 PRs)
 
 | PR | Scope |
-|----|-------|
+| ---- | ------- |
 | **C1** | Correlation IDs standard (`request_id`, `prediction_id`, `model_version`, `deployment_id`, `audit_id`, `drift_run_id`, `retrain_run_id`) carried through serving logs, events, audit (✅ shipped — `audit_id` in `agent_context` + `audit_record.py`; `deployment_id` via Downward API + `deploy-common.yml` patch; `drift_run_id` in report/Pushgateway/issue; contract codified in `templates/service/docs/correlation-ids.md`) |
 | **C2** | Alert routing: `runbook_url` field MANDATORY on every PrometheusRule; multi-window burn-rate SLO alerts with action mapping (✅ shipped — `templates/service/tests/test_alert_routing_contract.py` auto-discovers every PrometheusRule + bare alert-groups doc and asserts: every alert has a non-empty `runbook_url` annotation, every alert has an `action` label in `{page, ticket, notify}`, the SLO file contains at least one multi-window/multi-burn-rate alert (long+short joined by `and`), and severity↔action pairs are not nonsense; `slo-prometheusrule.yaml` rewritten to the canonical 4-level SRE Workbook ladder (P1 14.4x/1h+5m page, P2 6x/6h+30m page, P3 3x/1d+2h ticket, P4 1x/3d+6h notify); `performance-prometheusrule.yaml`, `alertmanager-rules.yaml`, and `alerts-template.yaml` audited and patched for both invariants; `alerts-template.yaml` placeholders quoted to make the file valid YAML pre-render) |
 | **C3** | 2 reproducible drills: drift simulated + deploy degraded; per-drill evidence in `docs/runbooks/drills/` (✅ shipped — `templates/scripts/drills/run_drift_drill.py` exercises the production `detect_drift(--eda-baseline ...)` path against a synthetic +3σ shift on `feature_a`; `run_deploy_degraded_drill.py` exercises `champion_challenger.compare_models` with a champion vs a challenger trained on shuffled labels and asserts the gate returns `block`; both write `evidence.md` + `evidence.json` + a per-drill artifacts dir under `docs/runbooks/drills/<drill>/<run_id>/`; `_drill_common.py` defines the shared `DrillEvidence` frozen dataclass; `templates/service/tests/test_drills_reproducible.py` runs both end-to-end + reproducibility checks (same seeds → byte-identical PSI / ΔAUC) + a catalogue sentinel; wired into `scripts/test_scaffold.sh` smoke chain and into `new-service.sh` so every scaffolded service ships drills; `templates/docs/runbooks/drills/README.md` documents cadence (per PR + per release + quarterly) and the contract for adding new drills) |
@@ -77,7 +77,7 @@ These items appeared in the source plan but violate ADR-001's
 calibration for 2-5 service single-team templates:
 
 | Rejected item | Why |
-|---------------|-----|
+| --------------- | ----- |
 | 6-module Terraform split (network/cluster/iam/registry/state/observability) | Module-per-domain is right at 10+ services, wrong at 2-5. Phase A keeps Terraform as **one cluster module per cloud** with focused sub-blocks. The audit's PR-03 expectation is a future ADR if/when the trigger fires. |
 | Two separate Day-2 checklists (`CHECKLIST_DAY2_GCP.md` + `CHECKLIST_DAY2_AWS.md`) | Single `docs/runbooks/day-2-operations.md` with cloud-tagged tables is more maintainable. |
 | `dashboards/QUESTIONS.md` as a PR of its own | Editorial commit inside Phase C2. Not a PR. |
@@ -105,10 +105,14 @@ The template is "productized" when ALL of:
 5. Each scaffolded service ships `quality_gates.yaml` validated by CI (✅ achieved — PR-B1)
 6. EDA emits 5 artifacts consumed by schema/drift/retrain (✅ achieved — PR-B2)
 7. Retrain produces `promotion_packet.json` with statistical evidence
-   (✅ achieved — adapter `b8708b6` produces evidence; PR-B3 manifest carries it; PR-B4 `evidence_bundle.evaluate_evidence` enforces it as a hard gate in `promote_to_mlflow.py`)
-8. Every alert has a `runbook_url` (✅ achieved — PR-C2 contract test enforces it across all auto-discovered PrometheusRule manifests)
+   (✅ achieved — adapter `b8708b6` produces evidence; PR-B3 manifest carries it; PR-B4
+   `evidence_bundle.evaluate_evidence` enforces it as a hard gate in `promote_to_mlflow.py`)
+8. Every alert has a `runbook_url` (✅ achieved — PR-C2 contract test enforces it across all auto-discovered
+   PrometheusRule manifests)
 9. Logs/events correlate by standard IDs (✅ achieved — PR-C1)
-10. ≥1 drift drill + ≥1 deploy-degraded drill repeat cleanly (✅ achieved — PR-C3 ships both, with reproducibility asserted by the contract test: same seeds produce byte-identical PSI on the drift drill and byte-identical ΔAUC CI lower bound on the deploy-degraded drill)
+10. ≥1 drift drill + ≥1 deploy-degraded drill repeat cleanly (✅ achieved — PR-C3 ships both, with reproducibility
+    asserted by the contract test: same seeds produce byte-identical PSI on the drift drill and byte-identical ΔAUC CI
+    lower bound on the deploy-degraded drill)
 
 ## Risks watched
 
@@ -127,7 +131,7 @@ The template is "productized" when ALL of:
 ## Tracking
 
 | Phase | Status | Commits |
-|-------|--------|---------|
+| ------- | -------- | --------- |
 | A — Operable product | ✅ **COMPLETE** | A1 `0e00916`+`e33ac63`+`8445df4`; A2 `565fe0a`; A3 this commit; A4 shipped; A5 + A5b shipped — see sub-table |
 | B — ML quality contract | ✅ **COMPLETE** | B1 PR-B1; B2 PR-B2; B3 PR-B3; B4 `6978272` |
 | C — Observational loops | ✅ **COMPLETE** | C1 (audit_id/deployment_id/drift_run_id chain shipped pre-PR-C2); C2 `3298134`; C3 this commit |
@@ -135,7 +139,7 @@ The template is "productized" when ALL of:
 ### Phase A sub-tracking
 
 | PR | Status | Commits / notes |
-|----|--------|------------------|
+| ---- | -------- | ------------------ |
 | A5 | ✅ **shipped** — Golden Path E2E green end-to-end | 7-commit bring-up converged: `78accae` (initial), `e28151c` (path), `20142f6` (k8s tooling actions), `cc621e2` (kyverno chart ver), `3f3a867` (inline policy), `b4dde96` (single-word slug + A5b documented), `13efa95` (tolerate platform CRDs absent in synthetic kind cluster), `ba6faee0` (AgentMode enum conversion in `audit_record.py`). Last 2 CI runs (`24954081650` workflow_dispatch + `24979238269` scheduled) both ✅ success. Verified contract: scaffold → build+sign (cosign keyless) → kind cluster + Kyverno digest policy → admit + smoke → audit-trail jsonl entry. Workflow runs weekly on schedule + on-demand via `workflow_dispatch`. The 7-commit sequence is the intended operating shape of an E2E bring-up: each green step proves a contract; each red step exposes one new contract that needs fixing. |
 | A5b | ✅ **shipped** — placeholder vocabulary split | `{service-name}` (kebab, RFC 1123) for K8s names + image refs + IRSA/WI annotations + URL paths; `{service}` (snake) reserved for Python identifiers + Prometheus metric names + `SERVICE_METRIC_PREFIX` env var. `templates/scripts/new-service.sh` derives `SERVICE_KEBAB` from `SERVICE_SLUG` via `tr '_' '-'` and substitutes `{service-name}` BEFORE `{service}`. 39 K8s manifests + 2 monitoring rules patched mechanically (6-pattern sed: `{service}-`, `app: "{service}"`, `service: "{service}"`, `/{service}/`, `job="{service}"`, `service="{service}"`). Contract test `templates/service/tests/test_k8s_name_vocabulary.py` enforces both layers: static (no `{service}` in kebab-required positions) AND rendered (substitute snake-heavy `golden_path` slug → every `metadata.name`/`metadata.namespace`/`labels.{app,service}`/`serviceAccountName`/`containers[*].name`/`subjects[*].name`/`roleRef.name` validates against RFC 1123 regex `^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`). 85 test cases pass; smoke-tested end-to-end with `bash new-service.sh GoldenPath golden_path` confirming `golden-path-predictor` (kebab) + `golden_path_performance_metric` (snake) coexist correctly. Wired into `scripts/test_scaffold.sh`. |
 | A1 | ✅ **shipped** — network mode + per-env IAM split | ADR-017 documents the design. GCP (`templates/infra/terraform/gcp/`): `network.tf` adds custom-mode VPC + secondary ranges for pods/services with VPC Flow Logs (sample 0.5); `iam.tf` adds 5 service accounts (ci/deploy/runtime/drift/retrain) with Workload Identity bindings on the runtime/drift/retrain trio. AWS (`templates/infra/terraform/aws/`): `network.tf` adds VPC + 3 private + 3 public subnets across 3 AZs + NAT gateways tagged for AWS LB controller auto-discovery; `iam-roles-split.tf` adds GitHub OIDC provider (gated on `var.github_repo`), CI role (TF state R/W + ECR push, no IAM mutation), Deploy role (ECR push + EKS describe), per-service drift IRSA (CloudWatch read + scoped S3 reports), per-service retrain IRSA (data read + models write). Both clouds expose `network_mode = "managed" \| "existing"` with backwards-compat default ('managed' on GCP, 'existing' on AWS to preserve `var.subnet_ids` callers). Contract test `templates/service/tests/test_iam_least_privilege.py` (11 cases) enforces no wildcard principals, no `Action: "*"` on custom policies, GitHub OIDC sub-claim repo binding, 5 GCP SAs exist, separate AWS drift+retrain IRSA, network_mode validation block on both clouds, CI role lacks IAM mutation, runtime/drift/retrain WI bindings present. Anti-pattern codified as **D-31** in `AGENTS.md`. `terraform validate` passes on both clouds. |

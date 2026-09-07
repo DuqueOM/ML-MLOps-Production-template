@@ -3,7 +3,8 @@
 - **Status:** Accepted
 - **Date:** 2026-04-29
 - **Supersedes:** none (extends ADR-016 closure)
-- **Related:** ADR-014 (gap remediation), ADR-015 (productization roadmap), ADR-016 (R2 remediation), ADR-018 (Memory Plane), ADR-019 (CI Self-Healing)
+- **Related:** ADR-014 (gap remediation), ADR-015 (productization roadmap), ADR-016 (R2 remediation), ADR-018 (Memory
+  Plane), ADR-019 (CI Self-Healing)
 - **Authors:** Staff/Lead, AI staff engineer
 
 ## Context
@@ -33,7 +34,7 @@ Self-Healing), which until now had been deferred behind explicit Phase 0 status.
 Adopt a **four-sprint plan** governed by this ADR with the following structure:
 
 | Sprint | Focus | Mode mix |
-|--------|-------|----------|
+| -------- | ------- | ---------- |
 | 0 (days 1–7) | Credibility — close all 5 Criticals via documentation + policy + assertion tests; **no cloud runtime change** | AUTO + 1 CONSULT |
 | 1 (days 8–14) | Execution hardening — per-PR smoke lane, PR-evidence policy, red-team log, ADR-019 Phase 1 read-only | AUTO + CONSULT + 2 STOP-delegated |
 | 2 (days 15–21) | Memory Plane Phase 1 contracts + Mediums | AUTO + 1 CONSULT |
@@ -96,7 +97,7 @@ the structure; the plan document is the operational artifact.
 ## Acceptance criteria
 
 | ID | Criterion |
-|----|-----------|
+| ---- | ----------- |
 | AC-1 | All 5 Criticals (C1–C5) closed in Sprint 0 PR `audit-r4/sprint-0-credibility` |
 | AC-2 | `tests/test_readme_model_names.py` and `tests/test_phase0_disclosure.py` green on `main` |
 | AC-3 | `docs/RELEASING.md`, `MIGRATION.md`, `VALIDATION_LOG.md` exist and are linked from `README.md` and `CHANGELOG.md` |
@@ -108,8 +109,10 @@ the structure; the plan document is the operational artifact.
 ## Revisit triggers
 
 - A Critical finding from R4 is found to be only partially closed → re-open this ADR, escalate severity.
-- ADR-019 Phase 1 shadow data shows classifier precision below the threshold defined at S1-6 acceptance → Phase 2 deferred indefinitely; this ADR documents the pause.
-- A new external audit (R5) lands during Sprint 0–3 → fold its findings into this ADR's progress log rather than opening a parallel ADR; sequence by severity.
+- ADR-019 Phase 1 shadow data shows classifier precision below the threshold defined at S1-6 acceptance → Phase 2
+  deferred indefinitely; this ADR documents the pause.
+- A new external audit (R5) lands during Sprint 0–3 → fold its findings into this ADR's progress log rather than opening
+  a parallel ADR; sequence by severity.
 
 ## Progress log
 
@@ -118,7 +121,7 @@ _Updated at the close of each sprint with closed-finding evidence._
 ### Sprint 0 — closed 2026-04-29 (commit `39fbfb7`)
 
 | Finding | Status | Evidence |
-|---------|--------|----------|
+| --------- | -------- | ---------- |
 | C1 | Closed | README §"Recommended baseline" reworded; `tests/test_readme_model_names.py` (3 invariants) green |
 | C2 | Closed | Phase-0 banners on README §"Operational Memory Plane" + §"Agentic CI self-healing"; `tests/test_phase0_disclosure.py` (6 invariants) green |
 | C3 | Closed | `docs/RELEASING.md` ratified; `### Breaking for adopters` blocks added retroactively to v1.10/v1.11/v1.12 |
@@ -131,7 +134,7 @@ runtime touched. Net diff: +1236 / -7 lines across 9 files.
 ### Sprint 1 — closed 2026-04-29 (commit chain — see VALIDATION_LOG Entry 002)
 
 | Finding | Status | Evidence |
-|---------|--------|----------|
+| --------- | -------- | ---------- |
 | H1 | Phase 1 closed | `scripts/ci_collect_context.py`, `scripts/ci_classify_failure.py`, `.github/workflows/ci-self-healing-shadow.yml`, `tests/test_ci_classify_failure_phase1.py` (27 invariants green). ADR-019 status: Phase 0 → Phase 1. Phase 2 gated on 14 days of shadow data. |
 | H2 | Closed | `.github/workflows/pr-evidence-check.yml`, `.github/pull_request_template.md` updated, `CONTRIBUTING.md` §"Evidence policy for new components" |
 | H3 | Closed | `.github/workflows/pr-smoke-lane.yml` — scaffold + 6 overlay renders + kubeconform + binary-presence audit per PR |
@@ -141,14 +144,14 @@ runtime touched. Net diff: +1236 / -7 lines across 9 files.
 | H7 | Runbook shipped | `docs/runbooks/kyverno-admission-validation.md` — STOP-delegated to Platform; kind-cluster procedure documented; execution pending |
 
 The three runbooks (H5 / H6 / H7) ship the operational procedure but the
-**execution evidence** has not yet been recorded. Per ADR-020 §"Hard rules"
-#5, they are not executed inside the agent loop; their entry in
+**execution evidence** has not yet been recorded. Per ADR-020 §"Hard rules" # 5,
+they are not executed inside the agent loop; their entry in
 `VALIDATION_LOG.md` will be added by Platform / Security.
 
 ### Sprint 2 — closed 2026-04-29 (commit chain — see VALIDATION_LOG Entry 003)
 
 | Finding | Status | Evidence |
-|---------|--------|----------|
+| --------- | -------- | ---------- |
 | H1 (part 2/2) | Phase 1 closed | `templates/common_utils/memory_types.py`, `templates/common_utils/memory_redaction.py`, `tests/test_memory_contracts.py` (21 invariants), `tests/test_memory_redaction.py` (38 invariants). ADR-018 status: Phase 0 → Phase 1. Phase 2 gated on 30 days of Phase 1 contract stability. |
 | M3 | Closed | `docs/decisions/ADR-021-fairness-thresholds.md` — DIR ≥ 0.80 default + per-domain table + consultation band + calibration parity. |
 | M4 | Closed | `docs/ADOPTION.md` §6 — Compliance gap analysis covering GDPR / SOC 2 / ISO 27001 / HIPAA + Out-of-scope-by-philosophy section. |
@@ -179,7 +182,7 @@ See `docs/audit/ACTION_PLAN_R4.md` §7 and `docs/audit/ACTION_PLAN_R5.md`.
 ### R5 AUTO batch — closed 2026-05-03 (commit chain — see VALIDATION_LOG Entry 004)
 
 | Finding | Status | Evidence |
-|---------|--------|----------|
+| --------- | -------- | ---------- |
 | R5-L4 | Closed | `.pre-commit-config.yaml` retired pre-push scaffold smoke; `Makefile` `smoke` alias; `CONTRIBUTING.md` §"Local validation cadence". |
 | R5-M4 | Closed | `templates/service/tests/load_test.py` synced to canonical schema; new `test_load_payload_matches_schema.py` (5 invariants) blocks future drift. |
 | R5-M2 | Closed | `scripts/validate_agentic.py` reconfigure-utf-8 + ASCII probe + `MARK_*` constants; verified on Linux + simulated cp1252. |
@@ -188,28 +191,31 @@ See `docs/audit/ACTION_PLAN_R4.md` §7 and `docs/audit/ACTION_PLAN_R5.md`.
 ### R5 remainder — closed 2026-05-03 (VALIDATION_LOG Entry 005)
 
 | Finding | Status | Evidence |
-|---------|--------|----------|
+| --------- | -------- | ---------- |
 | R5-H1 | Closed | `README.md` §"Production-ready scope" rewritten with "Production-ready by design" wording + 3-bullet preamble + new §"Verification status" 4-layer matrix (L1 contract / L2 smoke / L3 golden-path / L4 adopter-owned). Badge bumped to `anti--patterns-32`. `test_readme_verification_status.py` locks 9 wording invariants. |
 | R5-M1 | Closed | `.github/workflows/ci-self-healing-shadow.yml` — `permissions: pull-requests: read` added; fetch-logs step does real `gh api /actions/runs/{id}/logs` with 50 MB cap + unzip + concat; `log_artifact_url` replay via `curl`; changed-files step resolves PR base via `pulls/{num}` and diffs `base...HEAD`, closing red-team F1. Step summary now carries 9 provenance fields. `test_shadow_workflow_phase1.py` locks 14 invariants including "no gh pr create / no git push". |
 | R5-M3 | Closed | `templates/k8s/base/networkpolicy.yaml` carries OVERLAY-OVERRIDE-REQUIRED banner; 4 new `patch-networkpolicy.yaml` JSON 6902 patches in `overlays/{gcp,aws}-{staging,prod}` replace `0.0.0.0/0:443` with cloud-specific CIDR residuals (GCP private-googleapis VIPs; AWS 52./54. residuals with excepts). Each overlay's `kustomization.yaml` wires the patch with `target.kind: NetworkPolicy`. `test_networkpolicy_egress_hygiene.py` locks 19 invariants (14 structural + 4 kustomize-optional + 1 dev-negative). Follow-up: `docs/runbooks/egress-narrowing.md` queued for Sprint 3. |
 
-All R5 findings closed. Sprint 3 scope now: R4 Mediums/Lows (M5/L1/L2/L3) + follow-ups from red-team (F1/F2/F3) + `docs/runbooks/egress-narrowing.md` + ADR-019 Phase-1 → Phase-2 CONSULT decision.
+All R5 findings closed. Sprint 3 scope now: R4 Mediums/Lows (M5/L1/L2/L3) + follow-ups from red-team (F1/F2/F3) +
+`docs/runbooks/egress-narrowing.md` + ADR-019 Phase-1 → Phase-2 CONSULT decision.
 
 ### Sprint 3 — batch 2 closure 2026-05-03
 
 | Finding | Status | Evidence |
-|---------|--------|----------|
+| --------- | -------- | ---------- |
 | R4-L1 | Closed | `releases/v1.0.0.md` – `releases/v1.10.0.md` backfilled with `## Known follow-ons (scoped, not regressions)` section mirroring v1.11.0/v1.12.0 format. Each bullet points to the subsequent release that closed the item. `test_release_notes_follow_ons.py` locks 26 invariants (heading presence + non-empty body) across 13 release files (4 hotfix-note skips by design). |
 | R4-L3 | Closed | `templates/cicd/terraform-plan-nightly.yml` — new `infracost/actions/setup@v3` + `infracost breakdown` steps per cloud (gcp + aws). Guarded by `env.INFRACOST_API_KEY != ''` so forks without the secret degrade cleanly. JSON artifact (`infracost-<cloud>-<run_id>`, 14-day retention) + step summary table with `totalMonthlyCost`. Workflow header documents optional secret. `test_infracost_integration.py` locks 5 invariants (setup presence, guard, breakdown → summary + artifact, header documentation). |
 | Red-team F2 | Closed | `templates/common_utils/risk_context.py` parser hardening rejects full-day (`00-24`), reversed, degenerate, malformed, and out-of-range MLOPS_ON_HOURS_UTC spans with fallback to default `08-18` + WARNING. `templates/tests/unit/test_risk_context.py::TestOnHoursOverrideHardening` adds 7 invariants covering every rejected shape. |
 | Red-team F3 | Closed | `templates/service/tests/test_red_team_regression.py` — 6 regression invariants covering Entries 2+3 (protected_paths short-circuit precedence), Entry 2 signature lock, Entry 4 (PR-level blast-radius aggregation), Entry 5 / F2 (off_hours cannot be suppressed), and red-team-log integrity check. Direct-import of `scripts/ci_classify_failure.classify(context, policy)`, no subprocess, runtime < 1 s. |
 
-Sprint 3 remaining scope: R4-M5 (Alertmanager routing test, CONSULT — requires amtool + new alertmanager config) + ADR-019 Phase-1 → Phase-2 CONSULT decision (gated on 14 days of shadow data post-merge).
+Sprint 3 remaining scope: R4-M5 (Alertmanager routing test, CONSULT — requires amtool + new alertmanager config) +
+ADR-019 Phase-1 → Phase-2 CONSULT decision (gated on 14 days of shadow data post-merge).
 
 ### Sprint 3 — batch 3 closure 2026-05-03
 
 | Finding | Status | Evidence |
-|---------|--------|----------|
+| --------- | -------- | ---------- |
 | R4-M5 | Closed | New `templates/monitoring/alertmanager.yml` (routing tree + 4 receivers + inhibit rule) — separate from the existing `alertmanager-rules.yaml` which only emits alerts. New `templates/monitoring/tests/test_alertmanager_routing.py` locks 14 invariants: 5 routing rows via `amtool config routes test` (authoritative) + 5 identical rows via a pure-Python simulator (always-runs fallback) + `amtool check-config` structural check + defined-receivers cross-check + sibling-file layout check + P1→P2/P3/P4 inhibit-rule existence. `amtool` auto-discovered from `$PATH` or `<repo>/alertmanager-*/amtool`; amtool-authoritative tests skip cleanly when the binary is absent. New `docs/runbooks/alertmanager-validation.md` documents the manual end-to-end exercise against a real cluster + audit-log template. |
 
-Remaining Sprint 3 scope: only **ADR-019 Phase-1 → Phase-2 CONSULT decision**, which is time-gated on 14 days of shadow data post-merge of PR #15 — not an actionable engineering task.
+Remaining Sprint 3 scope: only **ADR-019 Phase-1 → Phase-2 CONSULT decision**, which is time-gated on 14 days of shadow
+data post-merge of PR #15 — not an actionable engineering task.

@@ -43,7 +43,7 @@ the same provider, ADR-023 §6 revisit triggers fire and we reopen.
 ### Mapping
 
 | Template concept | GCP equivalent | Notes |
-|------------------|----------------|-------|
+| ------------------ | ---------------- | ------- |
 | `AGENTS.md` permissions matrix | Vertex AI Agent IAM policy | Map AUTO → `roles/aiplatform.user`, CONSULT → custom role with reviewer step, STOP → blocked at IAM |
 | Skill (`agentic/skills/<id>/SKILL.md`) | Agent Builder *Tool* with explicit instruction text | Copy SKILL body into the tool description; do NOT auto-translate |
 | Workflow (`agentic/workflows/<id>.md`) | Agent Builder *Playbook* | Slash-command name maps 1:1 to playbook trigger |
@@ -94,7 +94,7 @@ the same provider, ADR-023 §6 revisit triggers fire and we reopen.
 ### Mapping
 
 | Template concept | AWS equivalent | Notes |
-|------------------|----------------|-------|
+| ------------------ | ---------------- | ------- |
 | `AGENTS.md` permissions matrix | AgentCore policy + IAM permission boundary | AUTO → invoke, CONSULT → invoke + reviewer Lambda, STOP → blocked at SCP |
 | Skill | AgentCore *Action Group* schema | Schema lives in repo as the SKILL frontmatter, copied to AgentCore |
 | Workflow | AgentCore *Flow* | Slash-command maps to flow trigger |
@@ -156,7 +156,7 @@ job, not a re-architecture.
 
 ## Authority chain
 
-```
+```text
 ADR-023 §F8, §F9
   └─ docs/agentic/cloud-companions.md   (this file)
        ├─ templates/config/agentic_manifest.yaml   (skills / workflows / surfaces)
@@ -165,6 +165,7 @@ ADR-023 §F8, §F9
 ```
 
 A change to either companion contract requires:
+
 1. ADR-023 amendment (new revision section).
 2. Update to this document.
 3. If a new surface is claimed by skills → manifest edit + validator

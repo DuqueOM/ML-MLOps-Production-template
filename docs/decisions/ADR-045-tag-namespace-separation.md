@@ -15,7 +15,7 @@ This repository carries two sets of git tags with **incompatible
 requirements**, in one namespace:
 
 | Purpose | Requirement |
-|---|---|
+| --- | --- |
 | Release-channel markers (`v0.x`) | machine-sortable; must contain **only live releases** |
 | Frozen audit snapshots (`v1.0.0`–`v1.12.0`) | permanent; must **never be resolved** |
 
@@ -65,7 +65,7 @@ return sorted_tags[0]
 before sorting**. Verified:
 
 | Tag | PEP 440 valid | Copier behaviour |
-|---|---|---|
+| --- | --- | --- |
 | `v1.12.0` | yes → `1.12.0` | resolved, wins |
 | `v0.25.0` | yes → `0.25.0` | resolved |
 | `archive/v1.12.0` | **no** | **filtered out** |
@@ -139,7 +139,7 @@ exactly. A tag→commit mapping was recorded before execution.
 ## Alternatives considered
 
 | Option | Verdict |
-|---|---|
+| --- | --- |
 | Renumber the active line to `v2.x` | Rejected — makes the version number lie about maturity to satisfy a sort order |
 | Delete the `v1.x` tags outright | Rejected — loses provenance for no gain over archiving |
 | Keep pinning, change nothing | Rejected — four defects in four releases; the next surface is a matter of time |

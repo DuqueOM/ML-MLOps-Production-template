@@ -89,7 +89,7 @@ python scripts/rank_regressions.py ops/incidents/{incident}/sliced_auc.json
 Produce a table:
 
 | slice | baseline | current | delta |
-|-------|----------|---------|-------|
+| ------- | ---------- | --------- | ------- |
 | by_country=MX | 0.87 | 0.71 | -0.16 |
 | by_channel=web | 0.84 | 0.79 | -0.05 |
 | _global | 0.86 | 0.80 | -0.06 |
@@ -111,6 +111,7 @@ kubectl argo rollouts history {service}-predictor -n {ns} \
 ```
 
 If yes → deploy-correlated. Pull the diff:
+
 ```bash
 gh pr list --search "merged:<={REGRESSION_TS} state:merged" \
   -L 5 --json number,title,mergedAt
@@ -131,7 +132,7 @@ python scripts/correlate_drift.py --since "{REGRESSION_TS - 7d}"
 Produce:
 
 | feature | psi_at_regression | alert_threshold | 2x_threshold |
-|---------|-------------------|-----------------|--------------|
+| --------- | ------------------- | ----------------- | -------------- |
 | amount | 0.42 | 0.25 | 0.50 |
 | country_mix | 0.12 | 0.20 | 0.40 |
 

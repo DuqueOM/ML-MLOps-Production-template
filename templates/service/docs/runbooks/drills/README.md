@@ -14,7 +14,7 @@ look identical to the function under test but very different to the
 people on call:
 
 | | unit test | drill |
-|--|-----------|-------|
+| -- | ----------- | ------- |
 | **scope** | one function, one input | end-to-end code path |
 | **input** | toy fixtures | deterministic synthetic data that mirrors a real failure |
 | **output** | pass/fail | pass/fail **+ human-readable evidence on disk** |
@@ -45,7 +45,7 @@ The template ships TWO drills (PR-C3, ADR-015 acceptance #10):
 
 ## Where evidence lives
 
-```
+```text
 docs/runbooks/drills/
     <drill_name>/
         <run_id>/                        # <UTC compact>-<short uuid>
@@ -74,6 +74,7 @@ python -m scripts.drills.run_deploy_degraded_drill
 ```
 
 Exit codes are stable:
+
 - `0` — drill PASSED (verdict matches expectation)
 - `1` — drill FAILED (verdict diverged — investigate immediately)
 - `2` — internal error (bootstrap, missing dependency)
@@ -81,7 +82,7 @@ Exit codes are stable:
 ## Cadence
 
 | Trigger | Drills to run |
-|---------|---------------|
+| --------- | --------------- |
 | Every PR (scaffold smoke) | both, via `test_drills_reproducible.py` |
 | Every release | both |
 | After any change to `monitoring/drift_detection.py` | `drift` |

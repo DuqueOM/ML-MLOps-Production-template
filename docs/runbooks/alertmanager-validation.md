@@ -26,13 +26,13 @@ and runs in < 1 s. The human-in-the-loop procedure below is only for:
 
 ## 2. Expected routing table (contract)
 
-| Priority | Alert labels                                   | Receiver           | Latency SLA |
-|---------:|------------------------------------------------|--------------------|-------------|
-| P1       | `severity=critical`, `action=page`             | `oncall-pager`     | < 2 min     |
-| P2       | `severity=warning`, `action=ticket`            | `platform-tickets` | < 1 h       |
-| P3       | `severity=warning`, `action=retrain`           | `ml-retrain`       | < 24 h      |
-| P4       | `severity=info`, `action=heartbeat`            | `ops-chat`         | best-effort |
-| default  | (anything else)                                | `ops-chat`         | best-effort |
+| Priority | Alert labels | Receiver | Latency SLA |
+| ---------: | ------------------------------------------------ | -------------------- | ------------- |
+| P1 | `severity=critical`, `action=page` | `oncall-pager` | < 2 min |
+| P2 | `severity=warning`, `action=ticket` | `platform-tickets` | < 1 h |
+| P3 | `severity=warning`, `action=retrain` | `ml-retrain` | < 24 h |
+| P4 | `severity=info`, `action=heartbeat` | `ops-chat` | best-effort |
+| default | (anything else) | `ops-chat` | best-effort |
 
 The pytest suite asserts every row via **two independent paths**:
 `amtool config routes test` (authoritative) + a pure-Python simulator
@@ -50,6 +50,7 @@ python -m pytest templates/service/monitoring/tests/test_alertmanager_routing.py
 ```
 
 If any row fails, **stop** and inspect:
+
 - **Simulator fails + amtool passes** → the simulator fell behind Alertmanager's
   matcher semantics; update `_parse_matcher` or `_route_matches` in the test.
 - **amtool fails + simulator passes** → the config is ambiguous; `amtool` is
@@ -74,6 +75,7 @@ tar -xzf am.tgz
 ```
 
 The pytest suite auto-discovers the binary at:
+
 1. `$PATH` (preferred for CI images).
 2. `<repo>/alertmanager-*/amtool` (local contributor convenience).
 

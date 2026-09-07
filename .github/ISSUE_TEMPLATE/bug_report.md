@@ -14,6 +14,7 @@ Which template or file is affected? (e.g., `templates/service/k8s/base/deploymen
 
 **To Reproduce**
 Steps to reproduce the behavior:
+
 1. Use template '...'
 2. Configure with '...'
 3. Run command '...'
@@ -23,11 +24,13 @@ Steps to reproduce the behavior:
 A clear and concise description of what you expected to happen.
 
 **Error Output**
-```
+
+```text
 Paste error output here
 ```
 
 **Environment:**
+
 - OS: [e.g., Ubuntu 22.04, macOS 14]
 - Python: [e.g., 3.11.8]
 - Docker: [e.g., 24.0.7]

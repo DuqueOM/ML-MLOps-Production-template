@@ -30,7 +30,8 @@ It feeds directly into `templates/service/common_utils/risk_context.py`:
 
 - `risk_appetite: high` downgrades AUTO→CONSULT for any prod operation.
 - `monthly_budget_usd` gates the cost-overrun escalation (`cost_estimate > 1.2× budget` → STOP).
-- `on_hours_utc` overrides the `MLOPS_ON_HOURS_UTC` default (validated by `_parse_on_hours_window` — full-day and reversed spans are rejected).
+- `on_hours_utc` overrides the `MLOPS_ON_HOURS_UTC` default (validated by `_parse_on_hours_window` — full-day and
+  reversed spans are rejected).
 - `approval_model` names the role that must sign off per promotion lane.
 
 ### `project_context.example.yaml`
@@ -67,7 +68,7 @@ The context layer is **configuration**, not **secret storage**. Per
 rule `12-security-secrets.md` (D-18):
 
 | Item | Belongs in context YAML? | Belongs where? |
-|------|--------------------------|----------------|
+| ------ | -------------------------- | ---------------- |
 | Company legal name | Yes | — |
 | Industry / regulatory regime | Yes | — |
 | Monthly budget ceiling | Yes | — |
@@ -87,7 +88,7 @@ documented in `docs/runbooks/secrets-integration-e2e.md`.
 
 ## 5. How this connects to the other layers
 
-```
+```text
            ┌─────────────────────────────┐
            │  AGENT_CONTEXT.md (entry)   │   "where to read first"
            └─────────────┬───────────────┘

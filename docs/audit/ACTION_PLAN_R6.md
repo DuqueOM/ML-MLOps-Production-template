@@ -13,7 +13,7 @@
 ## Verified green (evidence)
 
 | Check | Result |
-|---|---|
+| --- | --- |
 | `scripts/validate_agentic.py` | 107 checks OK — 15 rules, 16 skills, 12 workflows |
 | `scripts/sync_agentic_adapters.py --check` | silent (no drift) |
 | `scripts/validate_agentic_manifest.py --strict` | 8/8 sections OK |
@@ -40,6 +40,7 @@ matrix updated. Verified live: all 16 skills became invocable in-session.
 red on main today.** `policy-tests.yml` runs `tests/policy/` only;
 `validate-templates.yml` runs a post-scaffold subset. Running the full
 suite exposes genuinely red tests no lane catches:
+
 - `test_dashboards_inventory.py::test_every_dashboard_file_is_listed` —
   `templates/monitoring/grafana/dashboard-dora.json` is not listed in
   `docs/observability/dashboards-inventory.md` (grep count = 0).
@@ -131,7 +132,7 @@ template module would complete the claimed start of the lifecycle.
 ## Priority schedule
 
 | Wave | Items | Effort |
-|---|---|---|
+| --- | --- | --- |
 | P0 (this week) | S0-1 commit, S0-2 fixes + CI lane, S0-3 | 1–2 days |
 | P1 (2–4 weeks) | S1-1..S1-4, S2-1 | 2–4 days |
 | P2 (1–2 months) | S2-2 (L4 evidence), S2-3 (Phase-2 gates), S2-4 | sprint-scale |

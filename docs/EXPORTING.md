@@ -23,7 +23,7 @@ Four artifacts this template produces are portable regardless of where
 you deploy them, because none of them are Kubernetes-specific:
 
 | Artifact | Where it lives | Why it's portable |
-|---|---|---|
+| --- | --- | --- |
 | The predictor container image | `templates/service/Dockerfile` | A signed, SBOM-attested OCI image with no orchestrator-specific assumptions baked in |
 | The API contract | `app/schemas.py`, `templates/service/docs/model-card-template.md` | `/health`, `/predict`, `/predict_batch` request/response shapes are plain JSON over HTTP |
 | The data contract | `src/<service>/schemas.py` (Pandera) | Input validation is a Python library call, not a K8s resource |
@@ -101,7 +101,7 @@ the natural place to attach the model card as package documentation.
 ## What you keep, what you lose
 
 | Capability | Self-hosted (this template) | Exported to Vertex/SageMaker |
-|---|---|---|
+| --- | --- | --- |
 | Async inference, SHAP caching, prediction logging | Yes (rule 04a, D-01/D-03/D-24) | Yes — same container, same code |
 | Fairness + quality gates before promotion | CI-enforced (ADR-002, ADR-021) | You re-implement the gate in the platform's approval step; the *numbers* transfer via the model card |
 | AUTO/CONSULT/STOP agentic governance | Yes (`AGENTS.md`) | No — Vertex/SageMaker pipeline steps are not covered by this template's behavior protocol |

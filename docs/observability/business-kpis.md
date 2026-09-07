@@ -26,7 +26,7 @@ template already collects — they work the moment the service is
 scaffolded, with no adopter-side wiring:
 
 | Panel | Source | Proxies for |
-|---|---|---|
+| --- | --- | --- |
 | Request Volume (daily) | `{service}_requests_total` (FastAPI app) | Traffic / usage — the closest generic proxy for "how many people/systems rely on this" without knowing the adopter's actual unit of business volume. |
 | SLA Compliance (30d) | `{service}:sli:availability` recording rule (already computed for the SLO burn-rate alerts) | Reliability as the business sees it — a longer window and a business-legible unit (%), not a new metric. |
 | Predictions by Risk Level | `{service}_predictions_total` by `risk_level` | Segment mix — is the model's output distribution shifting over time. |
@@ -35,7 +35,7 @@ scaffolded, with no adopter-side wiring:
 ## What requires one adopter step
 
 | Panel | What's needed |
-|---|---|
+| --- | --- |
 | Monthly Cloud Cost vs. Budget | The `cost-audit` skill's Pushgateway step (see its SKILL.md "Step 2b") must run at least once — monthly cadence, matching the skill's own review cycle. The panel's yellow/red thresholds are a manually-set Grafana field value; update them to match your `company_context.monthly_budget_usd` after scaffolding. This is a **manual sync, not an automatic one** — see "What this deliberately does not do" below for why. |
 
 ## What this deliberately does NOT do

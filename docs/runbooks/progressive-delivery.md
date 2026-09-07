@@ -42,7 +42,7 @@ gate, and a low-traffic service where a full rollback is cheap.
 ## Pre-flight
 
 | Check | Command | Expected |
-|-------|---------|----------|
+| ------- | --------- | ---------- |
 | CRDs installed | `kubectl get crd rollouts.argoproj.io` | exists |
 | Argo controller running | `kubectl get deploy -n argo-rollouts argo-rollouts` | `1/1 Available` |
 | AnalysisTemplate present | `kubectl get analysistemplate -n <ns>` | matches `analysistemplate-champion-challenger.yaml` |
@@ -107,7 +107,7 @@ back to the champion/challenger AnalysisTemplate.
 ## Verification
 
 | Check | Command | Expected |
-|-------|---------|----------|
+| ------- | --------- | ---------- |
 | Rollout status | `kubectl argo rollouts get rollout <service-name>-predictor -n <ns>` | `Phase: Healthy` |
 | AnalysisRun verdict | `kubectl get analysisrun -n <ns>` | `Phase: Successful` after each canary step |
 | Traffic split | `kubectl argo rollouts get rollout ... -w` | percentages match the configured steps |

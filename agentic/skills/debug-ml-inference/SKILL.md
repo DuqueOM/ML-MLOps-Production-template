@@ -33,9 +33,11 @@ authorization_mode:
 Systematically diagnose and fix ML inference issues in production FastAPI services.
 
 ## Inputs
+
 - `$service-name`: Name of the ML service to debug (e.g., `bankchurn`)
 
 ## Goal
+
 Identify the root cause of the inference issue and either fix it or provide a specific
 remediation plan with commands. Every check must produce evidence (command + output).
 
@@ -46,7 +48,7 @@ remediation plan with commands. Every check must produce evidence (command + out
 Run this diagnostic before deep debugging — most inference issues match one of these patterns:
 
 | # | Check | Command | Pass If |
-|---|-------|---------|---------|
+| --- | ------- | --------- | --------- |
 | D-01 | Multiple workers | `grep -rn "workers" $service-name/Dockerfile $service-name/k8s/` | `--workers` absent or exactly `1` |
 | D-02 | Memory HPA | `grep -n "memory" $service-name/k8s/base/*hpa*` | Empty output |
 | D-03 | Sync predict | `grep -rn "\.predict\|predict_proba" $service-name/app/` | Direct model calls only inside sync helpers delegated by `run_in_executor` |
@@ -86,6 +88,7 @@ the service has drifted from the template contract; fix that first.
 ### 2. Identify the Symptom
 
 Classify the issue into one of:
+
 - **High latency**: P95 above SLA → likely event loop blocking or resource contention
 - **Wrong predictions**: Output doesn't match expectations → model or data issue
 - **5xx errors**: Service crashes or timeouts → code or infrastructure issue
@@ -103,6 +106,7 @@ grep -r "sync_predict\|_sync_predict" $service-name/app/
 ```
 
 If `model.predict()` is called directly in an `async def` endpoint → wrap it:
+
 ```python
 loop = asyncio.get_running_loop()
 return await loop.run_in_executor(_inference_executor, partial(_sync_predict, data))
@@ -133,6 +137,7 @@ Model should be loaded ONCE at startup (lifespan handler or module level), not p
 ### 6. Check SHAP Performance
 
 If `/predict?explain=true` is slow:
+
 - Verify background data is ≤ 50 samples
 - Verify `nsamples` parameter in KernelExplainer (default 2*K+2048 can be excessive)
 - SHAP is expected to be slower (seconds) — verify it's opt-in only
@@ -161,6 +166,7 @@ SchemaError means input data violates the Pandera schema → upstream data chang
 **Success criteria**: No validation errors in logs, or schema mismatch identified.
 
 ## Rules
+
 - Always check event loop blocking first — it's the most common cause
 - Never recommend `--workers N` as a fix; always use ThreadPoolExecutor + HPA
 - Use KernelExplainer, never TreeExplainer for ensemble/pipeline models
@@ -169,7 +175,7 @@ SchemaError means input data violates the Pandera schema → upstream data chang
 ## Quick Reference: Anti-Pattern → Fix
 
 | Issue | Anti-Pattern | Fix | ADR |
-|-------|-------------|-----|-----|
+| ------- | ------------- | ----- | ----- |
 | CPU thrashing | `uvicorn --workers N` | Single worker + HPA | D-01 |
 | HPA stuck | Memory-based metric | CPU-only HPA | D-02 |
 | Event loop block | `model.predict()` in async | `run_in_executor` | D-03 |
@@ -182,8 +188,8 @@ The skill is complete when ALL of the following hold:
 - [ ] Root cause identified — every claim has command + output as evidence
 - [ ] If an anti-pattern (D-01..D-38) was violated, the specific ID is cited
 - [ ] Either:
-  * (dev) the fix has been applied AND the symptom no longer reproduces, OR
-  * (staging/prod) a remediation plan with concrete commands is written
+  - (dev) the fix has been applied AND the symptom no longer reproduces, OR
+  - (staging/prod) a remediation plan with concrete commands is written
     and the operator has been handed off (CONSULT/STOP path)
 - [ ] If production-impacting, a regression test is added in
       `tests/regression/` to prevent recurrence

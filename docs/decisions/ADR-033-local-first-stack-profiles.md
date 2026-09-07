@@ -41,7 +41,7 @@ ergonomics has not been extended to scaffolded services.
 ### 1.1 Reference analysis
 
 | Reference | Pattern | What we adopt | What we reject |
-|-----------|---------|---------------|----------------|
+| ----------- | --------- | --------------- | ---------------- |
 | ZenML | Stack profiles as swappable configuration | Profile = YAML overlay, not a separate codebase | We do not adopt ZenML's stack abstraction layer (over-engineered for 2–3 models) |
 | Cookiecutter Data Science | No profile concept | — | — |
 | Made With ML | Local-first notebook → production gradient | `local` profile as the default scaffold choice | We do not adopt notebook-first; code-first remains |
@@ -54,7 +54,7 @@ question and governed by the AUTO/CONSULT/STOP protocol:
 ### 2.1 Profile definitions
 
 | Profile | Scope | Mode | Cloud deps | K8s | TF | Docker |
-|---------|-------|------|------------|-----|----|--------|
+| --------- | ------- | ------ | ------------ | ----- | ---- | -------- |
 | `local` | Train + serve + drift on a laptop | AUTO | none | no | no | no |
 | `staging` | Full stack targeting dev/staging cluster | CONSULT | cloud creds via IRSA/WI | yes | yes (staging) | yes |
 | `prod` | Full stack targeting prod cluster | STOP | cloud creds via IRSA/WI | yes | yes (prod) | yes |
@@ -110,7 +110,7 @@ local-loop: ## Run train → serve → drift in local mode (no Docker/K8s/TF)
 ### 2.5 Governance mapping
 
 | Profile | Scaffold | Train | Serve | Deploy | Drift | Retrain |
-|---------|----------|-------|-------|--------|-------|---------|
+| --------- | ---------- | ------- | ------- | -------- | ------- | --------- |
 | `local` | AUTO | AUTO | AUTO | **blocked** | AUTO (manual) | AUTO |
 | `staging` | AUTO | AUTO | AUTO | CONSULT | AUTO (CronJob) | CONSULT |
 | `prod` | AUTO | AUTO | AUTO | **STOP** | AUTO (CronJob) | **STOP** |
@@ -132,6 +132,7 @@ local-loop: ## Run train → serve → drift in local mode (no Docker/K8s/TF)
 ## 4. Scope
 
 **In scope**:
+
 - `copier.yml` `profile` question.
 - `configs/profiles/{local,staging,prod}.yaml` in the template service.
 - `configs/profiles/active_profile.yaml` (generated at scaffold time).
@@ -140,6 +141,7 @@ local-loop: ## Run train → serve → drift in local mode (no Docker/K8s/TF)
 - `stack-switch` skill + `/stack-switch` workflow.
 
 **Out of scope**:
+
 - Conditional file exclusion in Copier (all files are always generated;
   profiles are configuration, not file filtering).
 - ZenML-style stack abstraction (over-engineered for this template's
@@ -149,6 +151,7 @@ local-loop: ## Run train → serve → drift in local mode (no Docker/K8s/TF)
 ## 5. Consequences
 
 ### Positive
+
 - Adopters can evaluate the full train→serve→drift loop in < 5 minutes
   with zero cloud dependencies, directly addressing gap B2.
 - The `local` profile is the default scaffold choice, lowering the
@@ -158,6 +161,7 @@ local-loop: ## Run train → serve → drift in local mode (no Docker/K8s/TF)
   cloud deploys from a local profile.
 
 ### Negative
+
 - One additional Copier question (`profile`) adds ~2 seconds to
   scaffolding. Mitigated: default is `local`, so one Enter key suffices.
 - The `active_profile.yaml` file is a new source of truth that scripts
@@ -165,6 +169,7 @@ local-loop: ## Run train → serve → drift in local mode (no Docker/K8s/TF)
   that need it already parse YAML.
 
 ### Neutral
+
 - The `examples/minimal/` directory remains as-is — it predates profiles
   and serves a different purpose (standalone demo, not scaffolded
   service).
@@ -178,7 +183,7 @@ YAML configuration overlays. The repository remains Apache-2.0.
 ## 7. Alternatives considered
 
 | Alternative | Why rejected |
-|-------------|--------------|
+| ------------- | -------------- |
 | No profiles — keep full-stack-only | Gap B2 remains; adopters must provision a cluster to evaluate |
 | Profiles as separate Copier templates | Triples maintenance; `copier update` cannot cross templates |
 | Profiles as Git branches | Branches drift; no merge path; violates single-source principle |

@@ -38,14 +38,17 @@ training (`features.py`), schema generation (`schemas.py`), and drift detection 
 (`baseline_distributions.parquet`).
 
 ## Inputs
+
 - `$dataset-path`: Path to raw data (e.g., `data/raw/transactions.csv`)
 - `$service-slug`: Optional — the snake_case service name the EDA belongs to
 
 ## Goal
+
 Complete EDA with all 6 artifacts produced, leakage audit passing (or explicitly resolved),
 and `feature_catalog.yaml` ready for `features.py` consumption.
 
 ## Pre-conditions
+
 - `templates/service/eda/eda_pipeline.py` is available (copied by `new-service.sh`)
 - Dataset is in `data/raw/` (NEVER read from production paths — invariant D-13)
 - Required deps installed: `pip install -r eda/requirements.txt`
@@ -53,6 +56,7 @@ and `feature_catalog.yaml` ready for `features.py` consumption.
 ## Steps
 
 ### Phase 0 — Ingest & Normalization
+
 **Trigger**: Agent-DataValidator. Raw file arrives in `data/raw/`.
 
 1. Detect encoding with `chardet` (non-ASCII datasets are common)
@@ -66,6 +70,7 @@ and `feature_catalog.yaml` ready for `features.py` consumption.
 **Success criteria**: File loads, all columns are `snake_case`, DVC hash recorded.
 
 ### Phase 1 — Structural Profile
+
 **Trigger**: Agent-EDAProfiler. Clean dataset available.
 
 1. Shape, dtypes, memory footprint
@@ -76,9 +81,11 @@ and `feature_catalog.yaml` ready for `features.py` consumption.
 
 **Output**: `eda/reports/01_profile.html` (ydata-profiling or lightweight), canonical `eda/artifacts/schema_ranges.json`
 
-**Success criteria**: Profile report generated. `schema_ranges.json` enumerates every column with inferred dtype and observed range.
+**Success criteria**: Profile report generated. `schema_ranges.json` enumerates every column with inferred dtype and
+observed range.
 
 ### Phase 2 — Univariate Distributions + Baseline
+
 **Trigger**: Agent-EDAProfiler. **Critical phase — feeds drift detection.**
 
 1. For numeric: mean/std/skew/kurtosis, IQR outliers, normality test
@@ -88,9 +95,11 @@ and `feature_catalog.yaml` ready for `features.py` consumption.
 
 **Output**: `eda/reports/02_univariate.html`, **`eda/artifacts/baseline_distributions.parquet`**
 
-**Success criteria**: `baseline_distributions.parquet` exists with quantile bins for each feature. This file is the source of truth for drift detection in production. Missing = D-15 violation.
+**Success criteria**: `baseline_distributions.parquet` exists with quantile bins for each feature. This file is the
+source of truth for drift detection in production. Missing = D-15 violation.
 
 ### Phase 3 — Multivariate Correlations + VIF
+
 **Trigger**: Agent-EDAProfiler.
 
 1. Pearson (numeric↔numeric), Spearman (ordinal), Cramér's V (categorical↔categorical)
@@ -102,6 +111,7 @@ and `feature_catalog.yaml` ready for `features.py` consumption.
 **Success criteria**: Ranking CSV produced with top 20 features by target correlation. Multicollinearity groups identified.
 
 ### Phase 4 — Leakage Detection (HARD GATE)
+
 **Trigger**: Agent-DataValidator. **This phase can BLOCK the pipeline.**
 
 1. Correlation > 0.95 with target → suspicious
@@ -113,6 +123,7 @@ and `feature_catalog.yaml` ready for `features.py` consumption.
 **Output**: canonical `eda/artifacts/leakage_report.json` plus human-readable `eda/reports/04_leakage_audit.md`
 
 **Success criteria**:
+
 - If `BLOCKED_FEATURES: []` → continue to phase 5
 - If non-empty → **HALT**. Chain to `/incident` workflow with severity P2. Engineer must:
   - Investigate each flagged feature
@@ -120,9 +131,11 @@ and `feature_catalog.yaml` ready for `features.py` consumption.
   - Re-run phase 4 until empty before proceeding
 
 ### Phase 5 — Feature Proposals
+
 **Trigger**: Agent-MLTrainer + Agent-EDAProfiler (collaborative).
 
 Based on phases 2–3, propose transformations with documented rationale:
+
 - Skewed numeric (|skew| > 1) → log or boxcox transform
 - High cardinality categorical (> 50 unique) → target encoding or binning
 - Interaction candidates (pairs with meaningful combined signal)
@@ -130,9 +143,11 @@ Based on phases 2–3, propose transformations with documented rationale:
 
 **Output**: `eda/artifacts/feature_catalog.yaml`
 
-**Success criteria**: Every proposal has a `rationale` field citing specific EDA findings (e.g., "skew=2.3 → boxcox stabilizes variance"). Invariant D-16 enforced.
+**Success criteria**: Every proposal has a `rationale` field citing specific EDA findings (e.g., "skew=2.3 → boxcox
+stabilizes variance"). Invariant D-16 enforced.
 
 ### Phase 6 — Consolidation + Schema Proposal
+
 **Trigger**: Agent-DocumentationAI + Agent-DataValidator.
 
 1. Generate `eda/reports/eda_summary.md` with key findings (for ADR)
@@ -143,11 +158,13 @@ Based on phases 2–3, propose transformations with documented rationale:
 **Output**: `eda/reports/eda_summary.md`, `src/{service}/schema_proposal.py`, ADR entry
 
 **Success criteria**:
+
 - `eda_summary.md` produced with measurable findings
 - `schema_proposal.py` has ranges derived from observed data (D-14 enforced)
 - Drift CronJob config updated to load `baseline_distributions.parquet` (closes the loop)
 
 ## Rules
+
 - Never skip phase 4 (leakage gate) — proceeding past a non-empty `BLOCKED_FEATURES` is an automatic P2 incident
 - Never auto-overwrite `schemas.py` — produce `schema_proposal.py` for human review
 - Never read from production data paths — violation of D-13
@@ -157,6 +174,7 @@ Based on phases 2–3, propose transformations with documented rationale:
 ## Acceptance Criteria
 
 EDA is complete when ALL of these pass:
+
 - [ ] All 6 phases produced their expected artifacts
 - [ ] `leakage_report.json` shows `blocked_features: []`
 - [ ] `baseline_distributions.parquet` is DVC-tracked

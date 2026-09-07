@@ -14,4 +14,5 @@ Use this when PSI, sliced AUC, input-quality, or ground-truth freshness alerts f
 
 ## Exit Criteria
 
-The alert is closed only after the drift report is stored, the decision is recorded, and either retraining or explicit human acceptance is linked.
+The alert is closed only after the drift report is stored, the decision is recorded, and either retraining or explicit
+human acceptance is linked.

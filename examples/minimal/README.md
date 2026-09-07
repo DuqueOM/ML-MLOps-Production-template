@@ -42,7 +42,7 @@ curl http://localhost:8000/metrics
 ## Files
 
 | File | Purpose |
-|------|---------|
+| ------ | --------- |
 | `train.py` | Generate synthetic data + train pipeline + quality gates |
 | `serve.py` | FastAPI app with async inference + SHAP + Prometheus |
 | `test_service.py` | Regression tests (leakage, SHAP, latency, fairness) |
@@ -52,6 +52,7 @@ curl http://localhost:8000/metrics
 ## Not Included (Template Provides)
 
 This example focuses on **Python code only**. The full template also provides:
+
 - Dockerfile (multi-stage, non-root)
 - K8s manifests (Deployment, HPA, CronJob, NetworkPolicy, RBAC)
 - Terraform (GKE + EKS)

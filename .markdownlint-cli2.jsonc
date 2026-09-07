@@ -1,0 +1,110 @@
+// markdownlint-cli2 configuration
+// ============================================================================
+// The `Markdown Lint (style)` job in `.github/workflows/docs-quality.yml` ran
+// with **no configuration file at all** — every default rule, at every default
+// setting — and carried `continue-on-error: true` with the comment
+// "warn-only first run; flip to false after triage". The triage never
+// happened. It reported 8,584 issues in 474 files on every run, and blocked
+// nothing.
+//
+// This file is that triage. Every rule that is off is off with a reason
+// written here, because a lint config is the easiest place in a repository to
+// hide a narrowed scope behind a green check.
+//
+// The rule set is pinned: the workflow pins `markdownlint-cli2-action` by
+// commit SHA, which pins markdownlint-cli2 v0.23.2 (markdownlint v0.41.1).
+// New rules therefore arrive only in an explicit PR — MD060 landed that way
+// and fired 3,104 times — so a blocking gate cannot break on a dependency's
+// release day.
+// ============================================================================
+{
+  // What is linted. Declared here rather than only in the workflow so a local
+  // `markdownlint-cli2` run checks exactly what CI checks — the two drifting
+  // apart is how a gate ends up green in one place and red in the other.
+  //
+  // `.venv` is not cosmetic: the workflow's globs excluded only `node_modules`
+  // and `.git`, so a local run linted every LICENSE.md and README.md in
+  // site-packages and reported third-party formatting as repository debt.
+  // Untracked/ignored files are not part of the repository, and CI never
+  // checks them out. Without this, a local run lints private scratch files
+  // and reports them as repository debt — the same local-vs-CI divergence
+  // the explicit globs above exist to prevent.
+  "gitignore": true,
+
+  "globs": [
+    "**/*.md",
+    "!.git",
+    "!node_modules",
+    "!.venv",
+    "!venv",
+    "!**/site-packages/**",
+    // Notebooks are generated artefacts; their Markdown is nbconvert output.
+    "!templates/service/eda/notebooks/**",
+    // Shipped release notes are immutable records of what was released.
+    // Reformatting them would edit a published artefact.
+    "!releases/**"
+  ],
+  "config": {
+    // Everything on, then subtract with a stated reason.
+    "default": true,
+
+    // ---- Line length -------------------------------------------------
+    // 120, matching `line-length = 120` for ruff in pyproject.toml. The repo
+    // gets one line-length number instead of two. Tables and code blocks are
+    // exempt: a table row's width is set by its widest cell and a code block
+    // reproduces something that exists elsewhere at its own width — wrapping
+    // either changes what renders, which is the opposite of what this rule is
+    // for.
+    "MD013": {
+      "line_length": 120,
+      "tables": false,
+      "code_blocks": false
+    },
+
+    // ---- Table pipe alignment ----------------------------------------
+    // `compact` (`| a | b |`, no padding to column width). The default is
+    // `consistent`, which infers the style from each file's first table and
+    // then reports every later table that differs — 166 findings that were
+    // really one undeclared choice. Declaring it makes the whole rule
+    // auto-fixable.
+    "MD060": {
+      "style": "compact"
+    },
+
+    // ---- Duplicate headings ------------------------------------------
+    // `siblings_only` drops this from 142 findings to 3, and the 3 are real.
+    // ADRs repeat "Context"/"Decision"/"Consequences" and the CHANGELOG
+    // repeats "Fixed"/"Added" under every release — those are distinct
+    // sections under distinct parents, and their anchors do not collide in
+    // the way this rule exists to prevent.
+    "MD024": {
+      "siblings_only": true
+    },
+
+    // ---- Ordered list numbering --------------------------------------
+    // `ordered` (ascending) rather than the default `one_or_ordered`, which
+    // additionally demands the list start at 1. The R9 action plan numbers
+    // its items 1..10 continuously and splits them across `### Wave` headings,
+    // so a list legitimately begins at 7 — and GitHub renders it starting at
+    // 7, which is the intent. Requiring a restart would renumber the plan and
+    // break every cross-reference to an item number.
+    "MD029": {
+      "style": "ordered"
+    },
+
+    // ---- Emphasis as heading -----------------------------------------
+    // OFF. The ADR template and the runbooks use a bold lead-in
+    // (`**Positive**`, `**When you need this**`) as a labelled paragraph, not
+    // as a section. Promoting them to headings would put them in every
+    // table of contents and change the document structure to satisfy a
+    // formatting rule. This is a deliberate house style, not unfixed debt.
+    "MD036": false,
+
+    // ---- Inline HTML --------------------------------------------------
+    // Restricted rather than disabled. These are the elements the docs use
+    // for things Markdown cannot express; anything else is a finding.
+    "MD033": {
+      "allowed_elements": ["br", "details", "summary", "img", "sub", "sup"]
+    }
+  }
+}

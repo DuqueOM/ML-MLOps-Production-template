@@ -8,7 +8,7 @@ such as `{service-name}` with the concrete service name.
 ## Required Cadence
 
 | Procedure | Cadence | Owner | Evidence |
-|---|---:|---|---|
+| --- | ---: | --- | --- |
 | Terraform drift plan | Nightly | Platform | GitHub Actions summary + plan artifact |
 | Cluster version check | Weekly | Platform | Issue or audit record |
 | Node pool rotation review | Monthly | Platform | Maintenance ticket |

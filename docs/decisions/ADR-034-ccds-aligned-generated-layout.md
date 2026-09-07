@@ -1,7 +1,7 @@
 # ADR-034: CCDS-aligned generated layout view
 
 | | |
-|---|---|
+| --- | --- |
 | **Status** | Accepted |
 | **Date** | 2026-06-30 |
 | **Deciders** | @DuqueOM |
@@ -13,7 +13,7 @@
 The Cookiecutter Data Science (CCDS) template popularized a directory
 layout that most data-science practitioners recognize instantly:
 
-```
+```text
 data/           # raw, interim, processed, external
 notebooks/      # exploratory Jupyter notebooks
 models/         # trained model artifacts
@@ -24,7 +24,7 @@ src/            # source code
 Our template uses a production-oriented layout optimized for K8s
 deployment, DVC pipelines, and the agentic spine:
 
-```
+```text
 data/           # raw, processed, reference, production, validated
 eda/            # structured EDA pipeline + notebooks
 models/         # trained artifacts (DVC-tracked)
@@ -50,7 +50,7 @@ vocabulary. The mapping is emitted at scaffold time in
 ### Mapping table
 
 | CCDS directory | Template location | Notes |
-|----------------|-------------------|-------|
+| ---------------- | ------------------- | ------- |
 | `data/raw/` | `data/raw/` | Direct match — DVC-versioned inputs |
 | `data/interim/` | `data/validated/` | Pandera-validated frames (cache) |
 | `data/processed/` | `data/processed/` | Direct match — featurised output |

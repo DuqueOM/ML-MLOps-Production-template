@@ -3,7 +3,8 @@
 - **Authority**: external R5 audit + user-raised pre-commit friction concern, May 2026.
 - **Status**: open at Sprint 2 close (commit `0505551`).
 - **Predecessor**: [`ACTION_PLAN_R4.md`](ACTION_PLAN_R4.md) (Sprint 0–2 closed at this commit; Sprint 3 of R4 still open).
-- **Trigger**: user observed pre-commit scaffold-smoke hook taking >1 min and asked whether this is industry practice; the same pass surfaced 6 additional findings (1 High, 4 Medium, 1 Low).
+- **Trigger**: user observed pre-commit scaffold-smoke hook taking >1 min and asked whether this is industry practice;
+  the same pass surfaced 6 additional findings (1 High, 4 Medium, 1 Low).
 - **Audit log**: every R5 closure adds a row to `VALIDATION_LOG.md` and a column to ADR-020 §"Progress log".
 
 ---
@@ -16,7 +17,7 @@
 **Answer: it should move to CI / on-demand.** Industry baseline:
 
 | Stage | Target latency | Acceptable scope |
-|---|---|---|
+| --- | --- | --- |
 | pre-commit (per file save) | < 5 s | format, lint, typecheck on changed files |
 | pre-push (per push) | < 30 s | unit tests on changed modules, secret scan |
 | CI per-PR | 3–10 min | full unit + scaffold + integration + security |
@@ -37,6 +38,7 @@ opt-in via `make smoke` (or `scripts/smoke.sh`); remove from
 gate. Document in `CONTRIBUTING.md` why.
 
 This decision is consistent with:
+
 - Google's pre-commit guidance (Sec 4.2 *Software Engineering at Google*)
 - GitHub's Branch Protection model (PR-level gate is the source of truth)
 - ADR-019 §"Phase plan" — autonomous changes are CI-driven, not local-hook-driven
@@ -101,9 +103,12 @@ This decision is consistent with:
   measured precision. Without real log content, the gate cannot be
   closed honestly even if the calendar window passes.
 - **Evidence**:
-  - `@/home/duque_om/projects/template_MLOps/.github/workflows/ci-self-healing-shadow.yml:31` (`log_artifact_url` input declared)
-  - `@/home/duque_om/projects/template_MLOps/.github/workflows/ci-self-healing-shadow.yml:68-89` (download step writes empty log)
-  - `@/home/duque_om/projects/template_MLOps/.github/workflows/ci-self-healing-shadow.yml:103-107` (PR diff is "best effort" via last-commit only — covered by red-team Entry 4 follow-up F1)
+  - `@/home/duque_om/projects/template_MLOps/.github/workflows/ci-self-healing-shadow.yml:31` (`log_artifact_url` input
+    declared)
+  - `@/home/duque_om/projects/template_MLOps/.github/workflows/ci-self-healing-shadow.yml:68-89` (download step writes
+    empty log)
+  - `@/home/duque_om/projects/template_MLOps/.github/workflows/ci-self-healing-shadow.yml:103-107` (PR diff is "best
+    effort" via last-commit only — covered by red-team Entry 4 follow-up F1)
 - **Action**:
   1. Add a "Fetch upstream logs via GH API" step using `gh run view --log`
      (or `gh api /repos/.../actions/runs/{id}/logs`) into
@@ -173,7 +178,8 @@ This decision is consistent with:
   worldwide. Public-cloud IP ranges for GCS / S3 are well-known and
   enumerable; the broad egress is unnecessary.
 - **Evidence**:
-  - `@/home/duque_om/projects/template_MLOps/templates/k8s/base/networkpolicy.yaml:90-102` (TCP 443 to 0.0.0.0/0 except RFC-1918)
+  - `@/home/duque_om/projects/template_MLOps/templates/k8s/base/networkpolicy.yaml:90-102` (TCP 443 to 0.0.0.0/0 except
+    RFC-1918)
   - `@/home/duque_om/projects/template_MLOps/CHANGELOG.md:59` documents NetworkPolicy enforcement but does not address scope
 - **Action**:
   1. Move the egress rule out of `base/networkpolicy.yaml` and into
@@ -287,7 +293,7 @@ R5 closures are added to the existing **Sprint 3** of R4
 Updated Sprint 3 scope:
 
 | Item | Source | Priority | Mode |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | M5 (Alertmanager routing test) | R4 | medium | CONSULT |
 | L1 (release-notes follow-ons) | R4 | low | AUTO |
 | L2 (dashboards inventory) | R4 | low | AUTO |

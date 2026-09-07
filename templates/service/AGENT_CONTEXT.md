@@ -100,7 +100,7 @@ Details: `docs/agentic/contextualization.md`.
 
 ## Running the validators
 
-```
+```bash
 python3 scripts/validate_agentic.py --strict
 python3 scripts/validate_agentic_manifest.py --strict
 python -m pytest templates/service/tests/ templates/tests/ templates/service/monitoring/tests/ --no-cov

@@ -2,7 +2,9 @@
 
 ## Project Identity
 
-**ML-MLOps Production Template**: Agent-driven framework for building and maintaining production-grade ML systems with multi-cloud deployment (GKE + EKS), comprehensive observability, and enterprise CI/CD. Every architectural decision documented in ADRs with measured trade-offs.
+**ML-MLOps Production Template**: Agent-driven framework for building and maintaining production-grade ML systems with
+multi-cloud deployment (GKE + EKS), comprehensive observability, and enterprise CI/CD. Every architectural decision
+documented in ADRs with measured trade-offs.
 
 - **Stack**: Python 3.11+, scikit-learn, XGBoost, LightGBM, FastAPI, Docker, Kubernetes, Terraform, GitHub Actions
 - **Clouds**: GCP (primary) + AWS (secondary parity)
@@ -12,7 +14,7 @@
 
 ## Agent Architecture
 
-```
+```text
 LAYER 1: ORCHESTRATOR
   → Receives high-level requests ("create a new ML service for [domain]")
   → Determines which specialist agents are needed and in what order
@@ -78,7 +80,7 @@ LAYER 3: MAINTENANCE AGENTS (operate phase)
 
 ## Engineering Calibration Principle
 
-```
+```text
 The solution must match the scale of the problem.
 
 UNDER-ENGINEERING: Missing monitoring, no tests, no drift detection, no ADRs
@@ -101,7 +103,7 @@ This protocol is NOT optional — every skill and workflow must map its operatio
 ### The three modes
 
 | Mode | Meaning | Example |
-|------|---------|---------|
+| ------ | --------- | --------- |
 | **AUTO** | Execute without asking. Reversible or low-risk. | Scaffolding a new service, running tests, generating reports |
 | **CONSULT** | Propose the plan + rationale, wait for human approval before executing. | Promoting a model to production, applying Terraform in staging |
 | **STOP** | Do nothing. Block the pipeline. Require explicit human instruction to proceed. | `terraform apply` in prod, rotating a secret, overriding a quality gate failure |
@@ -109,7 +111,7 @@ This protocol is NOT optional — every skill and workflow must map its operatio
 ### Operation → Mode mapping (canonical)
 
 | Operation | Mode | Notes |
-|-----------|------|-------|
+| ----------- | ------ | ------- |
 | Scaffold new service (`new-service.sh`) | AUTO | Reversible via `rm -rf` |
 | Run EDA pipeline on `data/raw/` | AUTO | No side effects outside `eda/` |
 | Generate ADR, README, runbook | AUTO | Documents are reviewable in PRs |
@@ -138,6 +140,7 @@ This protocol is NOT optional — every skill and workflow must map its operatio
 ### Escalation triggers (automatic STOP)
 
 The agent **must** escalate to STOP mode even from AUTO/CONSULT when any of:
+
 - Metric suspiciously high (D-06): primary metric > 0.99 without explanation
 - Fairness DIR in `[0.80, 0.85]` — within margin, human judgment required
 - Drift PSI > 2× the configured threshold (not just > threshold)
@@ -148,7 +151,8 @@ The agent **must** escalate to STOP mode even from AUTO/CONSULT when any of:
 ### How agents signal mode transitions
 
 When an agent decides to change mode, it must output a structured signal:
-```
+
+```text
 [AGENT MODE: CONSULT]
 Operation: Transition fraud_detector v42 to MLflow Staging
 Rationale: CI passed, tests green, metrics within gates
@@ -165,7 +169,7 @@ replaces ad-hoc dict passing with validated contracts that fail fast.
 
 Canonical handoff chain:
 
-```
+```text
 Agent-EDAProfiler     ──[EDAHandoff]──►     Agent-MLTrainer
 Agent-MLTrainer       ──[TrainingArtifact]──► Agent-DockerBuilder
 Agent-DockerBuilder   ──[BuildArtifact]──► Agent-SecurityAuditor
@@ -184,6 +188,7 @@ Every agentic operation MUST produce an `AuditEntry` (defined in
 `ops/audit.jsonl` and mirrored to the GitHub Actions step summary in CI.
 
 The protocol is OPERATIONAL (ADR-014 §3.5):
+
 - **CLI wrapper**: `scripts/audit_record.py` — invoked from any CI step
   or local skill execution; takes `--agent --operation --environment
   --base-mode --final-mode --result --inputs --outputs --approver` and
@@ -198,6 +203,7 @@ The protocol is OPERATIONAL (ADR-014 §3.5):
   the static base mode AND the live signal that escalated it.
 
 Minimum fields:
+
 - `agent`, `operation`, `environment`, `mode`
 - `inputs` (what was requested)
 - `outputs` (what was produced — sha256, image refs, PR URLs)
@@ -206,6 +212,7 @@ Minimum fields:
 - `timestamp` (UTC ISO8601)
 
 Agents MUST NOT open a GitHub issue for every operation (noise). Instead:
+
 - Routine operations → `ops/audit.jsonl` + GHA step summary
 - Operations that required CONSULT/STOP → additionally open a GitHub issue tagged
   `audit` with the entry pre-filled
@@ -217,7 +224,7 @@ Some operations are intrinsically not permitted for certain agents regardless of
 environment. This matrix codifies capability boundaries.
 
 | Agent | dev | staging | production |
-|-------|-----|---------|------------|
+| ------- | ----- | --------- | ------------ |
 | Agent-EDAProfiler | read data, write `eda/**` | read data | **blocked** |
 | Agent-MLTrainer | train, log MLflow, transition None→Staging | transition Staging→None | transition to Production **blocked** (via PR only) |
 | Agent-DockerBuilder | build, push to registry | build, push, sign | build, push, sign |
@@ -237,7 +244,7 @@ GitHub Actions flow with required_reviewers.
 ## Anti-Patterns That Agents Must Detect and Correct
 
 | ID | Anti-Pattern | Corrective Action |
-|----|-------------|-------------------|
+| ---- | ------------- | ------------------- |
 | D-01 | `uvicorn --workers N` in Dockerfile or deployment | Change to 1 worker, add ThreadPoolExecutor |
 | D-02 | Memory HPA in any HorizontalPodAutoscaler | Remove memory metric, keep CPU only |
 | D-03 | `model.predict()` directly in async endpoint | Wrap in `run_in_executor` with ThreadPoolExecutor |
@@ -269,11 +276,9 @@ GitHub Actions flow with required_reviewers.
 | D-29 | Namespace without Pod Security Standards labels | Label prod namespaces `pod-security.kubernetes.io/enforce: restricted`; dev/staging `enforce: baseline` + `warn/audit: restricted`. See `templates/k8s/policies/pod-security-standards.yaml`. Container `securityContext` drops ALL capabilities, `allowPrivilegeEscalation: false`, `runAsNonRoot: true` |
 | D-30 | Production image without SBOM attestation | Deploy workflow MUST generate an SBOM (Syft / CycloneDX) and attach it as a Cosign attestation (`cosign attest --type cyclonedx`). Full SLSA L3 provenance is documented as roadmap in `deploy-gcp.yml` §1b |
 | D-31 | Monolithic IAM identity for CI / deploy / runtime / drift / retrain (ADR-017) | Each cloud Terraform splits identities by **purpose** (`ci`, `deploy`, `runtime`, `drift`, `retrain`, `nodes`) AND by **environment** (one set per env). GCP: 6 `google_service_account` resources with WI bindings for runtime/drift/retrain. `nodes` is the GKE node identity — omitting it silently falls back to the default Compute Engine SA, which typically holds `roles/editor` project-wide (Trivy GCP-0050). AWS: GitHub OIDC for ci/deploy + IRSA for runtime/drift/retrain. Audit trail identifies which workflow acted. Blast radius: leaked CI key cannot read prod model artifacts; leaked runtime key cannot push images. Enforced by `tests/test_iam_least_privilege.py` (no wildcard principals, no `Action: "*"`, no IAM mutation on CI role) |
-| D-32 | K8s manifests reference Python package paths using kebab-case placeholders | Python module paths MUST use snake_case (`{% raw %}{@ service_slug @}{% endraw %}`), never kebab (`{service-name}`). The scaffolder renames `src/{% raw %}{@ service_slug @}{% endraw %}` → `src/<snake_slug>`; a manifest pointing at `src/{service-name}/...` (e.g. `src/fraud-detector/...`) applies cleanly but explodes at runtime with `ModuleNotFoundError` because `fraud-detector` is not a valid Python package name. Enforced by `tests/policy/test_anti_patterns.py::test_d32_drift_cronjob_python_path` (placeholder leak guard + snake-case check + on-disk directory existence) |
+| {% raw %}D-32 | K8s manifests reference Python package paths using kebab-case placeholders | Python module paths MUST use snake_case (`{@ service_slug @}`), never kebab (`{service-name}`). The scaffolder renames `src/{@ service_slug @}` → `src/<snake_slug>`; a manifest pointing at `src/{service-name}/...` (e.g. `src/fraud-detector/...`) applies cleanly but explodes at runtime with `ModuleNotFoundError` because `fraud-detector` is not a valid Python package name. Enforced by `tests/policy/test_anti_patterns.py::test_d32_drift_cronjob_python_path` (placeholder leak guard + snake-case check + on-disk directory existence){% endraw %} |
 | D-33 | Manual file copying or sed-based placeholder substitution in the scaffolder | The scaffolder (`templates/scripts/new-service.sh`) MUST delegate to `copier copy`. Manual `cp -r` + `sed -i` cannot handle conditional logic, directory renaming, or upgrade paths. Enforced by `scripts/test_scaffold.sh` (validates Copier render + zero unreplaced Jinja tokens) |
-{% raw %}
-| D-34 | Unquoted Jinja tokens (`{@ @}`) in YAML list items | An unquoted `- {@ service_name @}` is invalid YAML (`@` cannot start a token). All `{@ @}` tokens in YAML lists MUST be quoted: `- "{@ service_name @}"`. Enforced by `rg -n '^\s*- \{@' templates/service/ --glob "*.yml"` returning zero hits |
-{% endraw %}
+| {% raw %}D-34 | Unquoted Jinja tokens (`{@ @}`) in YAML list items | An unquoted `- {@ service_name @}` is invalid YAML (`@` cannot start a token). All `{@ @}` tokens in YAML lists MUST be quoted: `- "{@ service_name @}"`. Enforced by `rg -n '^\s*- \{@' templates/service/ --glob "*.yml"` returning zero hits{% endraw %} |
 | D-35 | A `local` stack profile that accepts cloud credentials or targets a cluster | The `local` profile (`configs/profiles/local.yaml`) MUST set `requires.cloud_credentials: false`, `requires.kubernetes: false`, `requires.docker: false`, and `deploy.enabled: false`. A local profile that imports cloud creds or targets a cluster violates the local-first contract (ADR-033). Enforced by `tests/policy/test_anti_patterns.py::test_d35_local_profile_no_cloud_deps` |
 | D-36 | Promoting, tagging, or deploying without a verified-green CI check, or overriding a red/missing check without STOP-class human approval + an audit record | `/release` and `deploy-gke`/`deploy-aws` (staging/prod) MUST invoke `ci-green-verify` (AUTO, read-only) as a hard precondition before proceeding. Overriding a red/missing verdict is always STOP, regardless of environment or urgency, and MUST produce a `scripts/audit_record.py` entry before the gated action proceeds (ADR-039). Enforced by the wiring in `agentic/workflows/release.md` step 1 and the deploy skills' Step 0; `validate_agentic_manifest.py --strict` forbids any `escalation_override` de-escalating this mode |
 | D-37 | Non-English prose or a private/personal repo name committed to `docs/` or a root-level doc in this public repo | This repo's documentation is English-only; a private companion repo (e.g. a personal study guide) MUST never be named, linked, or otherwise referenced here — not even as a "why this design" aside. AUDIT R10 (2026-07-02) found four `docs/audit/*.md` files fully in Spanish and one private repo named across 6 files, including a dead clickable URL. Enforced by `scripts/check_doc_coherence.py` C7 (`check_doc_language_and_privacy`), which scans every tracked `docs/**/*.md` and root `*.md` for a curated Spanish-word list and a private-repo denylist (ADR-040) |
@@ -284,14 +289,21 @@ GitHub Actions flow with required_reviewers.
 When starting a new session in a project derived from this template:
 
 1. **READ** this AGENTS.md fully before writing any code
-2. **CONFIRM** the project has completed scaffold: check that `{% raw %}{@ service_name @}{% endraw %}` placeholders have been replaced
-3. **CHECK** invariants: `grep -r "TODO\|{% raw %}{@ service_name @}{% endraw %}\|{% raw %}{@ service_slug @}{% endraw %}" . --include="*.py" --include="*.yaml"`
+2. **CONFIRM** the project has completed scaffold: check that `{% raw %}{@ service_name @}{% endraw %}` placeholders
+   have been replaced
+3. **CHECK** invariants:
+
+   ```bash
+   grep -r "TODO\|{% raw %}{@ service_name @}{% endraw %}\|{% raw %}{@ service_slug @}{% endraw %}" . --include="*.py" --include="*.yaml"
+   ```
+
 4. **IDENTIFY** the current phase: **Build** (new service) vs **Operate** (existing service)
 5. **SELECT** the appropriate skill or workflow based on the task
 
 ## How to Invoke Skills and Workflows
 
 **Two invocation taxonomies, kept orthogonal to AUTO/CONSULT/STOP** (ADR-041):
+
 - **Model-invoked** — a **Skill**: the agent decides to invoke it because
   the current task matches its `when_to_use` trigger. No slash command
   required.
@@ -306,6 +318,7 @@ When starting a new session in a project derived from this template:
   filtering/discoverability — it does not change AUTO/CONSULT/STOP.
 
 **Skills** (multi-step procedures — invoked by the agent when task matches):
+
 - `new-service` — scaffold a new ML service using `templates/scripts/new-service.sh`
 - `eda-analysis` — 6-phase exploratory analysis with leakage gate + baseline distributions
 - `security-audit` — pre-build/pre-deploy scans: gitleaks, trivy, cosign verify, IAM review
@@ -318,22 +331,33 @@ When starting a new session in a project derived from this template:
 - `release-checklist` — full multi-cloud release process
 - `rollback` — STOP-class emergency revert (Argo Rollouts abort + undo, MLflow revert, alert silencing)
 - `cost-audit` — monthly cloud cost review
-- `batch-inference` — scaffold + run batch scoring jobs (CronJob + Parquet output) reusing the service's model and feature-engineering code
-- `performance-degradation-rca` — end-to-end RCA for a performance-degradation incident: correlates sliced metrics, drift, deploy history, upstream data changes, and prediction logs into one evidence-backed root cause
-- `rule-audit` — automated scan of a service/repo for compliance with AGENTS.md invariants D-01 through D-36; produces a PASS/FAIL report with file:line evidence
+- `batch-inference` — scaffold + run batch scoring jobs (CronJob + Parquet output) reusing the service's model and
+  feature-engineering code
+- `performance-degradation-rca` — end-to-end RCA for a performance-degradation incident: correlates sliced metrics,
+  drift, deploy history, upstream data changes, and prediction logs into one evidence-backed root cause
+- `rule-audit` — automated scan of a service/repo for compliance with AGENTS.md invariants D-01 through D-36; produces a
+  PASS/FAIL report with file:line evidence
 - `scaffold-update` — update an existing scaffolded service with the latest template changes via `copier update`
 - `stack-switch` — switch a scaffolded service between stack profiles (local, staging, prod)
 - `template-onboard` — interview the adopter and emit a `*_context.local.yaml` (no secrets)
-- `doc-coherence` — keep cross-document facts coherent (version, CHANGELOG, ADRs, anti-pattern + surface counts); drives `scripts/check_doc_coherence.py` (rule 16, ADR-031)
-- `ci-green-verify` — verify GitHub Actions CI status before a promote/release/deploy action; AUTO to check, STOP to override red/missing (D-36, ADR-039)
+- `doc-coherence` — keep cross-document facts coherent (version, CHANGELOG, ADRs, anti-pattern + surface counts); drives
+  `scripts/check_doc_coherence.py` (rule 16, ADR-031)
+- `ci-green-verify` — verify GitHub Actions CI status before a promote/release/deploy action; AUTO to check, STOP to
+  override red/missing (D-36, ADR-039)
 - `pr-review` — dual-axis change review (Standards + Spec, evaluated in isolation, then reconciled) (ADR-041)
-- `diagnose-bug` — systematic non-ML-serving bug diagnosis: reproduce → minimize → hypothesize → instrument → fix → regression-test (ADR-041)
-- `new-service-spec` — capture the ML problem spec (label, fairness attribute, cost asymmetry) BEFORE scaffolding, so `quality_gates.yaml` thresholds trace to a real answer (ADR-041)
-- `incident-postmortem` — blameless post-incident review after `/incident`/`/rollback`/`/secret-breach`: timeline from primary sources, 5-whys, owned action items (ADR-041)
-- `edge-audit` — scan a service for edge-protection coverage (WAF, DDoS mitigation, rate limiting) against D-38; AUTO/read-only, mirrors `rule-audit` for one invariant domain (ADR-042)
-- `enterprise-audit` — recurring 23-domain enterprise/ISO repository audit (governance → DX) with file:line evidence and risk ratings; AUTO to scan, CONSULT to fix, STOP to weaken any gate (ADR-043)
+- `diagnose-bug` — systematic non-ML-serving bug diagnosis: reproduce → minimize → hypothesize → instrument → fix →
+  regression-test (ADR-041)
+- `new-service-spec` — capture the ML problem spec (label, fairness attribute, cost asymmetry) BEFORE scaffolding, so
+  `quality_gates.yaml` thresholds trace to a real answer (ADR-041)
+- `incident-postmortem` — blameless post-incident review after `/incident`/`/rollback`/`/secret-breach`: timeline from
+  primary sources, 5-whys, owned action items (ADR-041)
+- `edge-audit` — scan a service for edge-protection coverage (WAF, DDoS mitigation, rate limiting) against D-38;
+  AUTO/read-only, mirrors `rule-audit` for one invariant domain (ADR-042)
+- `enterprise-audit` — recurring 23-domain enterprise/ISO repository audit (governance → DX) with file:line evidence and
+  risk ratings; AUTO to scan, CONSULT to fix, STOP to weaken any gate (ADR-043)
 
 **Workflows** (user-triggered via slash commands):
+
 - `/new-service` — end-to-end service creation
 - `/retrain` — model retraining with quality gates
 - `/incident` — classify severity (P1-P4) → execute runbook
@@ -344,20 +368,24 @@ When starting a new session in a project derived from this template:
 - `/new-adr` — create Architecture Decision Record
 - `/eda` — run 6-phase exploratory data analysis on a new dataset
 - `/secret-breach` — incident workflow for leaked secrets (STOP pipeline, rotate, audit)
-- `/performance-review` — monthly sliced-performance review using ground-truth metrics (detect silent concept drift, document findings)
+- `/performance-review` — monthly sliced-performance review using ground-truth metrics (detect silent concept drift,
+  document findings)
 - `/rollback` — emergency rollback of a production ML service — pairs with the `rollback` skill (STOP-class operation)
 - `/scaffold-update` — pull template improvements into an existing scaffolded service via `copier update`
 - `/stack-switch` — switch stack profile (local, staging, prod)
 - `/onboard` — generate adopter context file (interview + validate, no secrets)
 - `/doc-coherence` — restore + verify cross-document coherence (version, CHANGELOG, ADRs, anti-pattern + surface counts)
 - `/ci-green` — verify CI status for a ref before a promote/release/deploy action (D-36, ADR-039)
-- `/edge-setup` — wire native-cloud edge protection (Cloud Armor / AWS WAF+Shield) or optional Cloudflare into an overlay; CONSULT for apply in any environment, STOP for disabling an existing rule (D-38, ADR-042)
-- `/audit-quality` — run the recurring enterprise audit + Q-01..Q-08 sweep; AUTO scan, CONSULT fixes, STOP on gate weakening (ADR-043)
-- `/document-changes` — document the current working set: CHANGELOG entry, rule-16 cascade, audit-trail record; Agent-DocUpdater entry point (ADR-043)
+- `/edge-setup` — wire native-cloud edge protection (Cloud Armor / AWS WAF+Shield) or optional Cloudflare into an
+  overlay; CONSULT for apply in any environment, STOP for disabling an existing rule (D-38, ADR-042)
+- `/audit-quality` — run the recurring enterprise audit + Q-01..Q-08 sweep; AUTO scan, CONSULT fixes, STOP on gate
+  weakening (ADR-043)
+- `/document-changes` — document the current working set: CHANGELOG entry, rule-16 cascade, audit-trail record;
+  Agent-DocUpdater entry point (ADR-043)
 
 ## Agentic Configuration
 
-```
+```text
 agentic/                                # Canonical agentic source (ADR-027) — 19 rules, 27 skills, 20 workflows
 ├── rules/                              # Behavioral constraints (context-aware)
 │   ├── 01-mlops-conventions.md         # always_on — stack + Behavior Protocol (static + dynamic ADR-010)
@@ -439,7 +467,7 @@ workflow rather than getting its own.
 ### Skills → Workflow Cross-References
 
 | Trigger | Skill Invoked | Workflow Chained |
-|---------|--------------|-----------------|
+| --------- | -------------- | ----------------- |
 | New dataset to explore | `eda-analysis` | `/eda` → `/new-service` (if leakage-free) |
 | Pre-build / pre-deploy | `security-audit` | auto-chain before DockerBuilder/K8sBuilder |
 | Secret leak detected | `secret-breach-response` | `/secret-breach` (STOP pipeline, rotate) |
@@ -462,7 +490,10 @@ workflow rather than getting its own.
 
 ## Multi-IDE Support
 
-The template supports **4 agent surfaces** with equivalent invariant coverage: Devin (Desktop), Cursor, Claude Code, and Codex. `AGENTS.md` is the behavior authority, `agentic/` is the vendor-neutral canonical body store (ADR-027), and `templates/config/agentic_manifest.yaml` is the cross-surface index. Surfaces are generated, never hand-edited: `.devin/` is a full-body **mirror** (the IDE ingests bodies); `.cursor/`, `.claude/`, `.codex/` are thin **pointers**.
+The template supports **4 agent surfaces** with equivalent invariant coverage: Devin (Desktop), Cursor, Claude Code, and
+Codex. `AGENTS.md` is the behavior authority, `agentic/` is the vendor-neutral canonical body store (ADR-027), and
+`templates/config/agentic_manifest.yaml` is the cross-surface index. Surfaces are generated, never hand-edited:
+`.devin/` is a full-body **mirror** (the IDE ingests bodies); `.cursor/`, `.claude/`, `.codex/` are thin **pointers**.
 
 Generated surfaces are produced from the canonical store, not forks:
 
@@ -472,7 +503,7 @@ python3 scripts/sync_agentic_adapters.py --check
 python3 scripts/validate_agentic_manifest.py --strict
 ```
 
-```
+```text
 agentic/rules/         # CANONICAL rules: 18 files (humans edit here)
 agentic/skills/        # CANONICAL skills: 26 SKILL.md files
 agentic/workflows/     # CANONICAL workflows: 18 files
@@ -495,22 +526,25 @@ agentic/workflows/     # CANONICAL workflows: 18 files
 .codex/automations/    # Codex-specific schedules/events, never STOP writes
 ```
 
-Note: the project often says "17 rules" because rule 04 is split into `04a-python-serving` and `04b-python-training`. The on-disk canonical set is therefore 18 files.
+Note: the project often says "17 rules" because rule 04 is split into `04a-python-serving` and `04b-python-training`.
+The on-disk canonical set is therefore 18 files.
 
 ### IDE Parity Matrix (manifest-enforced)
 
 | Asset | Canonical (`agentic/`) | Devin | Cursor | Claude | Codex |
-|-------|------------------------|-------|--------|--------|-------|
+| ------- | ------------------------ | ------- | -------- | -------- | ------- |
 | Rules | `agentic/rules/*.md` | `.devin/rules/*.md` mirror | `.cursor/rules/*.mdc` pointers | `.claude/rules/*.md` pointers | `.codex/rules/*.md` pointers |
 | Skills | `agentic/skills/**/SKILL.md` | `.devin/skills/**/SKILL.md` mirror | `.cursor/skills/*.md` pointers | `.claude/skills/<id>/SKILL.md` pointers | `.codex/skills/*.md` pointers |
 | Workflows | `agentic/workflows/*.md` | `.devin/workflows/*.md` mirror | `.cursor/commands/*.md` pointers | `.claude/commands/*.md` pointers | `.codex/workflows/*.md` pointers |
 | Context | `AGENT_CONTEXT.md` | `.devin_context.md` | `.cursor_context.md` | `.claude_context.md` | `.codex_context.md` |
 
-Every surface inherits the same **Agent Behavior Protocol** (AUTO/CONSULT/STOP) from `AGENTS.md`; `scripts/validate_agentic_manifest.py --strict` rejects pointers that omit the canonical source or authority chain, and fails if any `.devin/` mirror body drifts from its `agentic/` source.
+Every surface inherits the same **Agent Behavior Protocol** (AUTO/CONSULT/STOP) from `AGENTS.md`;
+`scripts/validate_agentic_manifest.py --strict` rejects pointers that omit the canonical source or authority chain, and
+fails if any `.devin/` mirror body drifts from its `agentic/` source.
 
 ## Template System
 
-```
+```text
 templates/
 ├── service/            # Complete ML service boilerplate
 │   ├── app/            # FastAPI serving layer
@@ -532,7 +566,7 @@ templates/
 └── monitoring/         # Grafana dashboard + Prometheus alert templates
 ```
 
-```
+```text
 docs/                   # Template-level architectural decisions
 └── decisions/
     └── ADR-001-template-scope-boundaries.md  # Scope: LLM, multi-tenancy, Vault, compliance
@@ -546,7 +580,7 @@ LINK to these (not paraphrase) when a task touches the corresponding
 domain:
 
 | Runbook | When agents reference it |
-|---------|--------------------------|
+| --------- | -------------------------- |
 | `gcp-wif-setup.md` | First GCP deploy from a new fork; rotating WIF provider; debugging `iam.workloadIdentityUser` failures |
 | `aws-irsa-setup.md` | First AWS deploy from a new fork; debugging `AssumeRoleWithWebIdentity` failures; per-env IAM role creation |
 | `terraform-state-bootstrap.md` | Setting up a new env's tf state bucket + DynamoDB lock; debugging `init -reconfigure` errors |
@@ -565,7 +599,7 @@ Install only MCPs that change agent capabilities for this stack. Skip MCPs for t
 ### Recommended MCPs (high ROI for this template)
 
 | MCP | Package / Server | What the agent gains |
-|-----|-----------------|----------------------|
+| ----- | ----------------- | ---------------------- |
 | **`github`** | Streamable HTTP — `api.githubcopilot.com/mcp/` + PAT | Read CI logs, PR status, issues — no copy-paste into chat |
 | **`kubectl-mcp-server`** | `npx kubectl-mcp-server@latest --read-only` | Run `kubectl get/logs/describe` directly — skills execute instead of instruct |
 | **`terraform-mcp-server`** | `npx terraform-mcp-server@latest` or `docker run hashicorp/terraform-mcp-server` | Registry lookup, `plan/validate` — workflow `/release` with real infra state |
@@ -580,7 +614,7 @@ Each surface reads its own config file; the authoritative matrix lives in
 surface from the registry — never commit credentials (D-17):
 
 | Surface | Config file |
-|---------|-------------|
+| --------- | ------------- |
 | Devin Desktop | `~/.codeium/mcp_config.json` (legacy Windsurf: `~/.codeium/windsurf/mcp_config.json`) |
 | Cursor | `~/.cursor/mcp.json` |
 | Claude Code | `~/.claude.json` (user) or repo-scoped `.mcp.json` — copy `.mcp.json.example` and export the env vars it references |
@@ -590,7 +624,7 @@ A committed, placeholder-only reference for Claude Code lives at
 `.mcp.json.example`; tokens come from the environment, never the file.
 
 **GitHub PAT scopes needed**: `repo`, `actions` (CI logs), `pull_requests`.
-Create at: https://github.com/settings/personal-access-tokens/new
+Create at: <https://github.com/settings/personal-access-tokens/new>
 
 **Note**: `kubectl-mcp-server` uses your current `kubectl` context.
 **Always run** `kubectl config current-context` before any cluster operation.
@@ -617,4 +651,6 @@ With MCPs: agents execute those commands directly and verify the results. Same i
 
 ## AI Transparency
 
-This template uses AI-assisted coding agents for code generation and boilerplate. All architectural decisions, system design, trade-off analysis, and ADR documentation require human engineering judgment. AI tools accelerate throughput — they don't replace the engineer's responsibility to calibrate solutions to the right scale.
+This template uses AI-assisted coding agents for code generation and boilerplate. All architectural decisions, system
+design, trade-off analysis, and ADR documentation require human engineering judgment. AI tools accelerate throughput —
+they don't replace the engineer's responsibility to calibrate solutions to the right scale.

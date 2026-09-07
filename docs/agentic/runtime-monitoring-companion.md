@@ -50,7 +50,7 @@ automatically — skills and workflows start consulting the live
 signals without code changes.
 
 | MCP | Purpose | Required scope |
-|-----|---------|----------------|
+| ----- | --------- | ---------------- |
 | `prometheus` | Sliced latency / error / drift metrics | query only |
 | `github` | Open incidents, recent PRs, deploy status | `issues:read`, `pulls:read` |
 | `kubectl` | Pod / HPA / event snapshots during incidents | `--read-only` |
@@ -79,7 +79,7 @@ MCP — these are plain files on the local checkout.
 
 ### `debug-ml-inference` (ADR-023 F5 adapter-ready)
 
-```
+```text
 1. Read recent alerts from prometheus MCP (last 30m, service label)
 2. Read pod status + recent events from kubectl MCP (read-only)
 3. Read the latest drift report from ops/reports/drift/<service>/
@@ -89,7 +89,7 @@ MCP — these are plain files on the local checkout.
 
 ### `incident`
 
-```
+```text
 1. Read ops/audit.jsonl for recent STOP/CONSULT escalations
 2. Read the latest 3 reports under ops/reports/ (any type)
 3. Read current alerts from prometheus MCP
@@ -100,7 +100,7 @@ MCP — these are plain files on the local checkout.
 
 ### `performance-degradation-rca`
 
-```
+```text
 1. Read prometheus MCP for sliced metrics over the alert window
 2. Read the latest drift report + training report for the service
 3. Correlate drift features with performance sliced metrics
@@ -152,7 +152,7 @@ When wiring a new environment:
 
 ## Authority chain
 
-```
+```text
 ADR-023 §F7
   └─ docs/agentic/runtime-monitoring-companion.md  (this file)
        └─ templates/config/mcp_registry.yaml       (declares the 3 MCPs)
@@ -161,6 +161,7 @@ ADR-023 §F7
 ```
 
 A change to the companion contract requires:
+
 1. A new ADR amending F7 scope.
 2. Update to this document.
 3. Update to the consuming skills' SKILL.md files.

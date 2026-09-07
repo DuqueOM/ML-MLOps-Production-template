@@ -223,7 +223,7 @@ def _remove_stale_skill_dirs(root: Path, expected: set[Path], check: bool) -> bo
 def _render_skill_index(surface: str, skills: list[dict[str, Any]]) -> str:
     rows = [
         "| Skill | Mode | Canonical |",
-        "|-------|------|-----------|",
+        "| ----- | ---- | --------- |",
     ]
     for skill in skills:
         sid = skill["id"]

@@ -32,8 +32,8 @@ deliberately separate from the runtime `D-NN` namespace in AGENTS.md
 ## Anti-patterns — Q-01 … Q-08
 
 | ID | Anti-pattern | Detection | Mode on violation |
-|----|--------------|-----------|-------------------|
-| Q-01 | **Unpinned GitHub Action** — `uses:` referencing a tag or branch instead of a full 40-char SHA | `grep -E "uses: [^@]+@(v[0-9]|main|master)"` over workflow files | Block the edit; pin to SHA with a trailing `# vX.Y.Z` comment |
+| ---- | -------------- | ----------- | ------------------- |
+| Q-01 | **Unpinned GitHub Action** — `uses:` referencing a tag or branch instead of a full 40-char SHA | `grep -E "uses: [^@]+@(v[0-9]\|main\|master)"` over workflow files | Block the edit; pin to SHA with a trailing `# vX.Y.Z` comment |
 | Q-02 | **License statement drift** — README badge, `llms.txt`, `pyproject.toml`, or scaffolded outputs claiming a license other than the `LICENSE` file (Apache-2.0) | compare license strings across the four surfaces | Fix mirrors to match `LICENSE`; never "fix" `LICENSE` to match a mirror |
 | Q-03 | **Evidence-free release** — a `v*` tag published without SBOM + signed checksum assets on its GitHub Release | `release-on-tag.yml` `supply-chain-evidence` job missing, skipped, or failing | CONSULT before tagging; a tag already pushed without evidence gets the job re-run, never a tag rewrite |
 | Q-04 | **Complexity hotspot introduced** — new/modified production function with cyclomatic complexity > 15 or > 100 lines (excludes tests and generated code) | advisory AST scan in `enterprise-audit` skill §3 | Refactor before merge, or record the exemption + reason in the PR body |

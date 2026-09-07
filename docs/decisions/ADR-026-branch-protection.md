@@ -58,7 +58,7 @@ Adopt **two GitHub Rulesets** on the repository:
 ### Ruleset 1 — `main` branch baseline (Active)
 
 | Knob | Value | Rationale |
-|------|-------|-----------|
+| ------ | ------- | ----------- |
 | Target | branch `main` only | `dependabot/*`, `codex/*`, `feature/*` need to be force-pushable and deletable; protecting only `main` keeps the contract surgical. |
 | Enforcement | Active | "Evaluate" mode reports without blocking — useful for staging the rule, useless as protection. |
 | Restrict deletions | ON | `main` is the audit baseline; deletion is never legitimate. |
@@ -82,7 +82,7 @@ Adopt **two GitHub Rulesets** on the repository:
 #### Required Status Checks (final list — exactly 6)
 
 | Check (display name reported by GitHub) | Workflow file | Why it gates |
-|----|----|----|
+| ---- | ---- | ---- |
 | `Tests & Coverage / Python 3.11` | `ci-examples.yml` | Coverage + behavior |
 | `Tests & Coverage / Python 3.12` | `ci-examples.yml` | Forward Python compat |
 | `Self-audit (secrets + IaC + supply chain)` | `validate-templates.yml` | Security scans + secret detection |
@@ -108,7 +108,7 @@ gate at the SCM layer. Adding them later as required is a one-line script change
 ### Ruleset 2 — Tag immutability `v*` (Active)
 
 | Knob | Value | Rationale |
-|------|-------|-----------|
+| ------ | ------- | ----------- |
 | Target | tag pattern `v*` | All semantic-version tags. |
 | Enforcement | Active | Same logic as Ruleset 1. |
 | Restrict deletions | ON | Tags drive `release-on-tag.yml`; deletion + recreation = release hijack. |
@@ -207,7 +207,7 @@ rules. This ADR governs the source-of-truth repo only.
 Re-open this ADR when ANY of the following becomes true:
 
 | Trigger | Likely change |
-|---------|---------------|
+| --------- | --------------- |
 | Second CODEOWNER onboarded | Set `required_approving_review_count: 1` and `require_code_owner_review: true`. |
 | PR volume sustained >5 concurrent/day | Turn on "Require branches up to date" and reassess required-checks set. |
 | External adopter requests SOC 2 / HIPAA posture | Add required commit signing and consider `block deletions` on additional protected branches. |

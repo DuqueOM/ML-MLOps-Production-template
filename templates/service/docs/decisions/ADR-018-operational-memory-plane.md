@@ -119,7 +119,7 @@ non-empty `summary`, normalized `severity`, and that `sensitivity`
 ### Phase plan (high-level — each phase becomes its own PR)
 
 | Phase | Title | Ships | Acceptance |
-|-------|-------|-------|------------|
+| ------- | ------- | ------- | ------------ |
 | 0 | Scope + non-goals + threat model | this ADR | ADR approved |
 | 1 | Canonical contracts + redaction | `common_utils/memory_types.py`, `memory_redaction.py`, unit tests | invariants green; serialization stable |
 | 2 | Ingestion pipeline | `scripts/memory_ingest.py`, `scripts/memory_backfill.py`, hooks in `audit_record.py` + `deploy-common.yml` + `drift-detection.yml` | backfill over `ops/audit.jsonl`; zero secrets persisted |

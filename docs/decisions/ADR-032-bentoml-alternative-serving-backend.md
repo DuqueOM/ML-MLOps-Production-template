@@ -9,8 +9,8 @@
 
 ## Context
 
-The template's serving path is hand-rolled: FastAPI + `asyncio.run_in_executor`
-+ `ThreadPoolExecutor`, with the model loaded by an init container into an
+The template's serving path is hand-rolled: FastAPI + `asyncio.run_in_executor` +
+`ThreadPoolExecutor`, with the model loaded by an init container into an
 `emptyDir`. This is correct, dependency-light, and fully governed by the serving
 invariants (1 worker per pod, CPU-only HPA, no model baked into the image, no
 `model.predict()` on the event loop).
@@ -31,7 +31,7 @@ the DX upside without that cost.
 ## Options Considered
 
 | Option | Pros | Cons |
-|--------|------|------|
+| -------- | ------ | ------ |
 | **A. Keep FastAPI-only (status quo)** | Minimal deps; fully inspectable; already governed | No adaptive batching; more serving boilerplate per service |
 | **B. Replace serving with BentoML (default)** | Best serving DX; less boilerplate | Heavy dependency; identity dilution; re-validates every serving invariant against a framework we don't control |
 | **C. BentoML as an *optional* backend behind the same K8s/HPA invariants (proposed)** | Captures DX for teams that want it; default stays minimal; invariants unchanged | Two serving paths to document and test; needs a contract proving BentoML honors D-01/D-23/D-25 |

@@ -18,12 +18,14 @@ If any fails → STOP. Clean working tree and profile files are required.
 ## 2. Inspect Current Profile
 
 Read `configs/profiles/active_profile.yaml` and report:
+
 - Current profile name
 - Active dependencies and deploy targets
 
 ## 3. Review Target Profile
 
 Read `configs/profiles/$PROFILE.yaml` and present:
+
 - Required dependencies for the target profile
 - Deploy targets and mode (AUTO / CONSULT / STOP)
 - D-35 implications (local must not have cloud creds)
@@ -44,6 +46,7 @@ python3 scripts/validate_agentic_manifest.py --strict
 ```
 
 If switching to `local`, verify D-35:
+
 ```bash
 python3 -c "
 import yaml

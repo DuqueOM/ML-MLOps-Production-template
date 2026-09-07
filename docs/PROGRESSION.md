@@ -20,6 +20,7 @@ deferred.
 **Goal**: confirm the minimal path works end-to-end on your laptop.
 
 **Run**:
+
 ```bash
 git clone https://github.com/DuqueOM/ml-service-template.git
 cd ml-service-template
@@ -33,6 +34,7 @@ curl -X POST http://localhost:8000/predict \
 ```
 
 **What's expected to work**:
+
 - `train.py` exits 0 and writes `model.joblib`.
 - `/predict` returns JSON with `score`, `prediction_class`, `latency_ms`.
 - `/predict?explain=true` returns SHAP values per feature.
@@ -48,6 +50,7 @@ curl -X POST http://localhost:8000/predict \
 its unit tests + contract tests on your laptop. No cluster yet.
 
 **Run**:
+
 ```bash
 copier copy --vcs-ref=v0.26.0 https://github.com/DuqueOM/ml-service-template.git ChurnPredictor
 cd ChurnPredictor
@@ -66,6 +69,7 @@ make contract-test   # schema + policy contracts
 > active version.
 
 **What's expected to work**:
+
 - `make test` green locally.
 - `tests/integration/test_train_serve_drift_e2e.py` passes (train →
   serve → drift, the end-to-end path wired in v0.15.1).
@@ -86,6 +90,7 @@ publishing images, running MLflow in prod mode. Those are Stage 3+.
 of kind / minikube / GKE / EKS), with the base Kustomize overlay.
 
 **Scope inclusions**:
+
 - Image build + push to a registry you control.
 - `kustomize build k8s/overlays/<cloud>-dev/ | kubectl apply -f -`.
 - Liveness / readiness / `/ready` traffic gating.
@@ -93,6 +98,7 @@ of kind / minikube / GKE / EKS), with the base Kustomize overlay.
   with the dashboards from `templates/service/monitoring/grafana/`).
 
 **Scope exclusions at this stage**:
+
 - Cosign verification (warn mode in dev, enforce in prod — that's
   Stage 4).
 - Kyverno admission (cluster-level policy, Stage 5).
@@ -110,6 +116,7 @@ dev overlay sections only.
 all security invariants on.
 
 **Checklist (each one has a corresponding ADR + runbook)**:
+
 - `MODEL_SIGNATURE_VERIFY=enforce` — cosign verify-blob of the
   model blob at init time (v0.15.1).
 - Image pinned to a `@sha256:...` digest (ADR-024 HIGH-6 / D-26).
@@ -130,6 +137,7 @@ promotion contract) · `docs/audit/feedback-may-2026-triage.md`
 switch to Argo Rollouts for metric-gated deploys.
 
 **Wire order**:
+
 1. Prediction logger writing to your storage backend
    (`common_utils.prediction_logger.ParquetBackend` or BigQuery).
 2. Ground-truth ingestion SLA

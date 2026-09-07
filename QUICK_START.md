@@ -4,17 +4,21 @@
 
 Two clearly labeled tracks below. Pick ONE — do not mix them on a first read.
 
-- **Track A** — 5-minute taste: runs the `examples/minimal/` demo. Confirms your laptop is ready. No scaffolding, no cluster, no Docker.
-- **Track B** — 10-minute scaffold: generates a full-shape service via `copier copy` and runs its test suite locally. Still no cluster.
+- **Track A** — 5-minute taste: runs the `examples/minimal/` demo. Confirms your laptop is ready. No scaffolding, no
+  cluster, no Docker.
+- **Track B** — 10-minute scaffold: generates a full-shape service via `copier copy` and runs its test suite locally.
+  Still no cluster.
 
-If you need the longer "Day 1 to Month 2" arc (cluster deploys, production overlay, closed-loop retraining), read [`docs/PROGRESSION.md`](docs/PROGRESSION.md) AFTER finishing Track A or B. For a narrated walk-through from notebook to production, see [`docs/TUTORIAL.md`](docs/TUTORIAL.md).
+If you need the longer "Day 1 to Month 2" arc (cluster deploys, production overlay, closed-loop retraining), read
+[`docs/PROGRESSION.md`](docs/PROGRESSION.md) AFTER finishing Track A or B. For a narrated walk-through from notebook to
+production, see [`docs/TUTORIAL.md`](docs/TUTORIAL.md).
 
 ---
 
 ## Prerequisites
 
 | Component | Version | Check |
-|-----------|---------|-------|
+| ----------- | --------- | ------- |
 | **Python** | 3.11+ | `python --version` |
 | **Docker** | 20.10+ | `docker --version` |
 | **Make** | Any | `make --version` |
@@ -90,7 +94,7 @@ copier copy --vcs-ref=v0.26.0 https://github.com/DuqueOM/ml-service-template.git
 
 This creates a complete service directory:
 
-```
+```text
 ChurnPredictor/
 ├── app/                    # FastAPI serving layer
 ├── src/churn_predictor/    # Training, features, monitoring
@@ -163,9 +167,9 @@ make serve
 **Access points:**
 
 | Service | URL |
-|---------|-----|
-| Your API | http://localhost:8000/docs |
-| MLflow UI | http://localhost:5000 |
+| --------- | ----- |
+| Your API | <http://localhost:8000/docs> |
+| MLflow UI | <http://localhost:5000> |
 
 ---
 
@@ -173,7 +177,7 @@ make serve
 
 If using Devin, Claude Code, Cursor, or Codex, the template includes pre-configured rules, skills, and workflows:
 
-```
+```text
 # In your AI assistant:
 /new-service       # Scaffold a new ML service
 /scaffold-update   # Pull template improvements into an existing service
@@ -190,7 +194,7 @@ If using Devin, Claude Code, Cursor, or Codex, the template includes pre-configu
 ## Troubleshooting
 
 | Issue | Solution |
-|-------|----------|
+| ------- | ---------- |
 | `ModuleNotFoundError` | `pip install -r requirements.txt` |
 | Port 8000 in use | `lsof -i :8000` then `kill -9 <PID>` |
 | Model not found | Run `make train` first |
@@ -216,6 +220,7 @@ rationale: `docs/decisions/ADR-026-branch-protection.md`. Single-source
 of-truth for the exact configuration: `docs/governance/branch-protection.md`.
 
 Requirements:
+
 - `gh` CLI authenticated against your fork (`gh auth login`)
 - A token with `repo` admin scope on your fork
 - Optional: `jq` for pretty-printed dry-run output (the script falls back

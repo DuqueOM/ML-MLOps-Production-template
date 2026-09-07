@@ -12,7 +12,7 @@ under deadline pressure. The point of a baseline is to make the third option,
 ## Contract
 
 | File | Format |
-|---|---|
+| --- | --- |
 | `trivy-config.trivyignore` | one check id per line, `# expiry: YYYY-MM-DD  reason: …` inline or on the line above |
 
 Enforced by `scripts/check_baselines_expiry.py`, which fails CI when an entry

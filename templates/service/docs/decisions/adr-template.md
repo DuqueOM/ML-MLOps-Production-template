@@ -15,7 +15,7 @@ YYYY-MM-DD
 ## Options Considered
 
 | Option | Pros | Cons |
-|--------|------|------|
+| -------- | ------ | ------ |
 | **Option A**: {description} | {pros} | {cons} |
 | **Option B**: {description} | {pros} | {cons} |
 | **Option C**: {description} | {pros} | {cons} |

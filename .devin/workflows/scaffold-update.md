@@ -27,6 +27,7 @@ copier update --vcs-ref=<release-tag> --dry-run
 ```
 
 Review the diff. Categorize:
+
 - **No-op**: unchanged service files → safe to auto-apply
 - **Conflict**: service-customized files → manual review
 - **New**: template additions → safe
@@ -43,12 +44,14 @@ copier update --vcs-ref=<release-tag> --trust --defaults
 ```
 
 Copier re-renders all template files and runs post-gen tasks:
+
 - `scripts/sync_agentic_adapters.py`
 - `scripts/validate_agentic_manifest.py --strict`
 
 ## 5. Resolve Conflicts
 
 For each conflict:
+
 1. Read both versions
 2. Propose merge preserving service customizations
 3. Apply and mark resolved

@@ -99,7 +99,18 @@ def _collect() -> list[tuple[int, str, str]]:
 
 
 def _render(rows: list[tuple[int, str, str]]) -> str:
-    lines = [_PREAMBLE, f"**{len(rows)} decisions recorded.**\n", "| ADR | Decision |", "|---|---|"]
+    # The emitted Markdown must satisfy `.markdownlint-cli2.jsonc`, or this
+    # generator and the docs lint deadlock: regenerating fixes one gate and
+    # breaks the other. Hence the padded separator (MD060 `compact`) and the
+    # single trailing newline on the count line (MD012).
+    lines = [
+        _PREAMBLE.rstrip("\n"),
+        "",
+        f"**{len(rows)} decisions recorded.**",
+        "",
+        "| ADR | Decision |",
+        "| --- | --- |",
+    ]
     lines += [f"| {number:03d} | [{title}]({filename}) |" for number, title, filename in rows]
     return "\n".join(lines) + "\n"
 

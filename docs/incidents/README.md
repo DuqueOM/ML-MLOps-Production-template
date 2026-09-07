@@ -6,7 +6,7 @@ service or the development environment.
 ## What goes here
 
 | Committed? | What |
-|-----------|------|
+| ----------- | ------ |
 | ✅ Yes | `README.md` (this file) |
 | ✅ Yes | `EXAMPLE.md` — canonical format / template |
 | ✅ Yes | Generalized learnings that apply to any adopter of the template |

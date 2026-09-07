@@ -89,7 +89,7 @@ ownership chain.
 ### Verification (≤ 10 min after prod deploy)
 
 | Check | Command | Expected |
-|-------|---------|----------|
+| ------- | --------- | ---------- |
 | Pods Ready | `kubectl --context <prod> -n "<service-name>-prod" get pods -l app=<service-name>` | `1/1 Running` for all replicas |
 | Image digest matches | `kubectl --context <prod> -n "<service-name>-prod" get deploy <service-name>-predictor -o jsonpath='{.spec.template.spec.containers[0].image}'` | Ends in `@sha256:<expected-digest>` |
 | Kyverno admitted | `kubectl --context <prod> get policyreport -n "<service-name>-prod"` | No `Fail` results for the new pod |
@@ -106,7 +106,7 @@ Production pods run a `model-verifier` init container that calls
 `cosign verify-blob` against the model artifact downloaded by
 `model-downloader`. The verifier matches the signing identity to:
 
-```
+```text
 --certificate-identity-regexp "https://github.com/<ORG>/<REPO>/.github/workflows/retrain-service\.yml@.*"
 --certificate-oidc-issuer    "https://token.actions.githubusercontent.com"
 ```
@@ -140,8 +140,10 @@ Deploy is COMPLETE when:
 
 ## Failure paths
 
-- **Kyverno rejects the pod**: image is unsigned or SBOM missing → STOP, chain to `secret-breach.md` if signing key was compromised, otherwise fix the build pipeline.
-- **`/ready` stays 503 past 5 min**: warm-up is failing → `kubectl logs` for the SHAP / model-load error; if persistent, run `rollback.md`.
+- **Kyverno rejects the pod**: image is unsigned or SBOM missing → STOP, chain to `secret-breach.md` if signing key was
+  compromised, otherwise fix the build pipeline.
+- **`/ready` stays 503 past 5 min**: warm-up is failing → `kubectl logs` for the SHAP / model-load error; if persistent,
+  run `rollback.md`.
 - **Smoke `/predict` returns 5xx**: `rollback.md` Path A immediately.
 - **2-reviewer requirement cannot be met**: see `.github/CODEOWNERS` maintainer note; do NOT bypass.
 

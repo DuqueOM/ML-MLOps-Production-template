@@ -41,7 +41,7 @@ provide migration guidance without implementing it premature-optimally.
 ### Migration triggers (ANY ONE is sufficient)
 
 | Trigger | Example | Why GHA is insufficient |
-|---------|---------|------------------------|
+| --------- | --------- | ------------------------ |
 | **Backfill requirement** | Retrain monthly model for last 18 months in one run | GHA has 6h job limit; backfills need checkpointing |
 | **>10 parallel model variants** | Sweep 12 algorithms × 50 Optuna trials each | GHA concurrent jobs capped; no cluster-local cache |
 | **Distributed training** | Multi-node XGBoost / Dask / Ray training | GHA runners are single-node |

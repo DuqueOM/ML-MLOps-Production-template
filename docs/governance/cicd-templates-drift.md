@@ -46,7 +46,7 @@ workflows of the template repo.
 
 The blast radius is concrete:
 
-```
+```text
 1. Dependabot opens PR: actions/upload-artifact v4 -> v7 in .github/workflows/
 2. PR is merged. Runtime workflows are now on v7.
 3. templates/ still references v4 (Dependabot never saw those files).

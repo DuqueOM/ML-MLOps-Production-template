@@ -31,6 +31,7 @@ serving-surface change.
 `sklearn.predict()` and most ML frameworks are synchronous — they block asyncio's event loop.
 
 ALWAYS use `asyncio.run_in_executor()`:
+
 ```python
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
@@ -64,6 +65,7 @@ Why this works: sklearn, XGBoost, LightGBM release the GIL during C extensions �
 NEVER use `TreeExplainer` with StackingClassifier, pipelines, or complex ensembles.
 
 ALWAYS use `KernelExplainer` with a `predict_proba_wrapper`:
+
 ```python
 def predict_proba_wrapper(X_array: np.ndarray) -> np.ndarray:
     """SHAP in ORIGINAL feature space, not transformed space."""
@@ -77,7 +79,8 @@ explainer = shap.KernelExplainer(
 ```
 
 ALWAYS verify the consistency property:
-```
+
+```text
 base_value + sum(shap_values) ≈ predict_proba(input)  (tolerance < 0.01)
 ```
 
@@ -175,6 +178,7 @@ prediction_score_distribution = Histogram('{service}_prediction_score', '...')
 ## Type Hints
 
 Required on all public functions. Use Pydantic for config and API schemas:
+
 ```python
 from pydantic import BaseModel, Field
 
@@ -184,6 +188,7 @@ class PredictionRequest(BaseModel):
 ```
 
 ## When NOT to Apply
+
 - Test files (`test_*.py`) — test conventions are different
 - Training scripts — use `04b-python-training` rules instead
 - One-off scripts, migrations, CLI tools

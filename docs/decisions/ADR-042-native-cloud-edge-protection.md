@@ -63,7 +63,7 @@ case.
 **Native-cloud-first, Cloudflare-optional.**
 
 | Deployment shape | Default edge protection | Cloudflare |
-|---|---|---|
+| --- | --- | --- |
 | GCP only (GKE) | Cloud Armor, via `BackendConfig` CRD + a `google_compute_security_policy` | optional, off by default |
 | AWS only (EKS) | AWS WAFv2 + Shield Standard (automatic/free for ALB), via ALB annotations + an `aws_wafv2_web_acl` | optional, off by default |
 | Genuine concurrent multi-cloud (GKE + EKS both serving production traffic), or a zero-cloud-account local/demo path | Either native option per-cluster, or Cloudflare as one control plane spanning both | adopter's explicit choice, documented in the equivalence matrix (Wave B4) |
@@ -104,7 +104,7 @@ real effects, and *removing* a safety control is categorically
 different from either.
 
 | Verb | Mode | Rationale |
-|---|---|---|
+| --- | --- | --- |
 | Read/audit current edge-protection coverage (`edge-audit`) | **AUTO** | Read-only; an agent must always be able to check |
 | `terraform apply` of Cloud Armor / WAFv2 / Cloudflare resources, **in any environment including dev** | **CONSULT** | Creates a publicly-reachable resource plus real cost. Unlike the rest of the Operation → Mode table, this does not downgrade to AUTO in dev — the blast radius (public exposure) does not shrink because an environment label says "dev" |
 | Disabling, removing, or loosening an existing WAF/rate-limit rule, **in any environment** | **STOP**, unconditionally | Mirrors D-36 / `rollback`'s environment-independent STOP: removing a safety control is always a human decision, never a convenience, regardless of urgency or environment |
@@ -133,6 +133,7 @@ monitoring, and the setup runbook + cloud-equivalence matrix — tracked
 across several waves of the same initiative, not separate ADRs.
 
 **Out of scope**:
+
 - Cloudflare Workers/Pages — an application-hosting product, unrelated
   to edge *protection*.
 - AWS Shield **Advanced** (~$3k/mo) — not justified at this template's
@@ -149,6 +150,7 @@ across several waves of the same initiative, not separate ADRs.
 ## 5. Consequences
 
 ### Positive
+
 - Closes the one real gap the six-station monitoring audit found.
 - Matches the tool a reviewing platform or security engineer would
   actually expect on native GCP/AWS infrastructure — the same reasoning
@@ -158,6 +160,7 @@ across several waves of the same initiative, not separate ADRs.
   genuinely the better tool, without being forced onto the common case.
 
 ### Negative
+
 - Three edge-protection code paths to maintain and keep at parity
   (Cloud Armor, AWS WAFv2, Cloudflare) instead of one.
 - An adopter must still run `/edge-setup` (CONSULT) explicitly — by
@@ -166,6 +169,7 @@ across several waves of the same initiative, not separate ADRs.
   service without an explicit human decision.
 
 ### Neutral
+
 - Surface counts move: rules 17→18, skills 25→26, workflows 17→18,
   anti-patterns D-01..D-37→D-01..D-38. Cascaded through `AGENTS.md`,
   `CLAUDE.md` (×2), `README.md`, `llms.txt`, and
@@ -189,7 +193,7 @@ across several waves of the same initiative, not separate ADRs.
 ## 7. Alternatives considered
 
 | Alternative | Why rejected |
-|---|---|
+| --- | --- |
 | Cloudflare as the default/reference implementation, native tools shown as a comparison table | Adds a third-party account + DNS delegation for the common single-cloud case, when the cloud already chosen ships an equivalent native tool integrated with the same IAM model the rest of the template uses |
 | Native tools only, no Cloudflare option | Discards real value for genuinely multi-cloud adopters and for a zero-cloud-account learning/demo path |
 | A common abstraction layer hiding all three providers behind one Terraform module | Hides exactly the provider-specific configuration a platform engineer needs to see and audit; contradicts this template's existing explicit-over-abstracted Terraform convention |

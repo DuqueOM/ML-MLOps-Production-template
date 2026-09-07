@@ -10,7 +10,7 @@ Code, and Codex are now adapter surfaces generated from
 ## Current Parity
 
 | Asset | Canonical (`agentic/`) | Cursor | Claude | Codex |
-|-------|------------------------|--------|--------|-------|
+| ------- | ------------------------ | -------- | -------- | ------- |
 | Rules | 15 canonical files (mirrored to `.devin/`) | 15 `.mdc` pointers | 15 `.md` pointers | 15 `.md` pointers |
 | Skills | 16 canonical `SKILL.md` files | 16 pointers + `INDEX.md` | 16 pointers + `INDEX.md` | 16 pointers |
 | Workflows | 12 canonical files | 12 command pointers | 12 command pointers | 12 workflow pointers |

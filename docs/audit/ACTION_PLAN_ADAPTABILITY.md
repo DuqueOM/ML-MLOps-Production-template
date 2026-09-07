@@ -60,7 +60,7 @@ This attribution is intentional: it is enterprise good practice and consistent
 with the repo's ADR culture of citing sources.
 
 | Reference | Owner | What we adopt | What we do NOT adopt |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | [Made With ML](https://github.com/GokuMohandas/Made-With-ML) | Goku Mohandas | Pedagogical "why" narrative; guided end-to-end arc | Its single-project shape; Ray as a hard dependency |
 | [Cookiecutter Data Science](https://github.com/drivendataorg/cookiecutter-data-science) | DrivenData | Recognizable directory layout; standard scaffolding CLI ergonomics | Its deployment-agnostic minimalism (we keep production depth) |
 | [ZenML](https://github.com/zenml-io/zenml) | ZenML GmbH | Infra-agnostic "stack" concept (local → cloud) | Becoming a framework/runtime dependency |
@@ -116,7 +116,7 @@ provenance discipline; it does not require a new CI job at this scale
 ## 2. What makes this repo special (the moat — preserve)
 
 | Differentiator | Where it lives | None of the 3 references have it |
-|---|---|---|
+| --- | --- | --- |
 | Encoded, contract-tested anti-patterns (D-01..D-32) | `AGENTS.md`, policy tests | ✅ unique |
 | Agentic governance: AUTO/CONSULT/STOP + dynamic risk | `AGENTS.md`, ADR-010/014 | ✅ unique |
 | Vendor-neutral canonical agentic surface | `agentic/`, ADR-027 | ✅ unique |
@@ -130,7 +130,7 @@ provenance discipline; it does not require a new CI job at this scale
 ## 3. Comparative analysis (axis by axis)
 
 | Axis | This template | Made With ML | Cookiecutter DS | ZenML |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | Scaffolding tool | custom bash | N/A | `cookiecutter`/`ccds` (standard) | `zenml init` |
 | Template-update path | manual drift gate | ❌ | partial (Cruft) | versioned |
 | Entry friction | high (K8s/TF day 1) | medium | **very low** | low |
@@ -150,7 +150,7 @@ the levers that drive broad adoption.
 ## 4. Adaptability gaps (prioritized: impact / effort)
 
 | ID | Gap | Impact | Effort | Lever |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | **B1** | Non-standard scaffolding (`new-service.sh`) vs `copier`/`cookiecutter` | HIGH | MED | Copier migration + `copier update` replaces manual drift gate |
 | **B2** | No local-first gradient (K8s/TF assumed from day 1) | HIGH | MED | ZenML-style stack profiles `local/staging/prod` |
 | **B3** | Layout not recognizable to DS practitioners | MED | LOW | CCDS-aligned generated view (`data/ notebooks/ models/ references/`) |
@@ -275,7 +275,7 @@ its Copier index entry.
 ## 7. ADR ledger to create
 
 | ADR | Title | Wave | Status |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | **ADR-029** | Agentic Adoption Contract & Interoperability Strategy | W0 | [x] |
 | **ADR-030** | Copier-based scaffolding migration | W1 | [x] |
 | **ADR-033** | Local-first stack profiles | W2 | [x] |
@@ -291,7 +291,7 @@ indexed in `templates/config/agentic_manifest.yaml` where it carries policy.
 ## 8. Anti-pattern additions ledger
 
 | ID | Anti-pattern | Corrective action | Wave | Status |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | **D-33** | Manual file copying or sed-based placeholder substitution in the scaffolder | The scaffolder MUST delegate to `copier copy`; enforced by `scripts/test_scaffold.sh` | W1 | [x] |
 | **D-34** | Unquoted Jinja tokens (`{@ @}`) in YAML list items | All `{@ @}` tokens in YAML lists MUST be quoted; enforced by `rg -n '^\s*- \{@'` returning zero hits | W1 | [x] |
 | **D-35** | A `local` stack profile that accepts cloud credentials or targets a cluster | `local` profile refuses cloud creds; contract test asserts the boundary | W2 | [x] |
@@ -303,7 +303,7 @@ Adding these requires updating, in lockstep: `AGENTS.md` §Anti-Patterns table,
 ## 8b. New agentic surfaces ledger (skills / workflows / rules / MCPs)
 
 | Kind | Name | Mode | Wave | Status |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | rule | `agentic/rules/15-template-lifecycle.md` | always_on / glob | W1 | [x] |
 | skill | `scaffold-update` | CONSULT | W1 | [x] |
 | workflow | `/scaffold-update` | — | W1 | [x] |
@@ -318,7 +318,7 @@ Adding these requires updating, in lockstep: `AGENTS.md` §Anti-Patterns table,
 ## 9. Documentation impact matrix (generate vs update)
 
 | Document | Action | Driven by | Status |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `docs/decisions/ADR-029..035` | **create** | W0–W4 | [x] (all shipped) |
 | `docs/audit/ACTION_PLAN_ADAPTABILITY.md` (this file) | **maintain** (living tracker) | all | [x] (CLOSED) |
 | `README.md` | update §"How this compares", anti-pattern count/badge, on-ramps, agentic table | W0, W1, W2 | [x] |
@@ -353,7 +353,7 @@ Adding these requires updating, in lockstep: `AGENTS.md` §Anti-Patterns table,
 ## 11. Risks & mitigations
 
 | Risk | Mitigation |
-|---|---|
+| --- | --- |
 | Copier Jinja `{{ }}` collides with literal `{ServiceName}` placeholders | Custom delimiters (`[[ ]]`) + `{% raw %}` blocks; contract test renders a fixture and diffs |
 | `copier update` silently clobbers adopter agent-surface edits | D-34 + `scaffold-update` skill enforces commit + `sync --check` first |
 | Generated surfaces drift from canonical after new features | Post-gen hook + CI `sync --check` (existing discipline, unchanged) |

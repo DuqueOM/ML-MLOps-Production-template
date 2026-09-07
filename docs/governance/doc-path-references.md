@@ -1,7 +1,8 @@
 # Documentation Path Reference Gate
 
 **Status**: Active enforcement (2026-09-04+)
-**Enforcement**: `scripts/check_doc_path_refs.py` + `doc-path-refs` job in `.github/workflows/validate-templates.yml` + pre-commit hook `doc-path-refs`
+**Enforcement**: `scripts/check_doc_path_refs.py` + `doc-path-refs` job in `.github/workflows/validate-templates.yml` +
+pre-commit hook `doc-path-refs`
 **Baseline**: `.doc-path-baseline.yml`
 **Related**: ADR-030 (Copier scaffolding migration), ADR-031 (rule 16 doc coherence), `docs/governance/cicd-templates-drift.md`
 
@@ -35,7 +36,7 @@ It updated **none of the prose**. Thirty documents kept pointing at
 directories that no longer existed:
 
 | Surface | Examples |
-|---|---|
+| --- | --- |
 | Root docs | `AGENTS.md`, `README.md`, `CONTRIBUTING.md`, `MIGRATION.md`, `CLAUDE.md` |
 | Runbooks | `gcp-wif-setup.md`, `aws-irsa-setup.md`, `terraform-state-bootstrap.md`, `closed-loop-sla.md`, `digest-pin-init-image.md` |
 | Governance | `docs/security/compliance-mapping.md`, `docs/PROGRESSION.md` |
@@ -171,7 +172,7 @@ not defects. Every entry declares a `kind:`, and **the two kinds are verified
 differently because they are not the same claim.**
 
 | Kind | The claim | How it is checked |
-|---|---|---|
+| --- | --- | --- |
 | `unimplemented` | "we intend to build this" | `expiry:` — a deadline is the only honest check on an intention |
 | `runtime-artifact` | "this resolves at runtime, and X creates it" | `created-by:` — the gate asserts that file exists and still names the path |
 
@@ -190,7 +191,7 @@ mechanisms cannot be quietly mixed.
 Four failure modes are enforced:
 
 | Condition | Result |
-|---|---|
+| --- | --- |
 | A path is unresolved and not baselined | fail — the new-defect case |
 | An `unimplemented` entry is past its `expiry` | fail — forces a fix or a fresh justification |
 | A `runtime-artifact`'s creator is gone, or no longer names the path | fail — the claim is no longer true |

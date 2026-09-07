@@ -1,22 +1,29 @@
 # Contributing to ML-MLOps Production Template
 
-Thanks for contributing. This repository is meant to be a serious production template, so we optimize for changes that improve reliability, clarity, security, and repeatability in real ML systems.
+Thanks for contributing. This repository is meant to be a serious production template, so we optimize for changes that
+improve reliability, clarity, security, and repeatability in real ML systems.
 
 ## Ground rules
 
 - Follow the invariants and operating model in [AGENTS.md](AGENTS.md).
-- Keep solutions proportional to the problem. This repo is intentionally opinionated, but it should not drift into platform over-engineering.
+- Keep solutions proportional to the problem. This repo is intentionally opinionated, but it should not drift into
+  platform over-engineering.
 - Prefer production-backed patterns over purely theoretical abstractions.
 - If a change affects architecture, governance, security posture, or default behavior, document it with an ADR.
-- Versioning is governed by [`docs/RELEASING.md`](docs/RELEASING.md). Breaking changes to scaffolded output, contracts, or overlay names require a MAJOR bump and a row in [`MIGRATION.md`](MIGRATION.md).
+- Versioning is governed by [`docs/RELEASING.md`](docs/RELEASING.md). Breaking changes to scaffolded output, contracts,
+  or overlay names require a MAJOR bump and a row in [`MIGRATION.md`](MIGRATION.md).
 
 ## Evidence policy for new components (per ADR-020 §S1-2)
 
-R4 audit finding H2 documented a recurring class of bugs where new template components shipped without execution evidence. To prevent regression, **PRs that introduce a new component MUST include three evidence blocks in the PR body**, enforced by [`pr-evidence-check.yml`](.github/workflows/pr-evidence-check.yml):
+R4 audit finding H2 documented a recurring class of bugs where new template components shipped without execution
+evidence. To prevent regression, **PRs that introduce a new component MUST include three evidence blocks in the PR
+body**, enforced by [`pr-evidence-check.yml`](.github/workflows/pr-evidence-check.yml):
 
 1. **Evidence — Schema / Contract Test**: path to the test file that pins the new component's contract.
-2. **Evidence — Real Execution Output**: truncated raw output (stdout/stderr) from running the new component end-to-end. Description text is NOT acceptable — actual output is.
-3. **Evidence — CI Run Link**: URL to the GitHub Actions run that produced the output above, OR a link to a [`VALIDATION_LOG.md`](VALIDATION_LOG.md) entry.
+2. **Evidence — Real Execution Output**: truncated raw output (stdout/stderr) from running the new component end-to-end.
+   Description text is NOT acceptable — actual output is.
+3. **Evidence — CI Run Link**: URL to the GitHub Actions run that produced the output above, OR a link to a
+   [`VALIDATION_LOG.md`](VALIDATION_LOG.md) entry.
 
 The allowlist that triggers this requirement:
 
@@ -27,7 +34,8 @@ The allowlist that triggers this requirement:
 - `scripts/*.py`, `scripts/*.sh` (operational scripts)
 - `templates/config/*.yaml` (policy YAML)
 
-Typical doc-only or refactor PRs that don't introduce a new component are exempt; the evidence section can be deleted from the PR body in that case.
+Typical doc-only or refactor PRs that don't introduce a new component are exempt; the evidence section can be deleted
+from the PR body in that case.
 
 ## Local validation cadence
 
@@ -36,7 +44,7 @@ with `--no-verify`. Slow integration checks live in CI and as on-demand
 Make targets, per [`docs/audit/ACTION_PLAN_R5.md`](docs/audit/ACTION_PLAN_R5.md) §R5-L4.
 
 | Cadence | Cost | Entry point | What it covers |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | every commit | < 10 s | pre-commit hooks (auto) | format, lint, gitleaks, contract tests on changed files |
 | on demand | ~60 s | `make smoke` | scaffold a fresh service end-to-end (catches scaffolder + dependency-graph regressions) |
 | on demand | ~3 min | `make validate-templates` | lint + K8s render + agentic + scaffold + EDA |
@@ -71,9 +79,12 @@ CI will catch the same class of bug, but the local feedback loop is faster.
    bandit, gitleaks, fast contract tests). Total runtime is targeted
    at < 10 s on a no-op commit.
 
-   **Without pre-commit installed, your commits will fail CI.** The CI runs the exact same pre-commit configuration, so local failures predict CI failures.
+   **Without pre-commit installed, your commits will fail CI.** The CI runs the exact same pre-commit configuration, so
+   local failures predict CI failures.
 
-   The slower scaffold smoke test (~60 s) was retired from pre-push in R5-L4 because it was duplicating [`pr-smoke-lane.yml`](.github/workflows/pr-smoke-lane.yml). Run it on demand via `make smoke` per the *Local validation cadence* table above.
+   The slower scaffold smoke test (~60 s) was retired from pre-push in R5-L4 because it was duplicating
+   [`pr-smoke-lane.yml`](.github/workflows/pr-smoke-lane.yml). Run it on demand via `make smoke` per the *Local
+   validation cadence* table above.
 
 4. Make your changes.
 5. Run the relevant quality gates locally:
