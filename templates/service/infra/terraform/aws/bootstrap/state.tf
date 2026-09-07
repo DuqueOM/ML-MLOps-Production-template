@@ -26,6 +26,79 @@ resource "aws_s3_bucket" "tfstate" {
   }
 }
 
+# ----------------------------------------------------------------------------
+# Access logging for the state bucket
+# ----------------------------------------------------------------------------
+# Trivy AWS-0089 triage (2026-09-05). The state bucket was versioned,
+# KMS-encrypted and public-access-blocked, and nothing recorded WHO read it.
+# For a Terraform state file that is the interesting question: state holds
+# resource ids, IAM bindings and, historically, anything an operator put in a
+# variable. "Who read our state, and when" has no answer without this.
+#
+# Implemented rather than accepted: the module has no CloudTrail, so there
+# was no compensating control to point at — and pointing at one that does not
+# exist is the exact failure this repo has now found three times.
+resource "aws_s3_bucket" "tfstate_logs" {
+  bucket = "${var.project_name}-tfstate-logs-${var.environment}"
+
+  tags = {
+    Name    = "${var.project_name}-tfstate-logs-${var.environment}"
+    purpose = "tfstate-access-logs"
+  }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "tfstate_logs" {
+  bucket                  = aws_s3_bucket.tfstate_logs.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+# The same customer-managed key as the state bucket. AES256 would have been
+# simpler and is what most examples show, but Trivy flags it as AWS-0132
+# (HIGH): SSE-S3 keys are AWS-owned and unauditable. S3 has supported
+# SSE-KMS for server access log delivery since 2023 provided S3 Bucket Keys
+# are enabled, which they are below.
+#
+# Worth recording: adding this bucket to close one LOW finding introduced
+# three new ones — including that HIGH — because a new bucket inherits every
+# bucket check. Fixing a finding is not free of findings.
+resource "aws_s3_bucket_server_side_encryption_configuration" "tfstate_logs" {
+  bucket = aws_s3_bucket.tfstate_logs.id
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm     = "aws:kms"
+      kms_master_key_id = aws_kms_key.tfstate.arn
+    }
+    bucket_key_enabled = true
+  }
+}
+
+# A separate bucket rather than logging into the state bucket itself:
+# self-logging is a feedback loop and AWS rejects it.
+resource "aws_s3_bucket_lifecycle_configuration" "tfstate_logs" {
+  bucket = aws_s3_bucket.tfstate_logs.id
+  rule {
+    id     = "expire-access-logs"
+    status = "Enabled"
+    filter {}
+    expiration {
+      days = 365
+    }
+  }
+}
+
+resource "aws_s3_bucket_logging" "tfstate" {
+  bucket        = aws_s3_bucket.tfstate.id
+  target_bucket = aws_s3_bucket.tfstate_logs.id
+  target_prefix = "tfstate-access/"
+}
+
 # Versioning catches accidental rollback / `terraform state rm`.
 resource "aws_s3_bucket_versioning" "tfstate" {
   bucket = aws_s3_bucket.tfstate.id

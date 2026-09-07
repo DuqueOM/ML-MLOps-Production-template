@@ -169,16 +169,74 @@ the way a path is.** Nothing in this repo verifies that class of claim. That
 is the open structural gap this review leaves behind, and it is a bigger
 finding than any of the three.
 
+## Review — 2026-09-07 (fifth entry): the LOW triage, and the threshold reaches the floor
+
+The MEDIUM review left LOW unenforced with the reasoning that "an unenforced
+threshold is honest about untriaged findings in a way a suppressed one is
+not". True, and still an evasion: *"we have not looked"* is a description,
+not a decision. **Seven of the eight LOW findings were real.**
+
+| Finding | Verdict |
+|---|---|
+| `GCP-0066` ×4 — live buckets without customer-managed encryption | **Real.** `models`, `data`, `mlflow_artifacts` and `logs` held Google-managed keys while the *bootstrap state bucket* has had CMEK since ADR-015. The asymmetry was backwards: the state file was better protected than the models and training data it describes. Fixed with a `storage` key on the existing ring. |
+| `GCP-0054` ×2 — node image type not pinned | **Real.** COS is GKE's current default, which is why pinning matters: a default is not a decision, and inheriting it means a future change lands a different node OS without anyone choosing it. |
+| `GCP-0051` — cluster without resource labels | **Real, minor.** Every bucket, key and service account in the module carries them; the cluster did not, so cost attribution had a hole exactly where the spend is. |
+| `AWS-0089` — bootstrap state bucket without access logging | **Real.** Versioned, encrypted and public-access-blocked, and nothing recorded *who read it*. For a Terraform state file that is the interesting question. Implemented rather than accepted — the module has no CloudTrail, so there was no compensating control to point at. |
+
+### Fixing a finding is not free of findings
+
+Adding the access-log bucket to close `AWS-0089` introduced **three new
+findings**, one of them HIGH:
+
+- `AWS-0132` (HIGH) — SSE-S3 instead of a customer-managed key. Fixed: the
+  bucket uses the existing bootstrap CMK with S3 Bucket Keys, which S3 has
+  supported for access-log delivery since 2023.
+- `AWS-0090`, `AWS-0089` on the new bucket itself — accepted, below.
+
+Worth recording plainly: a new resource inherits every check that applies to
+its type. "Close the finding" and "reduce the finding count" are not the same
+operation, and the second is the wrong goal.
+
+### Accepted, with their breadth stated
+
+Four residual findings, all on **log-sink buckets**: versioning
+(`GCP-0078`, `AWS-0090`) and self-logging (`AWS-0089`). Append-only,
+write-once, lifecycle-bounded. Versioning guards against overwrite of
+existing objects, which is not a failure mode here; self-logging has no fixed
+point, because the log bucket's log bucket would need one too.
+
+The baseline entries now state a limitation the earlier ones did not: the
+plain ignore format suppresses a check id **repo-wide**, not per resource. So
+each entry carries a review question about *which* buckets the check fires
+on, not merely whether the justification still reads well. Trivy's YAML
+format would scope by path and is not used, because its sibling `expiredAt:`
+field is silently ignored (ADR-046) and one parser over one format is worth
+more here than per-path precision on a four-entry file.
+
+### The gate reaches the floor
+
+`CRITICAL,HIGH,MEDIUM,LOW`. It walked up as the triage was done, never ahead
+of it.
+
+**Of the 13 findings that sat below a threshold across the two reviews, 10
+were real defects.** "Below the threshold" predicted nothing about whether a
+finding mattered. That is the argument against selective gates, and it is
+why this one is now exhaustive.
+
 ## Next review
 
 **Due 2026-12-05** (calendar, one quarter out) and **2027-03-05** (when the
-two access-log acceptances expire).
+four log-sink acceptances expire).
 
-The question for the March review is narrow and written into the baseline
-itself: *are those buckets still access-log-only?* The acceptance rests
-entirely on the objects being append-only. If either bucket starts holding
-anything mutable, it is void — and that is a property to verify in
-`storage.tf`, not a rationale to re-read.
+Two questions for March, both written into the baseline entries themselves
+and both properties to verify rather than rationales to re-read:
+
+1. *Are all three log buckets still access-log-only?* The versioning
+   acceptance rests entirely on the objects being append-only.
+2. *Is the Terraform state bucket still logged?* That is the control the
+   `AWS-0089` entry must not be allowed to hide — the entry exists to accept
+   the log bucket not logging itself, not to accept the state bucket going
+   unlogged.
 
 ## How to run a review
 

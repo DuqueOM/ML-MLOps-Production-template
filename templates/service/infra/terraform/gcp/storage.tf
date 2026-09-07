@@ -1,5 +1,11 @@
 # Model artifacts bucket
 resource "google_storage_bucket" "models" {
+  # Customer-managed encryption (Trivy GCP-0066). The key, its rotation and
+  # the GCS service agent grant live in kms.tf.
+  encryption {
+    default_kms_key_name = google_kms_crypto_key.storage.id
+  }
+
   name          = "${var.project_name}-models-${var.environment}"
   location      = var.region
   force_destroy = false
@@ -37,6 +43,12 @@ resource "google_storage_bucket" "models" {
 
 # Data bucket
 resource "google_storage_bucket" "data" {
+  # Customer-managed encryption (Trivy GCP-0066). The key, its rotation and
+  # the GCS service agent grant live in kms.tf.
+  encryption {
+    default_kms_key_name = google_kms_crypto_key.storage.id
+  }
+
   name          = "${var.project_name}-data-${var.environment}"
   location      = var.region
   force_destroy = false
@@ -51,6 +63,12 @@ resource "google_storage_bucket" "data" {
 
 # MLflow artifacts bucket
 resource "google_storage_bucket" "mlflow_artifacts" {
+  # Customer-managed encryption (Trivy GCP-0066). The key, its rotation and
+  # the GCS service agent grant live in kms.tf.
+  encryption {
+    default_kms_key_name = google_kms_crypto_key.storage.id
+  }
+
   name          = "${var.project_name}-mlflow-artifacts-${var.environment}"
   location      = var.region
   force_destroy = false
@@ -65,6 +83,12 @@ resource "google_storage_bucket" "mlflow_artifacts" {
 
 # Access logs bucket
 resource "google_storage_bucket" "logs" {
+  # Customer-managed encryption (Trivy GCP-0066). The key, its rotation and
+  # the GCS service agent grant live in kms.tf.
+  encryption {
+    default_kms_key_name = google_kms_crypto_key.storage.id
+  }
+
   name          = "${var.project_name}-access-logs-${var.environment}"
   location      = var.region
   force_destroy = false
