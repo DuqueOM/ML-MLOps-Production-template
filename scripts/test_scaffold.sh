@@ -337,11 +337,22 @@ fi
 info "Testing pytest collection..."
 if command -v pytest >/dev/null 2>&1; then
   # pytest --collect-only validates test files parse without running them
-  if (cd "$SERVICE_DIR" && PYTHONPATH=.:src pytest --collect-only -q tests/ > /dev/null 2>&1); then
+  collect_out="$(cd "$SERVICE_DIR" && PYTHONPATH=.:src pytest --collect-only -q tests/ 2>&1)" \
+    && collect_rc=0 || collect_rc=$?
+  if [[ "$collect_rc" -eq 0 ]]; then
     pass "pytest can collect tests/"
   else
-    # This is a warning not a failure — scaffolded tests may require unmet deps
-    echo -e "${YELLOW}⚠${NC} pytest collection failed (expected — scaffolded deps not installed)"
+    # Deliberately a warning, not a failure: without an install step a missing
+    # third-party dependency is expected here, and classifying WHICH errors are
+    # environmental turned out to be unreliable — a conftest that raises does
+    # not surface as an `E   <Exception>` line at all, so any such heuristic
+    # waves real defects through.
+    #
+    # The honest check lives in the SCAFFOLD_SMOKE chain below, AFTER the
+    # dependencies are installed, where a collection error can only mean the
+    # scaffold is broken. CI sets SCAFFOLD_SMOKE=1, so CI gets the hard gate.
+    echo -e "${YELLOW}⚠${NC} pytest collection failed (deps absent here; the hard check runs post-install under SCAFFOLD_SMOKE=1)"
+    echo "$collect_out" | tail -8
   fi
 else
   echo -e "${YELLOW}⚠${NC} pytest not installed — skipping collection check"
@@ -382,6 +393,24 @@ if [[ "$SMOKE_REQUESTED" == "1" && "$FAILURES" -eq 0 ]]; then
     echo "pip install log tail:" >&2
     tail -5 "$TEMP_ROOT/pip.log" >&2 || true
     fail "SCAFFOLD_SMOKE=1 but dependency installation failed"
+  fi
+fi
+
+if [[ "$SMOKE_REQUESTED" == "1" && "$FAILURES" -eq 0 ]]; then
+  # 8a-bis. The whole shipped suite must COLLECT, now that dependencies exist.
+  #
+  # This is the check that was missing. Validation 7 above runs before the
+  # install and therefore has to guess whether a collection error is
+  # environmental; it guessed "deps not installed" for months while
+  # tests/policy/conftest.py raised a RuntimeError looking for a template-repo
+  # path, so `pytest` was broken in EVERY scaffolded service and nothing said
+  # so. After the install there is nothing left to blame.
+  info "Verifying the scaffolded suite collects with dependencies installed..."
+  if (cd "$SERVICE_DIR" && PYTHONPATH=.:src pytest --collect-only -q tests/ > "$TEMP_ROOT/collect.log" 2>&1); then
+    pass "Scaffolded tests/ collects cleanly"
+  else
+    fail "scaffolded tests/ does not collect even with dependencies installed:"
+    tail -15 "$TEMP_ROOT/collect.log" >&2
   fi
 fi
 

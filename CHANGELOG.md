@@ -10,6 +10,63 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
 
 ## [Unreleased]
 
+### Fixed — the shipped test suite could not even be collected in a scaffolded service
+
+- Running `pytest` in a freshly scaffolded service failed at **collection**:
+  `tests/policy/conftest.py` raised a `RuntimeError` looking for
+  `templates/scripts/new-service.sh`, a template-repo path. The whole
+  `tests/` tree was uncollectable, so every adopter's `make test` was broken
+  from the first commit.
+- Those tests **scaffold a service in order to inspect it**, so they need the
+  scaffolder: they are template-repo tests that happen to live inside the
+  payload directory. The package now skips cleanly there via
+  `collect_ignore_glob` instead of raising.
+- Two more modules failed rather than skipped in a service, for the same
+  reason — `parents[3]` walks above the service root and lands outside the
+  tree. Measured on a real scaffold: `test_dashboards_inventory.py` alone
+  produced 1 failure and 3 errors about the *template's* documentation.
+  Both now skip at module level with an explicit reason.
+
+### Fixed — three tests that passed without checking anything
+
+- **`test_dashboards_inventory.py`** parametrised over a path re-derived
+  inline against the pre-ADR-030 layout, while the module's own
+  `DASHBOARDS_DIR` constant was correct. The glob returned nothing, pytest
+  reported "empty parameter set" as a *skip*, and the test validated **zero
+  dashboards from June to September 2026**. Now uses the constant, and a new
+  `test_dashboards_are_discovered` fails if the set is ever empty again.
+- **`test_anti_pattern_count_consistency.py`** listed
+  `.claude/rules/01-serving.md` and `09-mlops-conventions.md` — neither has
+  ever existed under those names, and being thin adapter pointers those rules
+  do not quote the catalog range at all. Two of its six subjects were
+  decorative. Removed, and a missing subject now **fails** instead of
+  skipping.
+- **`test_closed_loop_workflow_contract.py`** skipped when the awk fallback
+  it checks was absent — so it could only run when the property already held
+  and could never fail for the one thing it existed to detect. Inverting it
+  showed the fallback is genuinely gone, and the workflow says why: *"Closed-loop
+  proof requires prediction_log_total. A request counter alone proves HTTP
+  traffic, not prediction logging."* The test was checking a contract the
+  workflow consciously replaced. Rewritten to the contract that holds: the
+  workflow's awk selector must name a metric `fastapi_app.py` actually
+  declares, or the proof sums nothing and passes while measuring nothing.
+
+### Fixed — the guard that explained all of this away
+
+- `scripts/test_scaffold.sh` treated a collection failure as a warning with a
+  guessed cause: *"(expected — scaffolded deps not installed)"*. It was not a
+  dependency problem, and the guess was plausible enough that nobody checked
+  which it was. **A guard that guesses why it failed is a guard that stops
+  failing.**
+- Two attempts at classifying the errors are recorded in the script because
+  both are traps worth knowing: `echo | grep -q` breaks under `set -o
+  pipefail` (grep closes the pipe, echo takes SIGPIPE, the pipeline reports
+  failure), and asking "does the output mention a missing module?" excuses a
+  real defect whenever it co-occurs with an absent dependency.
+- The reliable check needs no classification at all: it runs **after** the
+  `SCAFFOLD_SMOKE` install step, where a collection error can only mean the
+  scaffold is broken. CI sets `SCAFFOLD_SMOKE=1`, so CI gets the hard gate;
+  the pre-install check stays an honestly-labelled warning.
 ### Fixed — the coverage standard was documented at 90% and measured at 40%, enforced nowhere
 
 - `CLAUDE.md` promised *"Coverage: >= 90% lines, >= 80% branches"*. There was

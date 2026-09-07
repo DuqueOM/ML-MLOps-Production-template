@@ -35,6 +35,22 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 INVENTORY = REPO_ROOT / "docs" / "observability" / "dashboards-inventory.md"
+
+# `docs/observability/dashboards-inventory.md` is a template-repo document; it
+# is not part of the scaffolder payload. This module ships into a generated
+# service anyway, where `parents[3]` walks above the service root and the
+# inventory is simply absent — every test here then failed with
+# FileNotFoundError in the adopter's own repo. Measured on a real scaffold:
+# 1 failure and 3 errors from a test about the template's documentation.
+#
+# Skip the module there. It is a repo-only check that happens to live in the
+# payload directory.
+if not INVENTORY.exists():  # pragma: no cover — layout probe
+    pytest.skip(
+        "dashboards-inventory.md not present; this module checks a template-repo "
+        "document and does not apply to a scaffolded service",
+        allow_module_level=True,
+    )
 DASHBOARDS_DIR = REPO_ROOT / "templates" / "service" / "monitoring" / "grafana"
 
 
@@ -48,6 +64,21 @@ def inventory_text() -> str:
 @pytest.fixture(scope="module")
 def dashboard_files() -> list[Path]:
     return sorted(DASHBOARDS_DIR.glob("*.json"))
+
+
+def test_dashboards_are_discovered() -> None:
+    """Guard the guard.
+
+    An empty parameter set makes `test_dashboard_is_valid_json` pass without
+    examining anything, and pytest reports that as a skip rather than a
+    failure — which is how a broken glob went unnoticed from June to
+    September 2026. This fails instead.
+    """
+    found = sorted(DASHBOARDS_DIR.glob("*.json"))
+    assert found, (
+        f"no dashboards found under {DASHBOARDS_DIR}. Either the directory moved "
+        "again or the glob is wrong; both make the parametrised checks below vacuous."
+    )
 
 
 def test_inventory_exists() -> None:
@@ -87,10 +118,11 @@ def test_every_listed_file_exists(inventory_text: str) -> None:
     assert not orphans, f"Inventory mentions dashboard files that do not exist on disk: {orphans}"
 
 
-@pytest.mark.parametrize(
-    "dashboard_name",
-    [p.name for p in sorted((Path(__file__).resolve().parents[3] / "templates/monitoring/grafana").glob("*.json"))],
-)
+# Uses the module's own DASHBOARDS_DIR rather than re-deriving the path.
+# It used to re-derive the path against the pre-ADR-030 layout, one level
+# above where the dashboards actually live, so the parameter set was empty
+# and this test passed without examining a single dashboard, for months.
+@pytest.mark.parametrize("dashboard_name", [p.name for p in sorted(DASHBOARDS_DIR.glob("*.json"))])
 def test_dashboard_is_valid_json(dashboard_name: str) -> None:
     """Every dashboard file must parse as JSON. This is the minimal
     guard against merge-conflict garbage landing in Grafana configs.
