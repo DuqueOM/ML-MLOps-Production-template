@@ -187,5 +187,8 @@ Match solution complexity to problem scale:
 - ruff (lint + format, line-length=120) — replaces black/isort/flake8 (ADR-044) — plus mypy
 - Google-style docstrings, type hints on all public functions
 - `~=` for ML package pinning (never `==` or bare `>=`)
-- Coverage: >= 90% lines, >= 80% branches
+- Coverage: **enforced floor 40%** (`fail_under` in `pyproject.toml`), target 90% lines / 80% branches.
+  The floor is a ratchet at the measured value, not the target — see the note in
+  `pyproject.toml`. Branch coverage is not yet enabled, and the measured scope is
+  three paths, so `scripts/` is unmeasured.
 - ADR for every non-trivial decision in `docs/decisions/`

@@ -15,6 +15,56 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
 
 ## [Unreleased]
 
+### Added — a gate that the render root still parses as Copier templates
+
+- `copier.yml` sets `_templates_suffix: ""`, so **every** file under
+  `templates/service/` is a Jinja template, not only the ones that look like
+  one. A file that merely *contains* Jinja's delimiters aborts `copier copy`
+  outright — the adopter gets no service at all.
+- Two landed in one afternoon, neither in a file anyone would call a template:
+  a Markdown table row whose escaped `\{@` (inside a code span, inside
+  documentation *about* Jinja tokens) opened an expression that never closed;
+  and this release's own `validate_k8s_manifests.sh`, where bash's
+  array-length syntax opens a brace immediately followed by a hash — Copier's
+  `comment_start_string`. The scaffolder died with *"Missing end of comment
+  tag"* pointing at a file whose bash was perfectly valid.
+- `scripts/test_scaffold.sh` caught both, in CI, minutes into a full render.
+  That is the right place for the behaviour and the wrong place to find a
+  typo. `scripts/check_template_render_safety.py` reduces the class to a
+  parse: it reads the delimiters from `copier.yml` `_envops` rather than
+  hardcoding them, checks all 416 text files under the render root in under a
+  second, and names file and line. Wired into pre-commit, `make verify` and
+  CI.
+- It parses, it does not render, so `test_scaffold.sh` remains the authority
+  on whether a rendered service actually works.
+
+### Fixed — the Kubernetes manifest gates validated a fraction of what they guarded, and the overlay half was advisory
+
+- **Template repo**: `Kubernetes Manifests` named **7 base manifests
+  literally**. `templates/service/k8s/base/` holds **14**. The seven that
+  were never validated include `pdb.yaml` and
+  `networkpolicy-deny-default.yaml` — core API types kubeconform checks in
+  full. It validated **no overlay at all**.
+- **Generated service**: `ci-infra.yml` looped over `k8s/overlays/gcp-*` and
+  `k8s/overlays/aws-*`. There are **7** overlays; `batch-only` matches
+  neither glob. Both steps carried `continue-on-error: true`, so the result
+  was advisory — and a loop over a glob matching nothing validates zero
+  overlays while reporting the same green as one that validated all of them.
+- Measured before changing anything: **all 14 base manifests and all 7
+  overlays already pass** `kubeconform -strict`. The gate was advisory
+  guarding something that was clean, which is the cheapest kind of gate to
+  make blocking and the easiest kind to leave advisory forever.
+- Both are now one script, `scripts/validate_k8s_manifests.sh`, vendored
+  byte-identical into the service (`check_vendored_runtime_drift.py`) so the
+  template cannot hold itself to a different bar than it ships. It globs the
+  directory instead of naming files, covers `overlays/*/` instead of two
+  cloud prefixes, validates the *rendered* output as a check distinct from
+  the input files, and **treats discovering nothing as a failure**.
+- The service now installs the same pinned `kustomize v5.4.3` the template
+  validates with, instead of `kubectl kustomize` — whose embedded version
+  differs, a silent source of "passes there, fails here".
+- `continue-on-error` is gone. The gate blocks.
+
 ### Fixed — three generators emitted Markdown their own lint rejects, and two pre-existing dead-link classes
 
 - `sync_agentic_adapters.py`, `generate_adr_index.py` and `mcp_doctor.py`
@@ -146,6 +196,29 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
   `SCAFFOLD_SMOKE` install step, where a collection error can only mean the
   scaffold is broken. CI sets `SCAFFOLD_SMOKE=1`, so CI gets the hard gate;
   the pre-install check stays an honestly-labelled warning.
+
+### Fixed — the coverage standard was documented at 90% and measured at 40%, enforced nowhere
+
+- `CLAUDE.md` promised *"Coverage: >= 90% lines, >= 80% branches"*. There was
+  **no `fail_under`** in `pyproject.toml`, no root `codecov.yml`, and no
+  `--cov-fail-under` in CI — the pipeline produced a coverage report and
+  never looked at the number.
+- Read from CI rather than estimated: the scoped source sits at **40%**,
+  identically on Python 3.11, 3.12 and 3.13. A **50-point gap** between the
+  documented standard and the code, invisible because nothing compared them.
+- `fail_under = 40` — a **ratchet at the measured floor, not the target**. A
+  threshold above reality fails every build and gets deleted within a week; a
+  threshold at reality stops the number sliding backwards and makes every
+  improvement permanent.
+- Two limits are stated in the config rather than left to be discovered:
+  - the measured scope is three paths, so the **26 modules under `scripts/` —
+    including every gate this repo relies on — are not measured at all**.
+    40% is 40% of a subset.
+  - **branch coverage is not enabled**, so the "80% branches" half of the
+    claim was never measurable. Enabling it moves the line number too, which
+    makes it a separate decision rather than a silent flip.
+- `CLAUDE.md` now states the enforced floor alongside the target, so the
+  headline quality metric says what is true and what is aimed at.
 
 ### Changed — the scaffolded service gets the same IaC bar, and the machinery to hold it
 
