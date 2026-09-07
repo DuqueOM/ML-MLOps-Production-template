@@ -132,6 +132,34 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
   check id **repo-wide**, not per resource, so each carries a review question
   about *which* buckets the check fires on rather than whether the prose
   still reads well.
+### Added — a procedure for the node-pool replacement, not just a warning
+
+- The ADR-017 identity change makes `terraform apply` **replace** both node
+  pools. `MIGRATION.md` warned about it and told the adopter to "plan a
+  window", which moves the problem rather than solving it. A warning is not a
+  procedure.
+- `docs/runbooks/gke-node-pool-replacement.md` is the blue/green procedure:
+  stand up the new pool, cordon, drain through the API, verify on the new
+  nodes, then remove the old one. Terraform never holds the cluster in a
+  state with no nodes.
+- **The correction that matters most in it**: PodDisruptionBudgets do **not**
+  protect you on the naive path. A pool deletion is not an eviction — the
+  budget has no node left to keep the pod on. They *are* honoured by
+  `kubectl drain`, which is precisely why the procedure drains instead of
+  letting Terraform delete. Anyone reading "check your PDBs are in place" as
+  reassurance would have been wrong.
+- Documents why the module does **not** use `create_before_destroy`: it needs
+  `name_prefix` instead of `name`, which makes pool names non-deterministic
+  (breaking `nodeSelector`, dashboards and cost queries), is itself a
+  replacing change so it does not help with the migration at hand, and is
+  capped at 31 characters in google provider v8 — which `${var.project_name}-workload-pool`
+  exceeds for many project names.
+- States plainly that **the procedure has not been run against a live
+  cluster**. The template does not deploy to a real cloud by design, so the
+  commands come from the provider's replace semantics and standard GKE
+  practice, not a recorded run. First execution should be a rehearsal in dev,
+  recorded in `docs/runbooks/drills/` — a runbook that has never been run is
+  a hypothesis in the shape of a procedure.
 
 ### Fixed — GKE nodes ran as the default Compute Engine service account (D-31 in the module that defines D-31)
 
