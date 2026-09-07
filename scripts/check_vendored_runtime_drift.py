@@ -104,6 +104,15 @@ VENDORED_PAIRS: list[tuple[str, str]] = [
         "templates/service/scripts/check_doc_coherence.py",
     ),
     (
+        # The expiry authority for `.security-baselines/`. Vendored 2026-09-07
+        # so a scaffolded service can hold itself to the same IaC gate. The
+        # template repo ran trivy at LOW while the service ran at HIGH, and
+        # the stated reason was that the service had nowhere to record an
+        # accepted finding — a fixable gap, not a reason.
+        "scripts/check_baselines_expiry.py",
+        "templates/service/scripts/check_baselines_expiry.py",
+    ),
+    (
         "scripts/ci_verify_yaml.py",
         "templates/service/scripts/ci_verify_yaml.py",
     ),
