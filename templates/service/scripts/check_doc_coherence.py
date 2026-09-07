@@ -37,7 +37,7 @@ C6  Release note existence — the current ``VERSION`` must have a matching
     to a generic, unpolished release body (the exact failure this check
     exists to catch before it ships — see that workflow's file header for
     the 2026-07-01 incident this closes).
-C7  Documentation language + private-reference guard — every file under
+C7  Documentation language + private-reference guard (D-37) — every file under
     ``docs/`` and every root-level ``*.md`` must be English-only and must
     never name a known private/personal repo. AUDIT R10 (2026-07-02) found
     four ``docs/audit/*.md`` files fully in Spanish and a private repo

@@ -1,8 +1,15 @@
-"""Contract tests for the per-environment IAM split (ADR-017 / PR-A1).
+"""Contract tests for the per-environment IAM split (ADR-017 / PR-A1, D-31).
 
 These tests parse Terraform .tf files as text (no `terraform plan` required;
 keeps the test suite hermetic and fast) and assert structural invariants
-that must hold across both clouds:
+that must hold across both clouds.
+
+Since 2026-09-05 the file also carries **control invariants**: assertions
+that exist because a comment claimed a control and the control was absent.
+See the section at the bottom — a comment cannot be verified, an assertion
+is the claim.
+
+Invariants:
 
 1. **No wildcard principals**: `Principal: "*"` or `Principal: { AWS: "*" }`
    would let anyone in the world assume the role.
@@ -12,7 +19,8 @@ that must hold across both clouds:
 4. **GitHub OIDC sub claim restricts to a specific repo**: the trust
    policy must reference `repo:${var.github_repo}:` so any other repo
    trying to assume CI/Deploy roles fails.
-5. **5 GCP service accounts exist**: ci, deploy, runtime, drift, retrain.
+5. **6 GCP service accounts exist**: ci, deploy, runtime, drift, retrain,
+   nodes (the last added 2026-09-05, ADR-017 §Amendment).
 6. **AWS has CI + Deploy roles + drift IRSA + retrain IRSA**: separate
    from the per-service role, so a compromised drift CronJob cannot
    push images.
@@ -41,11 +49,11 @@ import pytest
 
 def _find_tf_root() -> Path | None:
     here = Path(__file__).resolve()
+    # `infra/terraform` relative to an ancestor covers both layouts: the
+    # service root in a scaffolded service, and templates/service/ here. The
+    # A first candidate pointed at the pre-ADR-030 layout, one level higher,
+    # until June 2026 — dead but harmless, since this one matched anyway.
     for ancestor in [here.parent] + list(here.parents):
-        candidate = ancestor / "templates" / "infra" / "terraform"
-        if candidate.is_dir():
-            return candidate
-        # In a scaffolded service, the tf tree lives under `infra/terraform/`.
         candidate = ancestor / "infra" / "terraform"
         if candidate.is_dir():
             return candidate
@@ -168,13 +176,19 @@ def test_github_oidc_sub_claim_restricts_to_specific_repo() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_gcp_five_service_accounts_exist() -> None:
-    """ADR-017 mandates 5 GCP SAs: ci, deploy, runtime, drift, retrain."""
+def test_gcp_six_service_accounts_exist() -> None:
+    """ADR-017 mandates 6 GCP SAs: ci, deploy, runtime, drift, retrain, nodes.
+
+    `nodes` was added 2026-09-05 (ADR-017 §Amendment). Omitting it does not
+    fail loudly — GKE silently falls back to the default Compute Engine
+    service account, which typically holds `roles/editor` project-wide. That
+    is exactly why it is asserted here rather than left to review.
+    """
     content = _read_tf_files("gcp")
     if "google_service_account" not in content:
         pytest.skip("GCP Terraform tree does not define service accounts")
 
-    required = ["ci", "deploy", "runtime", "drift", "retrain"]
+    required = ["ci", "deploy", "runtime", "drift", "retrain", "nodes"]
     for name in required:
         # Resource block: resource "google_service_account" "<name>" {
         pattern = rf'resource\s+"google_service_account"\s+"{name}"\s*\{{'
@@ -302,3 +316,111 @@ def test_gcp_runtime_drift_retrain_have_workload_identity_bindings() -> None:
         assert wi_binding, (
             f"GCP {sa} SA must have a Workload Identity binding to a KSA in ml-services namespace (ADR-017)"
         )
+
+
+# ---------------------------------------------------------------------------
+# Control invariants — asserted, not asserted-about
+#
+# Every check below exists because a COMMENT claimed the control and the
+# control was absent. Three times in one review cycle:
+#
+#   * a tfsec suppression cited "the variable validation rule in
+#     variables.tf" — there was none, and the GKE control plane could be
+#     public with no allowlist (#93);
+#   * `ci_sa_user` said "Scoped via condition (only acting on SAs in this
+#     project)" — there was no condition block, and CI could impersonate
+#     every service account in the project (#94);
+#   * `check_baselines_expiry.py` claimed to read `exclude:` blocks — it
+#     filtered on uppercase ids and read none (#88).
+#
+# A comment cannot be verified. An assertion is the claim, so it cannot
+# drift from it. This is ADR-017's answer to that class of failure.
+# ---------------------------------------------------------------------------
+
+
+def test_gke_node_pools_declare_a_service_account() -> None:
+    """Without `service_account`, nodes run as the default Compute Engine SA.
+
+    Trivy reports it as GCP-0050. The failure is silent: the cluster comes up,
+    the nodes work, and they carry whatever the project's default SA holds —
+    `roles/editor` in most projects.
+    """
+    content = _read_tf_files("gcp")
+    pools = re.findall(r'resource\s+"google_container_node_pool"\s+"(\w+)"', content)
+    if not pools:
+        pytest.skip("no GKE node pools in this layout")
+
+    # Each pool's node_config must bind the dedicated identity.
+    bound = re.findall(r"service_account\s*=\s*google_service_account\.nodes\.email", content)
+    assert len(bound) >= len(pools), (
+        f"every google_container_node_pool must set node_config.service_account "
+        f"to the dedicated `nodes` identity: found {len(pools)} pool(s) {pools} "
+        f"but only {len(bound)} binding(s) (ADR-017 §Amendment, Trivy GCP-0050)"
+    )
+
+
+def test_service_account_user_is_never_granted_project_wide() -> None:
+    """`roles/iam.serviceAccountUser` at project level = impersonate anything.
+
+    It must be granted per service account, with
+    `google_service_account_iam_member`, so the blast radius is the accounts
+    named rather than every account in the project.
+    """
+    content = _read_tf_files("gcp")
+    if "google_project_iam_member" not in content:
+        pytest.skip("no project-level IAM bindings in this layout")
+
+    for block in re.findall(r'resource\s+"google_project_iam_member"\s+"(\w+)"\s*\{(.*?)\n\}', content, re.S):
+        name, body = block
+        assert "roles/iam.serviceAccountUser" not in body, (
+            f"google_project_iam_member.{name} grants roles/iam.serviceAccountUser at the "
+            "PROJECT level, which permits impersonating every service account in the "
+            "project. Grant it per account with google_service_account_iam_member "
+            "(ADR-017 §Amendment, Trivy GCP-0011)"
+        )
+
+
+def test_gke_master_authorized_networks_is_statically_visible() -> None:
+    """A `dynamic` authorized-networks block hides the control from analysis.
+
+    Worse than hiding it: gated on a list that defaults to empty, the block
+    never rendered at all, and GKE with no authorized-networks block applies
+    no restriction.
+    """
+    content = _read_tf_files("gcp")
+    if "google_container_cluster" not in content:
+        pytest.skip("no GKE cluster in this layout")
+
+    assert re.search(r"^\s*master_authorized_networks_config\s*\{", content, re.M), (
+        "google_container_cluster must declare master_authorized_networks_config "
+        "as a static block. An empty list then means 'enabled, no external CIDR "
+        "allowed'; omitting the block means no restriction at all (Trivy GCP-0061)"
+    )
+    assert not re.search(r'dynamic\s+"master_authorized_networks_config"', content), (
+        "master_authorized_networks_config must not be a `dynamic` block — no static "
+        "analyser evaluates those, and gating it on a list that defaults to empty "
+        "silently disables the control"
+    )
+
+
+def test_public_control_plane_requires_an_allowlist() -> None:
+    """The invariant a suppression once claimed `variables.tf` enforced.
+
+    It did not. `enable_private_endpoint = false` with an empty
+    `master_authorized_networks` is a publicly reachable control plane with
+    no allowlist, and nothing rejected that combination.
+    """
+    content = _read_tf_files("gcp")
+    if "google_container_cluster" not in content:
+        pytest.skip("no GKE cluster in this layout")
+
+    preconditions = re.findall(r"precondition\s*\{(.*?)\n\s*\}", content, re.S)
+    guarding = [
+        block for block in preconditions if "enable_private_endpoint" in block and "master_authorized_networks" in block
+    ]
+    assert guarding, (
+        "google_container_cluster must carry a lifecycle precondition rejecting "
+        "enable_private_endpoint = false together with an empty "
+        "master_authorized_networks. Without it a documented dev opt-out exposes "
+        "the control plane with no allowlist (ADR-017 §Amendment)"
+    )

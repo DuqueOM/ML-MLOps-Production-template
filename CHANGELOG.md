@@ -10,6 +10,54 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
 
 ## [Unreleased]
 
+### Added — control invariants are asserted now, not asserted about
+
+- Three times in one review cycle a **comment claimed a control that was not
+  there**: a tfsec suppression citing a `variables.tf` validation rule that
+  did not exist (#93), `ci_sa_user` claiming an IAM condition with no
+  condition block (#94), and `check_baselines_expiry.py` claiming to read
+  `exclude:` blocks while filtering on uppercase ids (#88). Each survived
+  because **reviewing meant reading the claim**.
+- Four new assertions in `templates/service/tests/test_iam_least_privilege.py`
+  turn the three Terraform claims into executable checks: node pools must
+  bind the dedicated `nodes` identity, `roles/iam.serviceAccountUser` must
+  never be granted project-wide, `master_authorized_networks_config` must be
+  a static block, and the cluster must carry the precondition pairing
+  `enable_private_endpoint` with a non-empty allowlist.
+- **Each verified by removing the control and watching the test fail**, not
+  by observing a green run. A test that passes but would not catch the
+  regression is worse than none, which is the failure mode this whole series
+  keeps finding.
+- The suite also now requires **six** GCP service accounts. `nodes` was added
+  in #94 and nothing asserted it, so deleting it would have passed.
+
+### Added — `check_control_claims.py`, and why the cheap version was rejected
+
+- Measured first: 69 "enforced by / scoped via / validated by" claims across
+  the repo, 19 of them naming a path — and **all 19 resolve**. So a
+  path-existence check would have caught **none of the three failures**: in
+  every case the file existed and the control inside it did not. Building it
+  would have been theatre.
+- What is decidable, and valuable: the `D-NN` anti-pattern table in
+  `AGENTS.md` names an enforcer per row. The gate asserts the named file
+  exists **and mentions the `D-NN` it claims to enforce**, making the link
+  bidirectional — refactor one side and it fails.
+- Found two one-way links on first run: D-31 named a test that never
+  mentioned D-31, and D-37 named a script that never mentioned D-37. Both
+  closed.
+- Wired as a CI step, a pre-commit hook and a `make verify` gate.
+
+### Fixed — dead layout branch in the Terraform locator
+
+- `_find_tf_root` tried a pre-ADR-030 path first. Harmless — the second
+  candidate matched — but dead since June, and the docstring still claimed
+  five GCP service accounts. Both corrected.
+- Documented a genuine limit of the code-comment half of the path gate:
+  Markdown can mark a dead path by dropping the code span, and **a code
+  comment has no such distinction**, so a removed path must be described
+  rather than spelled. The alternative, a per-line opt-out marker, would be a
+  bigger hole than the one it closes.
+
 ### Fixed — GKE nodes ran as the default Compute Engine service account (D-31 in the module that defines D-31)
 
 - Neither node pool set `node_config.service_account`, so GKE fell back to

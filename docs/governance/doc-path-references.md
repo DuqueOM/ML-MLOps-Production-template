@@ -114,14 +114,22 @@ that never leave the template repo resolve against the repo root only.
   (`ADR-XXX.md`) and any `*.local.*` path are excluded; the latter is
   gitignored by contract, so a comment naming one is describing something
   that is *supposed* to be absent.
-- **Paths written as plain prose.** This is a deliberate convention, not
-  a hole: a code span asserts *this resolves today, from this document's
+- **Paths written as plain prose.** In Markdown this is a deliberate
+  convention, not a hole: a code span asserts *this resolves today, from this document's
   perspective*. A document discussing a path that has been removed, or
   illustrating a form that is only valid from the other root — this one
   does both — names it without code formatting. That is how you write a
   path you are talking *about* rather than pointing *at*. Do not reach
   for the baseline instead: the baseline is for references that are
   still making a live claim.
+
+  **This escape hatch does not exist in a code comment**, where there is no
+  formatting to distinguish naming a path from pointing at one. Discussing a
+  removed path in a comment therefore means describing it rather than
+  spelling it — "the pre-ADR-030 layout, one level higher" instead of the
+  path itself. That is a real limitation of the code-comment half of this
+  gate, and the cost of not having a per-line opt-out marker, which would be
+  a bigger hole than the one it closes.
 
 ## Markdown link targets, and why they are checked here
 
