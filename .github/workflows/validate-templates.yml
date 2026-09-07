@@ -66,6 +66,9 @@ jobs:
       - name: Generated service ADR references are resolvable
         run: python3 scripts/check_service_adr_references.py
 
+      - name: Render root parses as Copier templates
+        run: python3 scripts/check_template_render_safety.py
+
       - name: gitleaks (D-17)
         env:
           GITLEAKS_VERSION: "8.30.1"

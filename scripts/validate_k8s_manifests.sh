@@ -52,6 +52,15 @@ set -euo pipefail
 # `-strict`, which additionally rejects unknown fields.
 readonly KUBECONFORM_ARGS=(-strict -ignore-missing-schemas)
 
+# NOTE — why the element counts are kept in plain variables.
+# This file is vendored into `templates/service/scripts/`, where Copier
+# renders every file as a Jinja template (`_templates_suffix: ""`). Bash's
+# array-length syntax opens a brace immediately followed by a hash, which is
+# exactly Copier's comment-start token, so using it made `copier copy` fail
+# with "Missing end of comment tag" — the scaffolder, not this script.
+# Counters avoid the token. Enforced by
+# `scripts/check_template_render_safety.py`.
+
 usage() {
   echo "usage: $(basename "$0") <k8s-dir>" >&2
   echo "  <k8s-dir> must contain base/ and overlays/" >&2
@@ -83,6 +92,7 @@ main() {
   # A glob, never a list. The previous hardcoded list was already seven files
   # behind the directory.
   local -a base_manifests=()
+  local base_count=0
   local manifest
   for manifest in "$k8s_dir"/base/*.yaml; do
     [[ -f "$manifest" ]] || continue
@@ -90,16 +100,17 @@ main() {
     # no apiVersion/kind and kubeconform correctly rejects it.
     [[ "$(basename "$manifest")" == "kustomization.yaml" ]] && continue
     base_manifests+=("$manifest")
+    base_count=$((base_count + 1))
   done
 
-  if [[ ${#base_manifests[@]} -eq 0 ]]; then
+  if [[ $base_count -eq 0 ]]; then
     echo "::error::no base manifests found under '$k8s_dir/base/'. Either the" >&2
     echo "::error::layout moved or this is reading the wrong tree — both need a" >&2
     echo "::error::human, so finding nothing is a failure rather than a pass." >&2
     return 1
   fi
 
-  echo "==> validating ${#base_manifests[@]} base manifests"
+  echo "==> validating $base_count base manifests"
   if ! kubeconform "${KUBECONFORM_ARGS[@]}" "${base_manifests[@]}"; then
     echo "::error::base manifest validation failed" >&2
     status=1
@@ -124,19 +135,22 @@ main() {
   # `overlays/*/`, not `overlays/gcp-*` + `overlays/aws-*`. The cloud-prefix
   # globs silently skipped `batch-only`.
   local -a overlays=()
+  local overlay_count=0
   local overlay
   for overlay in "$k8s_dir"/overlays/*/; do
-    [[ -d "$overlay" ]] && overlays+=("$overlay")
+    [[ -d "$overlay" ]] || continue
+    overlays+=("$overlay")
+    overlay_count=$((overlay_count + 1))
   done
 
-  if [[ ${#overlays[@]} -eq 0 ]]; then
+  if [[ $overlay_count -eq 0 ]]; then
     echo "::error::no overlays found under '$k8s_dir/overlays/'. An overlay" >&2
     echo "::error::validator that validates zero overlays reports the same" >&2
     echo "::error::green as one that validated all of them." >&2
     return 1
   fi
 
-  echo "==> validating ${#overlays[@]} overlays"
+  echo "==> validating $overlay_count overlays"
   for overlay in "${overlays[@]}"; do
     local name
     name=$(basename "$overlay")
@@ -156,7 +170,7 @@ main() {
   done
 
   if [[ $status -eq 0 ]]; then
-    echo "[k8s-validate] OK — ${#base_manifests[@]} base manifests, base render, and ${#overlays[@]} overlays all valid."
+    echo "[k8s-validate] OK — $base_count base manifests, base render, and $overlay_count overlays all valid."
   fi
   return "$status"
 }

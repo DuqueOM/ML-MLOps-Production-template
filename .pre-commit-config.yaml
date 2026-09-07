@@ -318,6 +318,21 @@ repos:
         language: system
         pass_filenames: false
         files: ^(templates/service/docs/decisions/|scripts/check_service_adr_references\.py)
+      - id: template-render-safety
+        name: render root parses as Copier templates
+        description: |
+          copier.yml sets `_templates_suffix: ""`, so every file under
+          templates/service/ is a Jinja template. A file that merely
+          contains Jinja's delimiters aborts `copier copy` entirely and
+          the adopter gets nothing. Bash array-length syntax opens
+          Copier's comment token, and prose about `{@ @}` opens an
+          expression — both have broken the scaffolder here. This is a
+          parse, not a render; scripts/test_scaffold.sh stays the
+          authority on behaviour.
+        entry: python3 scripts/check_template_render_safety.py
+        language: system
+        pass_filenames: false
+        files: ^(templates/service/|copier\.yml|scripts/check_template_render_safety\.py)
       - id: ci-autofix-policy-contract
         name: CI autofix policy contract (ADR-019)
         description: |

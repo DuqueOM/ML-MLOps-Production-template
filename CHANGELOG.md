@@ -10,6 +10,29 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
 
 ## [Unreleased]
 
+### Added — a gate that the render root still parses as Copier templates
+
+- `copier.yml` sets `_templates_suffix: ""`, so **every** file under
+  `templates/service/` is a Jinja template, not only the ones that look like
+  one. A file that merely *contains* Jinja's delimiters aborts `copier copy`
+  outright — the adopter gets no service at all.
+- Two landed in one afternoon, neither in a file anyone would call a template:
+  a Markdown table row whose escaped `\{@` (inside a code span, inside
+  documentation *about* Jinja tokens) opened an expression that never closed;
+  and this release's own `validate_k8s_manifests.sh`, where bash's
+  array-length syntax opens a brace immediately followed by a hash — Copier's
+  `comment_start_string`. The scaffolder died with *"Missing end of comment
+  tag"* pointing at a file whose bash was perfectly valid.
+- `scripts/test_scaffold.sh` caught both, in CI, minutes into a full render.
+  That is the right place for the behaviour and the wrong place to find a
+  typo. `scripts/check_template_render_safety.py` reduces the class to a
+  parse: it reads the delimiters from `copier.yml` `_envops` rather than
+  hardcoding them, checks all 416 text files under the render root in under a
+  second, and names file and line. Wired into pre-commit, `make verify` and
+  CI.
+- It parses, it does not render, so `test_scaffold.sh` remains the authority
+  on whether a rendered service actually works.
+
 ### Fixed — the Kubernetes manifest gates validated a fraction of what they guarded, and the overlay half was advisory
 
 - **Template repo**: `Kubernetes Manifests` named **7 base manifests
