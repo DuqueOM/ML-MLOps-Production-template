@@ -124,6 +124,17 @@ VENDORED_PAIRS: list[tuple[str, str]] = [
         "scripts/generate_report.py",
         "templates/service/scripts/generate_report.py",
     ),
+    (
+        # Kubernetes manifest validator. Vendored 2026-09-07 so the template
+        # repo and a generated service validate the same tree with the same
+        # rules: before this, the repo checked 7 of 14 base manifests and no
+        # overlay, and the service's overlay steps were `continue-on-error`
+        # loops over globs that missed the `batch-only` overlay. Byte-identity
+        # is the point — a validator that differs between the two is how a
+        # template ends up shipping a bar it does not hold itself to.
+        "scripts/validate_k8s_manifests.sh",
+        "templates/service/scripts/validate_k8s_manifests.sh",
+    ),
     # --- Agentic system config (W1.3b) — byte-identical ---
     (
         "templates/config/context.schema.json",

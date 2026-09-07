@@ -10,6 +10,33 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
 
 ## [Unreleased]
 
+### Fixed — the Kubernetes manifest gates validated a fraction of what they guarded, and the overlay half was advisory
+
+- **Template repo**: `Kubernetes Manifests` named **7 base manifests
+  literally**. `templates/service/k8s/base/` holds **14**. The seven that
+  were never validated include `pdb.yaml` and
+  `networkpolicy-deny-default.yaml` — core API types kubeconform checks in
+  full. It validated **no overlay at all**.
+- **Generated service**: `ci-infra.yml` looped over `k8s/overlays/gcp-*` and
+  `k8s/overlays/aws-*`. There are **7** overlays; `batch-only` matches
+  neither glob. Both steps carried `continue-on-error: true`, so the result
+  was advisory — and a loop over a glob matching nothing validates zero
+  overlays while reporting the same green as one that validated all of them.
+- Measured before changing anything: **all 14 base manifests and all 7
+  overlays already pass** `kubeconform -strict`. The gate was advisory
+  guarding something that was clean, which is the cheapest kind of gate to
+  make blocking and the easiest kind to leave advisory forever.
+- Both are now one script, `scripts/validate_k8s_manifests.sh`, vendored
+  byte-identical into the service (`check_vendored_runtime_drift.py`) so the
+  template cannot hold itself to a different bar than it ships. It globs the
+  directory instead of naming files, covers `overlays/*/` instead of two
+  cloud prefixes, validates the *rendered* output as a check distinct from
+  the input files, and **treats discovering nothing as a failure**.
+- The service now installs the same pinned `kustomize v5.4.3` the template
+  validates with, instead of `kubectl kustomize` — whose embedded version
+  differs, a silent source of "passes there, fails here".
+- `continue-on-error` is gone. The gate blocks.
+
 ### Fixed — the shipped test suite could not even be collected in a scaffolded service
 
 - Running `pytest` in a freshly scaffolded service failed at **collection**:

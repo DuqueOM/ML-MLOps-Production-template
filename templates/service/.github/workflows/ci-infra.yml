@@ -99,19 +99,29 @@ jobs:
           sudo mv /tmp/kubeconform /usr/local/bin/
           kubeconform -v
 
-      - name: Validate base manifests
-        run: kubeconform -strict -ignore-missing-schemas k8s/base/*.yaml
-
-      - name: Validate GCP overlays (per environment)
+      - name: Install kustomize
+        # Pinned, same version the template repo validates with, so the two
+        # runs cannot disagree. Previously this job used `kubectl kustomize`,
+        # whose embedded kustomize is a different (older) version than the one
+        # the template validates against — a silent source of "passes there,
+        # fails here".
         run: |
-          for overlay in k8s/overlays/gcp-*; do
-            [ -d "$overlay" ] && kubectl kustomize "$overlay" | kubeconform -strict -ignore-missing-schemas
-          done
-        continue-on-error: true
+          set -euo pipefail
+          KVER=v5.4.3
+          curl -sSL -o /tmp/kustomize.tgz \
+            "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2F${KVER}/kustomize_${KVER}_linux_amd64.tar.gz"
+          tar -xzf /tmp/kustomize.tgz -C /tmp
+          sudo mv /tmp/kustomize /usr/local/bin/
+          kustomize version
 
-      - name: Validate AWS overlays (per environment)
-        run: |
-          for overlay in k8s/overlays/aws-*; do
-            [ -d "$overlay" ] && kubectl kustomize "$overlay" | kubeconform -strict -ignore-missing-schemas
-          done
-        continue-on-error: true
+      - name: Validate manifests (base + every overlay)
+        # Blocking. This replaced three steps: a base check that globbed
+        # `k8s/base/*.yaml`, and two overlay loops over `gcp-*` and `aws-*`
+        # that were `continue-on-error: true` and between them skipped the
+        # `batch-only` overlay entirely.
+        #
+        # The shared script fails when a discovery step finds nothing, which
+        # the old loops could not: `for o in k8s/overlays/gcp-*` over an empty
+        # match validated zero overlays and reported the same green as one
+        # that validated all of them.
+        run: bash scripts/validate_k8s_manifests.sh k8s

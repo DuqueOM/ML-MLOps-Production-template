@@ -379,17 +379,6 @@ jobs:
           sudo mv /tmp/kubeconform /usr/local/bin/
           kubeconform -v
 
-      - name: Validate base manifests
-        run: |
-          kubeconform -strict -ignore-missing-schemas \
-            templates/service/k8s/base/deployment.yaml \
-            templates/service/k8s/base/hpa.yaml \
-            templates/service/k8s/base/service.yaml \
-            templates/service/k8s/base/serviceaccount.yaml \
-            templates/service/k8s/base/cronjob-drift.yaml \
-            templates/service/k8s/base/networkpolicy.yaml \
-            templates/service/k8s/base/rbac.yaml
-
       - name: Install kustomize
         # Direct release tarball (not raw.githubusercontent.com/hack/).
         # The upstream install_kustomize.sh piped into bash hit the
@@ -404,8 +393,19 @@ jobs:
           sudo mv /tmp/kustomize /usr/local/bin/
           kustomize version
 
-      - name: Validate Kustomize build (base)
-        run: kustomize build templates/service/k8s/base/ > /dev/null
+      - name: Validate manifests (base + every overlay)
+        # Was: seven base manifests named literally, plus a bare
+        # `kustomize build base/ > /dev/null`. `k8s/base/` holds fourteen
+        # manifests, so seven were unvalidated — `pdb.yaml` and
+        # `networkpolicy-deny-default.yaml` among them, both core API types
+        # kubeconform checks in full — and no overlay was validated at all.
+        #
+        # The shared script globs the directory instead of naming files, and
+        # fails when it discovers nothing. It is byte-identical to the copy
+        # the generated service runs (`check_vendored_runtime_drift.py`), so
+        # this repo cannot validate its own manifests to a different bar than
+        # the one it ships.
+        run: bash scripts/validate_k8s_manifests.sh templates/service/k8s
 
       - name: Base neutrality lint (PR-R2-3, audit R2)
         # The base manifest must NOT carry environment-specific values;
