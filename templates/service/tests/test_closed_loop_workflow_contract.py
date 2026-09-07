@@ -26,6 +26,17 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 WORKFLOW = REPO_ROOT / ".github" / "workflows" / "golden-path-extended.yml"
+
+# This module checks the TEMPLATE REPO's golden-path workflow. Inside a
+# scaffolded service `parents[3]` walks above the service root and the
+# workflow is absent, so every test here errored in the adopter's own repo.
+# Skip the module there — it is a repo-only check living in the payload tree.
+if not WORKFLOW.is_file():  # pragma: no cover — layout probe
+    pytest.skip(
+        "golden-path-extended.yml not found; this module checks the template "
+        "repo's own workflow and does not apply to a scaffolded service",
+        allow_module_level=True,
+    )
 SCHEMA = REPO_ROOT / "templates" / "service" / "app" / "schemas.py"
 
 
@@ -139,46 +150,39 @@ def test_workflow_does_not_use_impossible_metric_label(workflow_text: str) -> No
 
 
 # ---------------------------------------------------------------------------
-# 3. The fallback regex actually matches a real label that exists
+# 3. The workflow's metric selector matches a metric the app really exposes
 # ---------------------------------------------------------------------------
 
 
-def test_workflow_fallback_metric_label_exists(workflow_text: str, schema_text: str) -> None:
-    """The fallback awk pattern on requests_total must match a label
-    name that actually exists on the Counter.
+def test_workflow_metric_selector_matches_a_declared_metric(workflow_text: str, schema_text: str) -> None:
+    """The awk selector in the closed-loop proof must name a real metric.
 
-    Cross-check: parse fastapi_app.py for the labels=[...] of
-    requests_total, then assert the workflow's awk pattern uses one
-    of those labels.
+    If it does not, `sum` stays 0, the workflow reports no predictions
+    logged, and the closed-loop "proof" measures nothing — silently.
+
+    This test previously asserted an awk fallback on `requests_total`, and
+    `pytest.skip`ped when it was absent. The workflow dropped that fallback
+    deliberately — its own comment says "Closed-loop proof requires
+    prediction_log_total. A request counter alone proves HTTP traffic, not
+    prediction logging." So the test was checking a contract the workflow had
+    consciously replaced, and the skip meant nobody noticed for as long as it
+    took someone to ask why it skipped.
     """
     fastapi_app = REPO_ROOT / "templates" / "service" / "app" / "fastapi_app.py"
     if not fastapi_app.is_file():
         pytest.skip(f"{fastapi_app} not present — skipping")
-
     app_text = fastapi_app.read_text()
-    counter_match = re.search(
-        r"requests_total\s*=\s*Counter\(\s*[^)]*?\[([^\]]+)\]",
-        app_text,
-        flags=re.DOTALL,
-    )
-    assert counter_match, (
-        "Could not find requests_total Counter declaration in fastapi_app.py. "
-        "Update this contract test if the metric was renamed."
-    )
-    declared_labels = set(re.findall(r'"([a-z_]+)"', counter_match.group(1)))
 
-    # Workflow's awk pattern: look for what it matches against requests_total
-    awk_lines = [line for line in workflow_text.splitlines() if "requests_total" in line and "$1 ~" in line]
-    if not awk_lines:
-        pytest.skip("workflow does not have an awk fallback on requests_total")
-
-    workflow_text_after_awk = workflow_text.split("requests_total", 1)[-1]
-    used_labels = set(re.findall(r'([a-z_]+)="', workflow_text_after_awk[:500]))
-
-    # At least one label used by the workflow must exist on the counter
-    overlap = used_labels & declared_labels
-    assert overlap, (
-        f"PR-R2-9 contract violation: workflow's requests_total fallback "
-        f"matches labels {sorted(used_labels)} but the counter declares "
-        f"labels {sorted(declared_labels)}. The fallback can never match."
+    selectors = re.findall(r'\$1\s*~\s*"\^"svc"_(\w+)"', workflow_text)
+    assert selectors, (
+        "the closed-loop workflow has no awk metric selector of the form "
+        '`$1 ~ "^"svc"_<metric>"`. Without one the proof step cannot sum a '
+        "metric, and a green run would prove nothing."
     )
+
+    for metric in sorted(set(selectors)):
+        assert re.search(rf"\b{metric}\s*=\s*Counter\(", app_text), (
+            f"the workflow sums `{metric}`, which fastapi_app.py does not declare "
+            f"as a Counter. The selector would match nothing, sum would stay 0, "
+            f"and the closed-loop proof would pass while measuring nothing."
+        )

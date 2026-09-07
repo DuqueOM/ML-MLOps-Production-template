@@ -24,7 +24,7 @@ import pytest
 # ---------------------------------------------------------------------------
 
 
-def _find_repo_root() -> Path:
+def _find_repo_root() -> Path | None:
     """Walk up from this file to find the actual repo root.
 
     The scaffolder lives at `templates/scripts/new-service.sh` (NOT at
@@ -36,10 +36,21 @@ def _find_repo_root() -> Path:
     for ancestor in here.parents:
         if (ancestor / "templates" / "scripts" / "new-service.sh").is_file():
             return ancestor
-    raise RuntimeError("Could not locate templates/scripts/new-service.sh from this file's path")
+    return None
 
 
 REPO_ROOT = _find_repo_root()
+
+# These tests scaffold a service in order to inspect it, so they need the
+# scaffolder — they are template-repo tests that happen to live inside the
+# payload directory. Inside a generated service the scaffolder is absent and
+# this module used to raise at import time, which broke collection of the
+# WHOLE tests/ tree: an adopter running `pytest` got a RuntimeError before a
+# single test ran.
+#
+# Skipping the package is the honest behaviour. Failing would be wrong (the
+# tests do not apply here) and raising was worse than either.
+collect_ignore_glob = ["*"] if REPO_ROOT is None else []
 
 
 @pytest.fixture(scope="session")

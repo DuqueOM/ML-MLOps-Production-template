@@ -31,12 +31,27 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[3]
 AGENTS_MD = REPO_ROOT / "AGENTS.md"
 
+# This module reconciles template-repo documents. Inside a scaffolded service
+# `parents[3]` walks above the service root and none of them exist, so every
+# subject would now fail rather than skip. Skip the module there instead: it
+# is a repo-only check that happens to live in the payload directory.
+if not AGENTS_MD.exists():  # pragma: no cover — layout probe
+    pytest.skip(
+        "AGENTS.md not found at the repo root; this module reconciles "
+        "template-repo documents and does not apply to a scaffolded service",
+        allow_module_level=True,
+    )
+
 # Documents that quote the CATALOG SIZE (range or count). Each must
 # match the canonical maximum derived from AGENTS.md.
+# `.claude/rules/01-serving.md` and `09-mlops-conventions.md` were listed here
+# and neither has ever existed under those names — the rules are
+# `04a-python-serving.md` and `01-mlops-conventions.md`, and being thin
+# adapter pointers they do not quote the catalog range at all. The test
+# skipped on both, so two of its six subjects were decorative. Removed rather
+# than repointed: there is nothing at those files to check.
 RANGE_QUOTING_DOCS: list[Path] = [
     REPO_ROOT / "CLAUDE.md",
-    REPO_ROOT / ".claude" / "rules" / "01-serving.md",
-    REPO_ROOT / ".claude" / "rules" / "09-mlops-conventions.md",
     REPO_ROOT / "agentic" / "skills" / "debug-ml-inference" / "SKILL.md",
     REPO_ROOT / "docs" / "ide-parity-audit.md",
     REPO_ROOT / "docs" / "decisions" / "ADR-014-gap-remediation-plan.md",
@@ -95,7 +110,15 @@ def test_doc_cites_canonical_max(doc: Path, canonical_max: int) -> None:
     of the catalog, not its size.
     """
     if not doc.exists():
-        pytest.skip(f"{doc} not present in this repo state")
+        # A named subject that is absent is a defect in this list, not a
+        # reason to pass. Skipping here is what let two dead entries sit in
+        # RANGE_QUOTING_DOCS unnoticed. In a scaffolded service none of these
+        # exist, and the module-level guard below skips the whole file rather
+        # than letting individual subjects vanish silently.
+        pytest.fail(
+            f"{doc.relative_to(REPO_ROOT)} is listed as quoting the anti-pattern "
+            "catalog range but does not exist. Fix the path or remove the entry."
+        )
     text = doc.read_text(encoding="utf-8")
     matches: list[tuple[int, int]] = []
     for pat in RANGE_PATTERNS:
