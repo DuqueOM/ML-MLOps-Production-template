@@ -143,9 +143,9 @@ by a second number, so misconfiguration ids (`GCP-0061`) matched nothing.
 
   **Resolved since**: the rename was carried out as the three-step ruleset
   transition this ADR anticipated, and the job is now
-  `{NEW}` — named for the classes of check rather
-  than the tools, so the next tool swap touches no contract. The procedure is
-  written down in `docs/governance/branch-protection.md`
+  `Self-audit (secrets + IaC + supply chain)` — named for the classes of
+  check rather than the tools, so the next tool swap touches no contract.
+  The procedure is written down in `docs/governance/branch-protection.md`
   §"Renaming a required check".
 - MEDIUM and LOW findings are visible but not enforced. Raising the threshold
   is a separate decision with its own triage cost.
