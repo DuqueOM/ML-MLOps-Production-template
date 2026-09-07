@@ -583,7 +583,7 @@ reports:
 # (or a managed-agent platform like Vertex AI / AgentCore) consume the
 # canonical agentic stack defined above.
 #
-# Contract test: `templates/service/tests/test_companions_contract.py`.
+# Contract test: `templates/tests/governance/test_companions_contract.py`.
 # -----------------------------------------------------------------------------
 companions:
   - id: "runtime-monitoring"

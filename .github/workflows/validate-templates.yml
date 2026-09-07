@@ -66,6 +66,9 @@ jobs:
       - name: Generated service ADR references are resolvable
         run: python3 scripts/check_service_adr_references.py
 
+      - name: Payload tests are about the generated service
+        run: python3 scripts/check_payload_test_scope.py
+
       - name: Render root parses as Copier templates
         # jinja2 is installed explicitly: the gate exits 2 when its parser is
         # missing rather than skipping, so a job that lacks it fails loudly

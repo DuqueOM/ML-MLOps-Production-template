@@ -31,8 +31,6 @@ from pathlib import Path
 
 import pytest
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
-
 # common_utils sits at the service root — templates/service/ in this repo,
 # the repo root in a scaffolded service; parents[1] is that root in both.
 # Adding it to sys.path lets `import common_utils.memory_types` resolve
@@ -284,7 +282,7 @@ def test_no_service_python_imports_memory_types() -> None:
 
     assert not offenders, (
         f"Phase 1 invariant violated: serving/training files import memory plane: "
-        f"{[str(p.relative_to(REPO_ROOT)) for p in offenders]}"
+        f"{[str(p.relative_to(_TEMPLATES_DIR)) for p in offenders]}"
     )
 
 

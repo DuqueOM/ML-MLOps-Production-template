@@ -22,11 +22,13 @@ from pathlib import Path
 
 import pytest
 
-# The load test + schema modules live under templates/service/. Add
-# templates/service to sys.path so `import app.schemas` and
-# `import tests.load_test` resolve regardless of pytest's rootdir.
-_REPO_ROOT = Path(__file__).resolve().parents[3]
-_SERVICE_ROOT = _REPO_ROOT / "templates" / "service"
+# The load test + schema modules live at the service root. Add it to
+# sys.path so `import app.schemas` and `import tests.load_test` resolve
+# regardless of pytest's rootdir. Addressed relatively, so this works
+# identically in the template repo and in a generated service — it used
+# to climb to the repo root and come back down through `templates/service`,
+# a path an adopter does not have.
+_SERVICE_ROOT = Path(__file__).resolve().parents[1]
 if str(_SERVICE_ROOT) not in sys.path:
     sys.path.insert(0, str(_SERVICE_ROOT))
 

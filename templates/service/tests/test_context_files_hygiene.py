@@ -58,10 +58,31 @@ import yaml
 
 # Walk up to the repository root — works from templates/service/tests/ in the
 # template repo and from tests/ in a generated service.
+#
+# The fallback is the SERVICE ROOT, not `parents[2]`. A freshly scaffolded
+# service has no `.git` yet — Copier's own closing message lists
+# "Initialize git" as step 3 — so the walk finds nothing, and the old fallback
+# landed two directories above the service, on whatever the adopter happened
+# to have there. Every path built from it was then wrong, and the two
+# git-dependent checks below died with "not a git repository" pointing at a
+# directory the adopter never asked about.
 _HERE = Path(__file__).resolve()
+_SERVICE_ROOT = _HERE.parents[1]
 REPO_ROOT = next(
     (parent for parent in _HERE.parents if (parent / ".git").exists()),
-    _HERE.parents[2],
+    _SERVICE_ROOT,
+)
+_IS_GIT_REPO = (REPO_ROOT / ".git").exists()
+
+# These two properties are about what git tracks and ignores, so they need a
+# repository. Before `git init` there is nothing to assert — this is an absent
+# precondition, not a control that failed, and it starts evaluating the moment
+# the adopter runs step 3 of the scaffold instructions.
+_needs_git = pytest.mark.skipif(
+    not _IS_GIT_REPO,
+    reason=(
+        f"no git repository at {REPO_ROOT} — run `git init` (scaffold step 3); these two checks evaluate from then on"
+    ),
 )
 
 _SKIP_DIRS = {".git", ".venv", "venv", "node_modules", "__pycache__", ".mypy_cache"}
@@ -126,6 +147,7 @@ def test_example_files_are_discovered() -> None:
 # --------------------------------------------------------------------------
 
 
+@_needs_git
 def test_no_local_context_file_is_tracked() -> None:
     """`*_context.local*.yaml` holds real values and is gitignored by design."""
     tracked = subprocess.run(
@@ -139,6 +161,7 @@ def test_no_local_context_file_is_tracked() -> None:
     assert not offenders, f"local context files must never be tracked: {offenders}"
 
 
+@_needs_git
 def test_local_context_pattern_is_gitignored() -> None:
     """Being untracked today is luck; being ignored is the control."""
     result = subprocess.run(

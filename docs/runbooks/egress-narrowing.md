@@ -267,7 +267,7 @@ CIDR count, and the validation test output.
 
 - ACTION_PLAN_R5 §R5-M3 (source finding)
 - VALIDATION_LOG Entry 005 (R5-M3 closure + explicit follow-up to this runbook)
-- `templates/service/tests/test_networkpolicy_egress_hygiene.py` (contract tests)
+- `templates/tests/governance/test_networkpolicy_egress_hygiene.py` (contract tests)
 - `.github/workflows/validate-templates.yml` (PR-time kustomize render check)
 - AWS IP Ranges feed: <https://docs.aws.amazon.com/vpc/latest/userguide/aws-ip-ranges.html>
 - GCP Private Google Access: <https://cloud.google.com/vpc/docs/private-google-access>
