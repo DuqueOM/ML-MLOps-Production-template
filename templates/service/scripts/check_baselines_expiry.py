@@ -77,7 +77,20 @@ ENTRY_PATTERNS = {
     # AVD-AWS-0088 (trivy misconfiguration checks). The original pattern
     # required a four-digit year followed by a second number, so every
     # misconfiguration id was invisible.
-    "trivy_entry": re.compile(r"^\s*([A-Z]+(?:-[A-Z]+)*-\d{3,}(?:-\d+)?)\s*(#.*)?$"),
+    # Two shapes of trivy identifier:
+    #   * numeric  — CVE-2026-12345, GCP-0061, AWS-0089
+    #   * advisory — GHSA-gqvg-gmmx-x4hm (GitHub Security Advisory: three
+    #                base32-ish groups, no digits required)
+    # The pattern was numeric-only and rejected every GHSA id as malformed,
+    # which would have forced anyone baselining one to either mangle the id or
+    # give up on the register. Advisory ids are how trivy reports findings that
+    # have no CVE assigned yet — precisely the ones worth tracking.
+    "trivy_entry": re.compile(
+        r"^\s*("
+        r"[A-Z]+(?:-[A-Z]+)*-\d{3,}(?:-\d+)?"
+        r"|GHSA(?:-[0-9a-z]{4}){3}"
+        r")\s*(#.*)?$"
+    ),
 }
 
 # Top-level keys whose sequence items are suppressions subject to expiry.
