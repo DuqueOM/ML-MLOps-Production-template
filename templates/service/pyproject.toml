@@ -56,9 +56,11 @@ dev = [
     "pytest-cov ~= 6.0.0",
     "locust ~= 2.32.0",
     "httpx ~= 0.28.0",
-    "black ~= 25.1.0",
-    "isort ~= 6.0.0",
-    "flake8 ~= 7.1.0",
+    # ADR-044 replaced black + isort + flake8 with ruff. All three stayed
+    # declared here, so every generated service installed three linters it
+    # never runs — and did not declare the one it does. Dependabot noticed
+    # before we did: it opened a PR bumping flake8.
+    "ruff ~= 0.15.15",
     "mypy ~= 1.13.0",
     "bandit ~= 1.7.10",
     "pre-commit ~= 3.7.0",

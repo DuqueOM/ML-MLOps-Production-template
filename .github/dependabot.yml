@@ -16,6 +16,28 @@ updates:
       - "dependencies"
       - "github-actions"
 
+  # GitHub Actions — the SHIPPED workflows.
+  #
+  # `directory:` is resolved literally, so the entry above covers only
+  # `.github/workflows/` at the repo root. The nine workflows under
+  # `templates/service/.github/workflows/` were never scanned, which is the
+  # same blind spot documented for terraform below — and it had a second
+  # effect: `check_cicd_template_drift.py` requires the runtime and template
+  # copies to pin identical versions, so every action bump Dependabot opened
+  # was HALF a change and failed that gate by construction. Scanning both
+  # directories lets one PR satisfy it.
+  - package-ecosystem: "github-actions"
+    directory: "/templates/service"
+    schedule:
+      interval: "weekly"
+      day: "thursday"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "ci"
+    labels:
+      - "dependencies"
+      - "github-actions"
+
   # ---------------------------------------------------------------------
   # Python (pip).
   #
