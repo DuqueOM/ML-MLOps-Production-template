@@ -12,7 +12,7 @@ uvicorn              ~= 0.32.0
 pydantic             ~= 2.10.0
 
 # Data Validation
-pandera              ~= 0.23.0
+pandera              >= 0.23,< 0.34
 jsonschema           ~= 4.23.0    # PR-B1 — quality_gates.schema.json validator (test_quality_gates_schema_sync.py)
 
 # Explainability
