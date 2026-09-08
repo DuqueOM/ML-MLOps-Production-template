@@ -27,9 +27,16 @@ jobs:
         # Runs all commit-stage hooks (excludes pre-push scaffold smoke).
         run: pre-commit run --all-files --hook-stage commit
 
-      - name: mypy
-        # mypy not in pre-commit hooks yet — kept separate for now.
-        # TODO: add mypy to .pre-commit-config.yaml once baseline clean.
+      - name: mypy (against installed dependencies)
+        # mypy IS in .pre-commit-config.yaml and the step above already ran
+        # it — the comment here used to say it was not, with a TODO to add
+        # it, both of which had been untrue since the hook was added.
+        #
+        # This step is still worth its seconds, for a reason worth stating:
+        # `mirrors-mypy` runs mypy in its own virtualenv with no project
+        # dependencies, so it infers far less than mypy running where
+        # pandas, fastapi and pydantic are actually importable. The two
+        # runs check the same files and do not find the same things.
         run: |
           pip install mypy
           mypy src/ app/ --ignore-missing-imports

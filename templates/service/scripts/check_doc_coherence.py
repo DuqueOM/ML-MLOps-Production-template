@@ -241,6 +241,56 @@ def _reconcile_surface(claude_path: Path, rules_dir: Path, label: str) -> list[s
     return []
 
 
+def _count_surface_units(directory: Path) -> int:
+    """How many rules / skills / workflows an adapter directory holds.
+
+    Adapters do not share a shape: `.claude/skills/` and `.devin/skills/` use
+    one directory per skill, `.cursor/skills/` and `.codex/skills/` use one
+    file each, and two of the four also carry an `INDEX.md` that is not a
+    skill. Counting entries naively gives 28 for one adapter and 27 for the
+    next, which is how the numbers in AGENTS.md drifted apart in the first
+    place.
+    """
+    if not directory.is_dir():
+        return -1
+    subdirs = [d for d in directory.iterdir() if d.is_dir() and not d.name.startswith("__")]
+    if subdirs:
+        return len(subdirs)
+    return len([f for f in directory.iterdir() if f.is_file() and f.name != "INDEX.md"])
+
+
+# A line of the adapter-surface tree in AGENTS.md:
+#   `.claude/skills/        # generated skill pointers + INDEX.md: 26 skills as …`
+_ADAPTER_LINE = re.compile(r"^(?P<path>\.[a-z]+/[a-z]+/)\s+#[^:]*:\s*(?P<count>\d+)\s")
+
+
+def _reconcile_adapter_block(doc_path: Path, root: Path, label: str) -> list[str]:
+    """Every `N <unit>` claim in the adapter-surface tree must match the tree.
+
+    AGENTS.md documents the generated surfaces with a count per directory.
+    All nine were stale — claiming 18 rules / 26 skills / 18 commands against
+    a live 19 / 27 / 20 — because C4 only ever reconciled CLAUDE.md. This is
+    the same gap C4's own docstring describes closing for the service copy of
+    CLAUDE.md, one document over.
+    """
+    text = _read(doc_path)
+    if text is None:
+        return []
+    problems: list[str] = []
+    for line in text.splitlines():
+        m = _ADAPTER_LINE.match(line)
+        if not m:
+            continue
+        target = root / m.group("path")
+        actual = _count_surface_units(target)
+        if actual < 0:
+            continue  # the adapter is not present in this tree
+        claimed = int(m.group("count"))
+        if claimed != actual:
+            problems.append(f"{label} says `{m.group('path')}` holds {claimed}; it holds {actual}.")
+    return problems
+
+
 def check_surface_counts() -> list[str]:
     """C4 — live agentic surface counts must match CLAUDE.md's claim.
 
@@ -253,9 +303,18 @@ def check_surface_counts() -> list[str]:
     surface that sits beside it.
     """
     problems = _reconcile_surface(CLAUDE, RULES_DIR, "CLAUDE.md")
-    service_claude = REPO_ROOT / "templates" / "service" / "CLAUDE.md"
-    service_rules = REPO_ROOT / "templates" / "service" / "agentic" / "rules"
+    # README.md states the same surface for adopters and was never reconciled:
+    # it claimed 18 rules / 26 skills / 18 workflows against a live 19/27/20.
+    problems += _reconcile_surface(REPO_ROOT / "README.md", RULES_DIR, "README.md")
+    service_root = REPO_ROOT / "templates" / "service"
+    service_claude = service_root / "CLAUDE.md"
+    service_rules = service_root / "agentic" / "rules"
     problems += _reconcile_surface(service_claude, service_rules, "templates/service/CLAUDE.md")
+
+    # AGENTS.md documents the same surfaces as a directory tree with a count
+    # per adapter, and nothing checked those: all nine were stale.
+    problems += _reconcile_adapter_block(REPO_ROOT / "AGENTS.md", REPO_ROOT, "AGENTS.md")
+    problems += _reconcile_adapter_block(service_root / "AGENTS.md", service_root, "templates/service/AGENTS.md")
     return problems
 
 

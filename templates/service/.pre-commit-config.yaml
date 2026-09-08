@@ -2,8 +2,12 @@
 # Install: pip install pre-commit && pre-commit install
 # Run all: pre-commit run --all-files
 #
-# Hooks: black (format) → isort (imports) → flake8 (lint) → mypy (types)
+# Hooks: ruff-check (lint) → ruff-format (format) → mypy (types)
 #        → bandit (security) → gitleaks (secrets)
+#
+# This header named black, isort and flake8 — none of which is in this file.
+# ADR-044 replaced all three with ruff, and the block four lines below says
+# so; the header was simply never updated.
 
 repos:
   # ── Ruff: lint + format (ADR-044) ────────────────────────────────────────
@@ -29,7 +33,7 @@ repos:
         args:
           - "--python-version=3.11"
           - "--ignore-missing-imports"
-        # TODO: Update file pattern to match your service directory
+        # Adjust if your service uses different top-level source directories.
         files: ^(app/|src/|tests/)
         exclude: >
           (?x)(

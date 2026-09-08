@@ -59,6 +59,41 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
   its id pattern required digits. Advisory ids are how trivy reports findings
   with no CVE assigned yet — precisely the ones worth tracking.
 
+### Fixed — twelve stale surface counts in AGENTS.md, and the gate that only watched CLAUDE.md
+
+- The generated-adapter tree in `AGENTS.md` claimed **18 rules / 26 skills /
+  18 commands** for each of the four surfaces. The live counts are
+  **19 / 27 / 20**. Twelve wrong numbers in the repository's canonical
+  architecture document — which is also vendored into every generated service.
+- `README.md` stated the same surface as *"18 rule files, 26 skills, and 18
+  workflows"*: three more, in the first document an adopter reads.
+- Cause: **C4 reconciled `CLAUDE.md` and nothing else.** That is the same gap
+  C4's own docstring describes closing one document over, for the service copy
+  of `CLAUDE.md`.
+- C4 now also reconciles `README.md` and the adapter tree in both `AGENTS.md`
+  files. Counting had to be shape-aware: `.claude/skills/` and `.devin/skills/`
+  use one directory per skill, `.cursor/` and `.codex/` use one file each, and
+  two of the four carry an `INDEX.md` that is not a skill — naive counting
+  gives 28 for one adapter and 27 for the next, which is how the numbers
+  drifted apart.
+
+### Fixed — a comment asserting the opposite of the file beside it
+
+- `templates/service/.github/workflows/ci.yml` said *"mypy not in pre-commit
+  hooks yet — kept separate for now. TODO: add mypy to
+  `.pre-commit-config.yaml` once baseline clean."* The service's
+  `.pre-commit-config.yaml` **has had a mypy hook all along**, so every
+  scaffolded service shipped a TODO asking the adopter to do something already
+  done.
+- The step is kept, because it does earn its seconds — but for the real
+  reason, now stated: `mirrors-mypy` runs in its own virtualenv with no
+  project dependencies, so it infers far less than mypy running where pandas,
+  fastapi and pydantic are importable. The two runs check the same files and
+  do not find the same things.
+- The same file's header listed *"black → isort → flake8 → mypy"*. **None of
+  those three is in it** — ADR-044 replaced them with ruff, and the block four
+  lines below says so.
+
 ### Fixed — a size-triggered prediction-log flush could be lost on shutdown
 
 - `PredictionLogger.log_prediction` fired the buffer-full flush with
