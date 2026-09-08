@@ -15,6 +15,50 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
 
 ## [Unreleased]
 
+### Fixed — the supply-chain gate had never examined a Python dependency
+
+- `Self-audit` §"Trivy filesystem scan" was blocking (`exit-code: 1`,
+  `CRITICAL,HIGH`) and scanned **nothing**. Its own log said so on every run:
+
+  ```text
+  INFO  Number of language-specific files  num=0
+  WARN  [report] Supported files for scanner(s) not found.  scanners=[vuln]
+  ```
+
+  Trivy reads a requirements file only when versions are pinned **exactly**.
+  This repo mandates `~=` — deliberately, since numpy 2.x silently corrupts
+  joblib models — and ships no lock file. A blocking gate that always passes
+  is worse than no gate: it produces the assurance without the check.
+- **Three nominal controls over Python dependencies were inert at once**: that
+  scan, a `dependabot.yml` with no `pip` ecosystem despite four requirements
+  files, and repository vulnerability alerts that were **disabled**.
+- `scripts/resolve_python_dependencies.py` asks pip to *resolve* each tracked
+  requirements file without installing (`--dry-run --report`) and writes the
+  concrete versions for trivy. Resolving in CI rather than committing a lock
+  file is deliberate — a lock under `templates/service/` would ship to every
+  adopter and freeze their transitive tree to ours.
+- **Switching it on surfaced 24 fixable CRITICAL/HIGH findings** (7 CRITICAL)
+  that had been there all along: 20 in `mlflow`, 3 in `starlette`, 1 in
+  `pyarrow`. None is fixable inside its declared pin range — every fix needs a
+  major bump. They are accepted in `.security-baselines/trivy-fs.trivyignore`
+  with a **2026-12-08 expiry** and a per-cluster review question, so any *new*
+  finding blocks immediately.
+- `.github/dependabot.yml` gains **four `pip` entries** (`directory:` is
+  resolved literally, exactly as for terraform). Vulnerability alerts and
+  Dependabot security updates are now **enabled** on the repository.
+
+### Fixed — two smaller things the same investigation turned up
+
+- The step referenced `.security-baselines/.trivyignore`, a file whose own
+  header read *"Baseline starts empty. The first hard-fail run surfaces real
+  findings."* That run never came. It is replaced by
+  `trivy-fs.trivyignore`, matching its sibling's naming, and the single
+  overloaded step is now two that each say what they do — a secret scan over
+  `templates/`, and a dependency scan over the resolved versions.
+- `check_baselines_expiry.py` rejected every **GHSA** identifier as malformed;
+  its id pattern required digits. Advisory ids are how trivy reports findings
+  with no CVE assigned yet — precisely the ones worth tracking.
+
 ### Fixed — twelve stale surface counts in AGENTS.md, and the gate that only watched CLAUDE.md
 
 - The generated-adapter tree in `AGENTS.md` claimed **18 rules / 26 skills /

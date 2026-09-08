@@ -1,0 +1,125 @@
+# Trivy filesystem (Python dependency) baseline.
+#
+# Contract: explicit, dated and reviewable, exactly like
+# `trivy-config.trivyignore`. Each entry carries `# expiry: YYYY-MM-DD` and
+# `scripts/check_baselines_expiry.py` fails the build once past that date.
+# Do NOT use trivy's own `expiredAt:` field — it is accepted and silently not
+# honoured (measured at 0.71.0; see ADR-046).
+#
+# WHY THIS FILE EXISTS AT ALL
+# ---------------------------
+# The `Trivy filesystem scan` step was blocking (`exit-code: 1`) and had never
+# examined a single Python dependency. Its own log said so on every run:
+#
+#     INFO  Number of language-specific files  num=0
+#     WARN  [report] Supported files for scanner(s) not found.  scanners=[vuln]
+#
+# Trivy reads a requirements file only when versions are pinned exactly.
+# This repository mandates `~=` — deliberately: numpy 2.x silently corrupts
+# joblib models — and ships no lock file, so trivy had nothing to read.
+# `scripts/resolve_python_dependencies.py` now resolves each requirements file
+# with pip and hands trivy the concrete versions.
+#
+# Turning the gate on surfaced 24 fixable CRITICAL/HIGH findings that had been
+# there all along. They are accepted HERE, with a date, rather than left
+# invisible — and every NEW finding blocks immediately, which is the whole
+# point of switching a dormant gate on instead of deleting it.
+#
+# KNOWN LIMITATION, stated rather than hidden: the plain ignore format
+# suppresses a vulnerability id REPO-WIDE. If a second package were ever
+# affected by the same CVE, this would silence it there too. Accepted for the
+# same reason as the config baseline: trivy's YAML format supports `paths:`
+# scoping but silently ignores `expiredAt:`, and one parser over one format is
+# worth more than per-path precision.
+#
+# NONE of these is fixable within its declared pin range — every fix requires a
+# MAJOR version bump, which is a product decision with its own test run, not a
+# side effect of switching on a scanner. `.github/dependabot.yml` now watches
+# pip, so those upgrades arrive as their own PRs with CI attached.
+
+
+# --- mlflow — pinned `~= 2.18.0`, every fix is in 3.x ------------
+#
+# 20 findings ({'CRITICAL': 7, 'HIGH': 13}), installed 2.18.0.
+# The largest cluster by far, and the one that most needs a decision rather
+# than a bump. mlflow 3.x changes the tracking API surface the template's
+# training and promotion paths depend on. Note also that mlflow is a
+# DEVELOPMENT/tracking dependency here: it is not imported by the serving
+# path (`app/`), so the exposure is the tracking server an operator runs,
+# not the inference endpoint.
+#
+# Review question: has the mlflow 3.x migration ADR been written? If the
+# answer is still no at expiry, that is the finding — not the CVE count.
+#
+# expiry: 2026-12-08  reason: mlflow 2.18.0 -> needs 3.4.0rc0 (major bump); HIGH
+CVE-2025-10279
+# expiry: 2026-12-08  reason: mlflow 2.18.0 -> needs 2.22.0rc0 (major bump); HIGH
+CVE-2025-11200
+# expiry: 2026-12-08  reason: mlflow 2.18.0 -> needs 3.0.0, 2.22.4 (major bump); HIGH
+CVE-2025-11201
+# expiry: 2026-12-08  reason: mlflow 2.18.0 -> needs 3.5.0 (major bump); HIGH
+CVE-2025-14279
+# expiry: 2026-12-08  reason: mlflow 2.18.0 -> needs 3.8.0rc0 (major bump); HIGH
+CVE-2025-14287
+# expiry: 2026-12-08  reason: mlflow 2.18.0 -> needs 3.9.0rc0 (major bump); HIGH
+CVE-2025-15031
+# expiry: 2026-12-08  reason: mlflow 2.18.0 -> needs 3.9.0rc0 (major bump); CRITICAL
+CVE-2025-15036
+# expiry: 2026-12-08  reason: mlflow 2.18.0 -> needs 3.8.1 (major bump); CRITICAL
+CVE-2025-15379
+# expiry: 2026-12-08  reason: mlflow 2.18.0 -> needs 3.9.0 (major bump); CRITICAL
+CVE-2026-0596
+# expiry: 2026-12-08  reason: mlflow 2.18.0 -> needs 3.8.0rc0 (major bump); HIGH
+CVE-2026-2033
+# expiry: 2026-12-08  reason: mlflow 2.18.0 -> needs 3.9.0 (major bump); HIGH
+CVE-2026-2393
+# expiry: 2026-12-08  reason: mlflow 2.18.0 -> needs 3.10.0 (major bump); HIGH
+CVE-2026-2614
+# expiry: 2026-12-08  reason: mlflow 2.18.0 -> needs 3.8.0rc0 (major bump); CRITICAL
+CVE-2026-2635
+# expiry: 2026-12-08  reason: mlflow 2.18.0 -> needs 3.11.0rc1 (major bump); CRITICAL
+CVE-2026-2651
+# expiry: 2026-12-08  reason: mlflow 2.18.0 -> needs 3.11.0 (major bump); HIGH
+CVE-2026-2652
+# expiry: 2026-12-08  reason: mlflow 2.18.0 -> needs 3.11.0 (major bump); CRITICAL
+CVE-2026-4035
+# expiry: 2026-12-08  reason: mlflow 2.18.0 -> needs 3.11.0 (major bump); HIGH
+CVE-2026-4137
+# expiry: 2026-12-08  reason: mlflow 2.18.0 -> needs 3.15.0 (major bump); CRITICAL
+CVE-2026-64849
+# expiry: 2026-12-08  reason: mlflow 2.18.0 -> needs 3.13.0rc0 (major bump); HIGH
+CVE-2026-8147
+# expiry: 2026-12-08  reason: mlflow 2.18.0 -> needs 3.15.0 (major bump); HIGH
+GHSA-gqvg-gmmx-x4hm
+
+# --- starlette — transitive via `fastapi ~= 0.115.0` -------------
+#
+# 3 findings ({'HIGH': 3}), installed 0.46.2.
+# Not directly pinned. Reaching starlette >= 0.49.1 requires a fastapi bump
+# outside the declared compatible-release range. Two of the three are
+# StaticFiles/Range-header issues on surfaces this template does not mount
+# (no StaticFiles, no Range handling); the third is a form-parsing DoS that
+# does apply to `/predict` under a hostile client.
+#
+# Review question: does the pinned fastapi range now reach a fixed
+# starlette? That is a one-line check and the cheapest of the three to close.
+#
+# expiry: 2026-12-08  reason: starlette 0.46.2 -> needs 0.49.1 (major bump); HIGH
+CVE-2025-62727
+# expiry: 2026-12-08  reason: starlette 0.46.2 -> needs 1.1.0 (major bump); HIGH
+CVE-2026-48818
+# expiry: 2026-12-08  reason: starlette 0.46.2 -> needs 1.3.1 (major bump); HIGH
+CVE-2026-54283
+
+# --- pyarrow — pinned `~= 18.0.0` for the parquet prediction log (ADR-006)
+#
+# 1 findings ({'HIGH': 1}), installed 18.0.0.
+# A use-after-free DoS in the Arrow C++ layer. The template's exposure is the
+# prediction logger writing parquet it produced itself, not parsing
+# attacker-supplied Arrow data, which is the vector the advisory describes.
+#
+# Review question: does anything now READ third-party parquet? If so this
+# acceptance is void and the bump becomes urgent.
+#
+# expiry: 2026-12-08  reason: pyarrow 18.0.0 -> needs 23.0.1 (major bump); HIGH
+CVE-2026-25087

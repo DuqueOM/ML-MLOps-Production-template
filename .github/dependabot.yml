@@ -16,6 +16,74 @@ updates:
       - "dependencies"
       - "github-actions"
 
+  # ---------------------------------------------------------------------
+  # Python (pip).
+  #
+  # This was ABSENT while the repository carried four requirements files and
+  # two pyproject.toml files. The consequence was not theoretical: with pip
+  # unwatched, GitHub's dependency graph never opened an update PR for
+  # scikit-learn, fastapi, mlflow or anything else, and the one CI control
+  # that was meant to catch vulnerable versions — the Trivy filesystem scan —
+  # had never examined a dependency either (it cannot read `~=` pins). Three
+  # nominal controls over Python dependencies, all inert at once.
+  #
+  # `directory:` is resolved LITERALLY, exactly as for terraform above, so
+  # every requirements file needs its own entry. Adding a requirements file
+  # without adding an entry here puts it back in the blind spot.
+  # ---------------------------------------------------------------------
+
+  # Python — the shipped service runtime
+  - package-ecosystem: "pip"
+    directory: "/templates/service"
+    schedule:
+      interval: "weekly"
+      day: "thursday"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
+    labels:
+      - "dependencies"
+      - "python"
+
+  # Python — EDA extras (shipped, optional at install time)
+  - package-ecosystem: "pip"
+    directory: "/templates/service/eda"
+    schedule:
+      interval: "weekly"
+      day: "thursday"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "deps"
+    labels:
+      - "dependencies"
+      - "python"
+
+  # Python — the working example an adopter runs first
+  - package-ecosystem: "pip"
+    directory: "/examples/minimal"
+    schedule:
+      interval: "weekly"
+      day: "thursday"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "deps"
+    labels:
+      - "dependencies"
+      - "python"
+
+  # Python — this repository's own tooling (root pyproject.toml)
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "thursday"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "deps"
+    labels:
+      - "dependencies"
+      - "python"
+
   # Docker (service template)
   - package-ecosystem: "docker"
     directory: "/templates/service"
