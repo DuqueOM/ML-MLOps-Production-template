@@ -288,6 +288,13 @@ class PredictionLogger:
         self._buffer: list[PredictionEvent] = []
         self._lock = asyncio.Lock()
         self._flush_task: asyncio.Task[None] | None = None
+        # Size-triggered flushes run as their own tasks and MUST be held here.
+        # `asyncio.create_task` returns the only strong reference the caller
+        # gets — the event loop keeps a weak one — so a task nobody stores can
+        # be garbage-collected mid-await. Measured symptom: the batch reached
+        # the backend but `logged_count` was never incremented, because the
+        # task vanished while suspended in `run_in_executor`.
+        self._inflight: set[asyncio.Task[None]] = set()
         self._closed = False
         # Counters (accessed by /metrics)
         self.logged_count = 0
@@ -300,7 +307,16 @@ class PredictionLogger:
             self._flush_task = asyncio.create_task(self._flush_loop())
 
     async def close(self) -> None:
-        """Drain buffer and stop background task. Call from FastAPI lifespan shutdown."""
+        """Drain buffer and stop background task. Call from FastAPI lifespan shutdown.
+
+        Waits for size-triggered flushes that are still in flight. Without
+        that wait, `close()` returned while a full batch was mid-write: the
+        events had already been taken out of the buffer, so the final drain
+        below found nothing, and the orphan task died with the event loop.
+        Measured on a backend that takes 300ms: 0 of 3 events reached it by
+        the time `close()` returned, and all 3 arrived afterwards — which in a
+        real shutdown is never.
+        """
         self._closed = True
         if self._flush_task:
             self._flush_task.cancel()
@@ -308,6 +324,10 @@ class PredictionLogger:
                 await self._flush_task
             except asyncio.CancelledError:
                 pass
+        if self._inflight:
+            # `return_exceptions=True`: a failing flush already counted itself
+            # in `error_count` (D-22), and shutdown must not raise.
+            await asyncio.gather(*tuple(self._inflight), return_exceptions=True)
         await self._flush_once()
 
     async def log_prediction(self, event: PredictionEvent) -> None:
@@ -322,7 +342,9 @@ class PredictionLogger:
             async with self._lock:
                 self._buffer.append(event)
                 if len(self._buffer) >= self.max_buffer_size:
-                    asyncio.create_task(self._flush_once())
+                    task = asyncio.create_task(self._flush_once())
+                    self._inflight.add(task)
+                    task.add_done_callback(self._inflight.discard)
         except Exception as e:
             self.error_count += 1
             logger.warning("prediction_log enqueue failed: %s", e)
