@@ -78,6 +78,26 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
   container whose overlay already set one, producing a
   `hides previous definition` warning that the old check counted as residue.
 
+### Fixed — Dependabot could not satisfy the drift gate, and shipped three dead linters
+
+- `dependabot.yml` had **one** `github-actions` entry, at `/`. `directory:` is
+  resolved literally, so the nine workflows under
+  `templates/service/.github/workflows/` were never scanned — the same blind
+  spot the file already documents for terraform, unapplied to actions.
+- That had a second effect: `check_cicd_template_drift.py` requires the runtime
+  and template copies to pin identical versions, so **every action bump
+  Dependabot opened was half a change and failed that gate by construction**.
+  Scanning both directories lets one PR satisfy it. The three open bumps
+  (checkov-action, hadolint-action, codeql-action) are applied here in both
+  copies.
+- **`black`, `isort` and `flake8` were still declared** as dev dependencies of
+  every generated service. ADR-044 replaced all three with ruff in the
+  pre-commit config and nobody removed them, so each scaffolded service
+  installed three linters it never runs — and did **not** declare `ruff`, the
+  one it does. Dependabot noticed before we did: it opened a PR bumping
+  flake8. The three are replaced by `ruff ~= 0.15.15`, matching the version
+  the service's pre-commit config already pins.
+
 ### Fixed — the supply-chain gate had never examined a Python dependency
 
 - `Self-audit` §"Trivy filesystem scan" was blocking (`exit-code: 1`,
