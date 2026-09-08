@@ -15,6 +15,26 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
 
 ## [Unreleased]
 
+### Fixed — a documentation sweep, and a gate I narrowed myself two PRs ago
+
+- **`check_control_claims.py` was scanning 36 anti-patterns instead of 38.**
+  Wrapping the D-32 and D-34 rows in a Jinja raw block — needed so Copier does
+  not render the tokens they document — changed their prefix from `| D-34 |`
+  to `| {% raw %}D-34 |`, and the row pattern no longer matched. The scan
+  narrowed and said nothing. My change, two PRs ago.
+- The pattern now tolerates the wrapper, and the gate **asserts it matched
+  every D-NN up to the highest**: a scan that sees fewer rows than the table
+  holds is now a failure rather than a smaller number. Recovering the two rows
+  also surfaced a sixth path-shaped enforcer that had been invisible.
+- **C8 missed the singular form.** It matched `N overlays` but not
+  `N overlay renders`, so two living documents still said 6 — the check added
+  to stop that count drifting missed an instance of it on the day it shipped.
+  `README.md` and `CONTRIBUTING.md` now say "every overlay rendered", which
+  cannot go stale.
+- `README.md` §"Recent hardening (v0.14.0 → v0.15.x)" was **eleven minor
+  versions behind** `VERSION` (0.26.0). The version range is gone; the section
+  lists releases already.
+
 ### Fixed — L3 had been red for eighteen consecutive weeks and nobody was told
 
 - `README.md` offers adopters **"L1 + L2 + L3 are your contract"**. The L3

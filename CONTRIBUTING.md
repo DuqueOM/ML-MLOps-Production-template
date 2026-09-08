@@ -48,7 +48,7 @@ Make targets, per [`docs/audit/ACTION_PLAN_R5.md`](docs/audit/ACTION_PLAN_R5.md)
 | every commit | < 10 s | pre-commit hooks (auto) | format, lint, gitleaks, contract tests on changed files |
 | on demand | ~60 s | `make smoke` | scaffold a fresh service end-to-end (catches scaffolder + dependency-graph regressions) |
 | on demand | ~3 min | `make validate-templates` | lint + K8s render + agentic + scaffold + EDA |
-| every PR | ~3–10 min | [`pr-smoke-lane.yml`](.github/workflows/pr-smoke-lane.yml) | scaffold + 6 overlay renders + kubeconform + binary audit |
+| every PR | ~3–10 min | [`pr-smoke-lane.yml`](.github/workflows/pr-smoke-lane.yml) | scaffold + every overlay rendered + kubeconform + binary audit |
 | every PR | varies | other CI workflows | full unit tests, contract tests, security scans, signing |
 
 When you touch any of the following, **run `make smoke` locally before push**:
