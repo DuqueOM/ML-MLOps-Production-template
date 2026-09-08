@@ -4,7 +4,7 @@
 
 pandas~=2.2
 numpy~=1.26
-scipy~=1.11
+scipy~=1.18
 scikit-learn~=1.4
 pandera~=0.18
 matplotlib~=3.11
