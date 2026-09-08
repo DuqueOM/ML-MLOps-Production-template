@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 import sqlite3
 import sys
+import time
 from pathlib import Path
 
 import pandas as pd
@@ -185,8 +186,33 @@ class TestParquetBackend:
 class TestPredictionLogger:
     @pytest.mark.asyncio
     async def test_flush_on_buffer_full(self, tmp_path: Path) -> None:
-        backend = SQLiteBackend(path=str(tmp_path / "t.db"))
-        logr = PredictionLogger(backend=backend, max_buffer_size=3, flush_interval_s=60.0)
+        """Reaching max_buffer_size flushes without waiting for the interval.
+
+        The wait here is on an ``asyncio.Event`` the backend sets, not on the
+        clock. The previous version slept 0.1s and hoped the size-triggered
+        task had run; it failed intermittently on CI, and the failure was real
+        — the flush task was unreferenced, so it could be garbage-collected
+        mid-``run_in_executor``, leaving the rows written but ``logged_count``
+        at 0. A sleep long enough to hide that is also long enough to hide a
+        genuinely broken trigger.
+
+        The timeout is a failsafe, not a race: it only decides how long the
+        suite waits before declaring the trigger broken.
+        """
+        flushed = asyncio.Event()
+
+        class SignallingBackend:
+            def __init__(self) -> None:
+                self.inner = SQLiteBackend(path=str(tmp_path / "t.db"))
+
+            def write_batch(self, events: list[PredictionEvent]) -> None:
+                self.inner.write_batch(events)
+                flushed.set()
+
+            def health_check(self) -> bool:
+                return self.inner.health_check()
+
+        logr = PredictionLogger(backend=SignallingBackend(), max_buffer_size=3, flush_interval_s=60.0)
         await logr.start()
         try:
             for i in range(3):
@@ -201,11 +227,59 @@ class TestPredictionLogger:
                         prediction_class="LOW",
                     )
                 )
-            await asyncio.sleep(0.1)
+            # Fails only if the size trigger never fires — `flush_interval_s`
+            # is 60s, so nothing else can flush within this window.
+            await asyncio.wait_for(flushed.wait(), timeout=10.0)
         finally:
             await logr.close()
         count = sqlite3.connect(tmp_path / "t.db").execute("SELECT COUNT(*) FROM predictions_log").fetchone()[0]
         assert count == 3
+        assert logr.logged_count == 3
+
+    @pytest.mark.asyncio
+    async def test_close_waits_for_an_inflight_size_flush(self, tmp_path: Path) -> None:
+        """`close()` must not return while a size-triggered flush is in flight.
+
+        Regression test for silent batch loss. A size-triggered flush takes the
+        events out of the buffer before writing them, so if `close()` does not
+        wait for it, the final drain finds an empty buffer and writes nothing,
+        and the orphaned task dies with the event loop. Measured against a
+        backend taking 300ms: 0 of 3 events had reached it when `close()`
+        returned, and all 3 arrived afterwards — which during a real shutdown
+        is never.
+        """
+
+        class SlowBackend:
+            def __init__(self) -> None:
+                self.written: list[PredictionEvent] = []
+
+            def write_batch(self, events: list[PredictionEvent]) -> None:
+                time.sleep(0.3)
+                self.written.extend(events)
+
+            def health_check(self) -> bool:
+                return True
+
+        backend = SlowBackend()
+        logr = PredictionLogger(backend=backend, max_buffer_size=3, flush_interval_s=60.0)
+        await logr.start()
+        for i in range(3):
+            await logr.log_prediction(
+                PredictionEvent(
+                    prediction_id=f"p{i}",
+                    entity_id=f"u{i}",
+                    timestamp=utc_now_iso(),
+                    model_version="v1",
+                    features={},
+                    score=0.5,
+                    prediction_class="LOW",
+                )
+            )
+        await logr.close()
+        assert len(backend.written) == 3, (
+            "close() returned while a size-triggered flush was still in flight — "
+            "those events are lost when the event loop stops"
+        )
         assert logr.logged_count == 3
 
     @pytest.mark.asyncio
@@ -252,7 +326,8 @@ class TestPredictionLogger:
                 prediction_class="LOW",
             )
         )
-        await asyncio.sleep(0.05)
+        # No sleep: `close()` awaits the in-flight size-triggered flush, so by
+        # the time it returns the failing write has been attempted and counted.
         await logr.close()
         # D-22 contract: error count grew but no exception reached the handler
         assert logr.error_count >= 1

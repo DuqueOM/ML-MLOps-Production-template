@@ -15,6 +15,43 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
 
 ## [Unreleased]
 
+### Fixed — a size-triggered prediction-log flush could be lost on shutdown
+
+- `PredictionLogger.log_prediction` fired the buffer-full flush with
+  `asyncio.create_task(...)` and **kept no reference to it**. Python's docs
+  are explicit that the event loop holds only a weak reference, so such a task
+  can be garbage-collected mid-execution.
+- `close()` did not wait for it either. Measured against a backend taking
+  300 ms: `close()` returned with **0 of 3 events written and `logged_count`
+  at 0**, the batch still in an orphan task; all 3 arrived 0.5 s later, which
+  during a real FastAPI shutdown is never. The events were already out of the
+  buffer, so the final drain found nothing to write. **A full batch of
+  prediction logs, lost silently** — on the closed-loop path D-20/D-22 exist
+  to protect.
+- In-flight flushes are now retained in a set and awaited by `close()`.
+  Verified by removing the control: the new
+  `test_close_waits_for_an_inflight_size_flush` fails with the old code and
+  passes with the fix.
+
+### Fixed — the flaky test that was hiding it, and the gate that let it hide
+
+- `test_flush_on_buffer_full` slept `0.1 s` and hoped the background flush had
+  run. It failed intermittently on CI (Python 3.11; green on rerun with
+  identical code) — and the sleep was long enough to usually mask the
+  production defect underneath. It now waits on an `asyncio.Event` the backend
+  sets, with a 10 s timeout as a failsafe: **a timeout decides how long the
+  suite waits before declaring something broken, a sleep decides whether the
+  test is correct.**
+- `test_backend_failure_does_not_raise` lost its `0.05 s` sleep outright —
+  `close()` now guarantees the in-flight flush has been attempted.
+- **`check_test_clock_isolation.py` matched only calls that *read* the clock**
+  (`datetime.now`, `time.time`), while its own title says tests must not
+  *depend* on it. Waiting on the clock is the same dependency wearing a
+  different hat. It now also matches `time.sleep` and `asyncio.sleep`. Two
+  remaining uses are allowlisted with reasons: a poll-with-timeout loop
+  waiting on an external service (the correct shape), and a fake backend that
+  simulates a slow write, which is the condition under test.
+
 ### Added — the generated service gets the Markdown gate the template holds itself to
 
 - A scaffolded service had **no docs lane at all**: no markdownlint, no
