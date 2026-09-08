@@ -314,19 +314,73 @@ jobs:
           sudo mv /tmp/kustomize /usr/local/bin/
           kustomize version
 
+      # ---------------------------------------------------------------
+      # The deployment references the image BY DIGEST, because D-19 and the
+      # Kyverno policy below require it. `kind load docker-image` loads an
+      # image under its TAG, and containerd cannot resolve a digest from a
+      # tag-loaded image — so it tried to pull `…@sha256:…` from a registry
+      # the kind nodes could not reach, and every pod sat in ErrImagePull.
+      # That is the third and last reason this job was red for eighteen
+      # weeks; the two before it were hiding this one.
+      #
+      # So the nodes get a registry they can actually reach. The registry in
+      # the build job lives on a different runner and is gone by now, but the
+      # image tar is not: re-pushing identical content reproduces the same
+      # manifest digest, which the step below asserts rather than assumes.
+      # ---------------------------------------------------------------
+      - name: Start a registry the kind nodes can reach
+        run: |
+          set -euo pipefail
+          docker run -d --name kind-registry --restart=always -p 5001:5000 registry:2
+          for _ in $(seq 1 30); do
+            curl -sf http://localhost:5001/v2/ >/dev/null && break || sleep 1
+          done
+          curl -sf http://localhost:5001/v2/ >/dev/null
+
+      - name: Re-push the built image and confirm the digest is unchanged
+        run: |
+          set -euo pipefail
+          IMG="localhost:5001/${{ env.SERVICE_SLUG }}-predictor:test"
+          EXPECTED="${{ needs.build-and-sign.outputs.digest }}"
+          docker load -i /tmp/image.tar
+          docker push "$IMG"
+          ACTUAL=$(docker inspect --format='{{index .RepoDigests 0}}' "$IMG" | cut -d@ -f2)
+          echo "→ expected $EXPECTED"
+          echo "→ actual   $ACTUAL"
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "::error::re-pushed digest does not match the one the overlay pins."
+            echo "::error::The deployment would reference an image this registry does not have,"
+            echo "::error::which is the ErrImagePull this step exists to prevent."
+            exit 1
+          fi
+
+      - name: Write the kind config that mirrors that registry
+        run: |
+          cat > /tmp/kind-config.yaml <<'EOF'
+          kind: Cluster
+          apiVersion: kind.x-k8s.io/v1alpha4
+          containerdConfigPatches:
+            - |-
+              [plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:5001"]
+                endpoint = ["http://kind-registry:5000"]
+          EOF
+          cat /tmp/kind-config.yaml
+
       - name: Create kind cluster
         uses: helm/kind-action@06c1ae10762d3b9c1644e7fe69596ae519e015a2 # v1.15.0
         with:
           cluster_name: golden-path
           node_image: ${{ env.KIND_IMAGE }}
+          config: /tmp/kind-config.yaml
           wait: 120s
 
-      - name: Load image into kind
+      - name: Put the registry on the cluster network
+        # Without this the mirror endpoint `kind-registry:5000` does not
+        # resolve from inside the nodes.
         run: |
-          docker load -i /tmp/image.tar
-          kind load docker-image \
-            "localhost:5001/${{ env.SERVICE_SLUG }}-predictor:test" \
-            --name golden-path
+          set -euo pipefail
+          docker network connect kind kind-registry
+          docker network inspect kind --format '{{range .Containers}}{{.Name}} {{end}}'
 
       - name: Install Kyverno
         run: |
