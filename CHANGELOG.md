@@ -15,6 +15,69 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
 
 ## [Unreleased]
 
+### Fixed — a documentation sweep, and a gate I narrowed myself two PRs ago
+
+- **`check_control_claims.py` was scanning 36 anti-patterns instead of 38.**
+  Wrapping the D-32 and D-34 rows in a Jinja raw block — needed so Copier does
+  not render the tokens they document — changed their prefix from `| D-34 |`
+  to `| {% raw %}D-34 |`, and the row pattern no longer matched. The scan
+  narrowed and said nothing. My change, two PRs ago.
+- The pattern now tolerates the wrapper, and the gate **asserts it matched
+  every D-NN up to the highest**: a scan that sees fewer rows than the table
+  holds is now a failure rather than a smaller number. Recovering the two rows
+  also surfaced a sixth path-shaped enforcer that had been invisible.
+- **C8 missed the singular form.** It matched `N overlays` but not
+  `N overlay renders`, so two living documents still said 6 — the check added
+  to stop that count drifting missed an instance of it on the day it shipped.
+  `README.md` and `CONTRIBUTING.md` now say "every overlay rendered", which
+  cannot go stale.
+- `README.md` §"Recent hardening (v0.14.0 → v0.15.x)" was **eleven minor
+  versions behind** `VERSION` (0.26.0). The version range is gone; the section
+  lists releases already.
+
+### Fixed — L3 had been red for eighteen consecutive weeks and nobody was told
+
+- `README.md` offers adopters **"L1 + L2 + L3 are your contract"**. The L3
+  golden-path E2E — scaffold → build → sign → attest → deploy to kind →
+  `/predict` 2xx — failed **every scheduled run from 2026-05-11 to 2026-09-07**.
+  Last success: **2026-05-04**.
+- It was invisible by construction: `golden-path.yml` runs on a weekly schedule
+  and on demand, **never on a pull request**, so its red appeared in no PR's
+  checks and blocked nothing.
+- Its own step summary made it worse: five ✓ marks printed under
+  `if: always()`, so a failed run rendered a summary claiming every stage
+  passed. It now reports each job's real result.
+- **A red L3 now opens an issue** — one issue, commented rather than
+  duplicated, so eighteen weeks of failure is one thread instead of eighteen.
+  Same mechanism the drift-detection workflow already used.
+
+### Fixed — the two defects inside that failure
+
+- **`cronjob-performance.yaml` shipped two containers with no `securityContext`
+  at all** — no `allowPrivilegeEscalation: false`, no `runAsNonRoot`, no
+  dropped capabilities — while every namespace this template creates is
+  labelled `pod-security.kubernetes.io/enforce: restricted` (D-29). The
+  golden path had been printing the violation weekly since May.
+- **Nothing tested it.** `grep -rl allowPrivilegeEscalation` over the test
+  trees returned nothing: the invariant was declared in `AGENTS.md`, labelled
+  on every namespace, and asserted nowhere. New
+  `test_pod_security_standards.py` checks every container and initContainer of
+  every workload in `k8s/base`, discovered rather than listed, and fails when
+  it discovers none.
+- The apply-result check **decided on leftover lines instead of on meaning**,
+  and that is the root cause of the eighteen weeks. It subtracted the lines it
+  recognised and failed if anything remained — but `kubectl` always leaves
+  something: it writes warnings to the same stream, and every
+  `no matches for kind` error is followed by `ensure CRDs are installed first`,
+  a continuation line carrying no kind name that survived every filter.
+  My first attempt at this fix removed only the warnings and stayed red for
+  exactly that reason. The check now collects the **kinds** that failed to map
+  and tolerates the run only if every one is a CRD this cluster is known not
+  to have.
+- The golden path's own CI patch also **appended a second `ENVIRONMENT`** to a
+  container whose overlay already set one, producing a
+  `hides previous definition` warning that the old check counted as residue.
+
 ### Fixed — the supply-chain gate had never examined a Python dependency
 
 - `Self-audit` §"Trivy filesystem scan" was blocking (`exit-code: 1`,

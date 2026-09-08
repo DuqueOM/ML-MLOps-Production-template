@@ -136,12 +136,15 @@ jobs:
                   value:
                     name: ALLOW_MODELLESS_STARTUP
                     value: "true"
-                - op: add
-                  path: /spec/template/spec/containers/0/env/-
-                  value:
-                    name: ENVIRONMENT
-                    value: "ci"
           EOF
+
+          # ENVIRONMENT is deliberately NOT patched here. The gcp-dev overlay
+          # already sets it, and this used to `add` a second entry to the same
+          # env list: Kubernetes keeps the last one, but `kubectl apply` emits
+          #   containers[0].env[9]: hides previous definition of "ENVIRONMENT"
+          # on stderr — and the apply-result check below treated any stderr
+          # residue as a failure. That warning is one of the two reasons this
+          # job had been red every week since 2026-05-11.
 
       - name: Upload scaffolded service for downstream jobs
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -428,11 +431,34 @@ jobs:
           APPLY_RC=$?
           set -e
           cat /tmp/apply.err
+          # Decide on MEANING, not on leftover lines.
+          #
+          # The original check subtracted the lines it recognised and failed if
+          # anything remained. Two things always remain: `kubectl` writes
+          # warnings to the same stream, and each "no matches for kind" error
+          # is followed by a continuation line, `ensure CRDs are installed
+          # first`, which carries no kind name and therefore survived every
+          # filter. That is why this job was red for eighteen consecutive
+          # weeks. A line-subtraction check is fragile against a tool that is
+          # free to reformat its own diagnostics.
+          #
+          # So: collect the KINDS that failed to map. If every one is a CRD
+          # this cluster is known not to have, the apply did what it could.
+          if grep -q '^Warning:' /tmp/apply.err; then
+            echo "→ kubectl warnings (not fatal, but read them):"
+            grep '^Warning:' /tmp/apply.err | sed 's/^/::warning::/'
+          fi
           if [ "$APPLY_RC" -ne 0 ]; then
-            if grep -Ev 'no matches for kind "(AnalysisTemplate|PrometheusRule)"' /tmp/apply.err | grep -q .; then
+            unmatched=$(grep -oE 'no matches for kind "[^"]+"' /tmp/apply.err \
+                        | sed -E 's/.*"([^"]+)"/\1/' | sort -u)
+            unexpected=$(echo "$unmatched" | grep -Ev '^(AnalysisTemplate|PrometheusRule)$' || true)
+            if [ -z "$unmatched" ] || [ -n "$unexpected" ]; then
               echo "::error::kubectl apply failed for reasons other than known missing CRDs"
+              [ -n "$unexpected" ] && echo "::error::unexpected unmapped kind(s): $(echo "$unexpected" | tr '\n' ' ')"
+              cat /tmp/apply.err
               exit "$APPLY_RC"
             fi
+            echo "→ unmapped kinds, all expected in a bare kind cluster: $(echo "$unmatched" | tr '\n' ' ')"
           fi
           echo "→ kubectl apply exit code: $APPLY_RC (known missing CRDs only)"
           echo "→ Namespaces:"
@@ -555,12 +581,81 @@ jobs:
 
       - name: Summarize on step summary
         if: always()
+        # Reports the real outcome. This block used to print five ✓ marks
+        # under `if: always()`, so a failed run still rendered a summary
+        # claiming every stage passed — the job was red for eighteen
+        # consecutive weeks while its own summary said otherwise.
+        env:
+          SCAFFOLD: ${{ needs.scaffold.result }}
+          BUILD: ${{ needs.build-and-sign.result }}
+          ADMIT: ${{ needs.admit-and-smoke.result }}
+          AUDIT: ${{ job.status }}
         run: |
+          mark() { [ "$1" = "success" ] && echo "✓" || echo "✗ ($1)"; }
           {
-            echo "## Golden Path E2E"
-            echo "- ✓ Scaffolded service from template"
-            echo "- ✓ Built + signed image by digest"
-            echo "- ✓ Kyverno admitted digest-pinned manifest"
-            echo "- ✓ PSS namespace label enforced"
-            echo "- ✓ Audit trail written on clean runner"
+            echo "## Golden Path E2E (L3)"
+            echo "- $(mark "$SCAFFOLD") Scaffolded service from template"
+            echo "- $(mark "$BUILD") Built + signed image by digest"
+            echo "- $(mark "$ADMIT") Kyverno admitted digest-pinned manifest, PSS enforced, smoke passed"
+            echo "- $(mark "$AUDIT") Audit trail written on clean runner"
           } >> "$GITHUB_STEP_SUMMARY"
+
+  # ---------------------------------------------------------------------
+  # A red L3 must reach a human.
+  #
+  # This workflow runs on a weekly schedule and on demand — never on a PR —
+  # so its failures appear in no PR's checks and block nothing. It was red
+  # every week from 2026-05-11 to 2026-09-07, eighteen runs, while README.md
+  # offered L1+L2+L3 to adopters as "your contract". Nobody was told.
+  #
+  # Same mechanism the drift-detection workflow already uses: open an issue.
+  # One issue, reopened and commented rather than duplicated, so eighteen
+  # weeks of failure is one thread and not eighteen.
+  # ---------------------------------------------------------------------
+  notify-on-failure:
+    name: Open an issue when L3 is red
+    needs: [scaffold, build-and-sign, admit-and-smoke, audit-trail]
+    if: always() && contains(needs.*.result, 'failure')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          script: |
+            const label = 'golden-path-red';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const failed = Object.entries(${{ toJSON(needs) }})
+              .filter(([, v]) => v.result === 'failure')
+              .map(([k]) => k);
+            const body = [
+              `Golden Path E2E (verification layer **L3**) failed.`,
+              ``,
+              `Failed job(s): ${failed.map(f => `\`${f}\``).join(', ') || 'unknown'}`,
+              `Run: ${runUrl}`,
+              ``,
+              `README.md offers L1 + L2 + L3 to adopters as their contract, so a red`,
+              `L3 is a claim this repository is making and not meeting. It is not a`,
+              `flake budget: fix it or change the claim.`,
+            ].join('\n');
+
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo,
+              state: 'open', labels: label, per_page: 1,
+            });
+            if (existing.data.length) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: existing.data[0].number, body,
+              });
+              core.notice(`Commented on existing issue #${existing.data[0].number}`);
+            } else {
+              const created = await github.rest.issues.create({
+                owner: context.repo.owner, repo: context.repo.repo,
+                title: 'Golden Path E2E (L3) is failing',
+                labels: [label, 'ci'],
+                body,
+              });
+              core.notice(`Opened issue #${created.data.number}`);
+            }

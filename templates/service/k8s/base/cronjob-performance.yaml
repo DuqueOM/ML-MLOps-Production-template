@@ -31,6 +31,12 @@ spec:
         spec:
           serviceAccountName: "{@ service_kebab @}-sa"
           restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            fsGroup: 65532
+            seccompProfile:
+              type: RuntimeDefault
           containers:
             - name: performance-monitor
               image: "{@ service_kebab @}-predictor:latest"
@@ -56,6 +62,13 @@ spec:
                   value: "pushgateway:9091"
                 - name: SERVICE_NAME
                   value: "{@ service_slug @}"
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                runAsNonRoot: true
+                runAsUser: 65532
+                capabilities:
+                  drop: ["ALL"]
               resources:
                 requests:
                   cpu: "200m"
@@ -101,6 +114,12 @@ spec:
         spec:
           serviceAccountName: "{@ service_kebab @}-sa"
           restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            fsGroup: 65532
+            seccompProfile:
+              type: RuntimeDefault
           containers:
             - name: ground-truth-ingester
               image: "{@ service_kebab @}-predictor:latest"
@@ -113,6 +132,13 @@ spec:
               env:
                 - name: SERVICE_NAME
                   value: "{@ service_slug @}"
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                runAsNonRoot: true
+                runAsUser: 65532
+                capabilities:
+                  drop: ["ALL"]
               resources:
                 requests:
                   cpu: "200m"

@@ -60,7 +60,14 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 AGENTS = REPO_ROOT / "AGENTS.md"
 
 # A row of the anti-pattern table: `| D-07 | ... | ... |`
-_ROW = re.compile(r"^\|\s*(?P<id>D-\d+)\s*\|")
+#
+# The optional `{% ... %}` is not cosmetic. Two rows (D-32, D-34) document
+# Jinja tokens and are wrapped in a raw block so Copier does not try to render
+# them — `| {% raw %}D-34 | ...`. This pattern used to require `D-` right after
+# the pipe, so the moment those rows gained their wrapper the scan silently
+# dropped from 38 anti-patterns to 36, and said nothing. The count assertion in
+# `main` exists so that cannot happen again quietly.
+_ROW = re.compile(r"^\|\s*(?:\{%[^%]*%\}\s*)?(?P<id>D-\d+)\s*\|")
 # The clause naming an enforcer, when that enforcer is path-shaped.
 _ENFORCED_BY = re.compile(r"[Ee]nforced by[^|]*?`?(?P<target>(?:[A-Za-z0-9_./-]*tests?|scripts)/[A-Za-z0-9_./-]+)")
 
@@ -92,6 +99,22 @@ def main() -> int:
             "a human, so this is a failure rather than a pass.\n"
         )
         return 2
+
+    # Every D-NN from 1 to the highest must appear as a row. A scan that
+    # silently sees fewer rows than the table holds is the failure mode this
+    # gate exists to prevent, applied to itself.
+    ids = sorted(int(_ROW.match(line).group("id")[2:]) for line in rows)  # type: ignore[union-attr]
+    gaps = [n for n in range(1, max(ids) + 1) if n not in ids]
+    if gaps:
+        sys.stderr.write(
+            f"::error::AGENTS.md's anti-pattern table has rows up to D-{max(ids):02d} but "
+            f"this scan matched only {len(ids)}. Unmatched: "
+            f"{', '.join(f'D-{n:02d}' for n in gaps)}. Either a row was deleted "
+            f"without renumbering, or its shape changed and `_ROW` no longer "
+            f"matches it — the second is how this scan once narrowed from 38 to 36 "
+            f"without a word.\n"
+        )
+        return 1
 
     problems: list[str] = []
     checked = 0

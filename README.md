@@ -170,7 +170,7 @@ cannot be asserted template-wide.
 | Layer | Scope | Where it runs | Evidence in this repo |
 | ------- | ------- | --------------- | ---------------------- |
 | **L1 — Contract tests** | Invariants on generated service code, schemas, policies, and agentic config | `.github/workflows/validate-templates.yml`; `templates/service/tests/test_*.py`; `make validate-templates` locally | Contract tests covering FastAPI serving invariants, memory (ADR-018), CI self-healing (ADR-019), model-routing disclaimer, Phase-0/1 disclosure, anti-pattern count consistency, Locust ↔ API parity, PR evidence policy, CI autofix policy |
-| **L2 — Scaffold smoke** | End-to-end scaffold of a fresh service + 6 overlay renders + kubeconform + binary audit | `.github/workflows/pr-smoke-lane.yml` on every PR; `make smoke` on demand (~60 s) | Green per PR; history in the Actions tab |
+| **L2 — Scaffold smoke** | End-to-end scaffold of a fresh service + every overlay rendered + kubeconform + binary audit | `.github/workflows/pr-smoke-lane.yml` on every PR; `make smoke` on demand (~60 s) | Green per PR; history in the Actions tab |
 | **L3 — Golden path E2E** | Full chain: scaffold → build → sign → attest → deploy to kind → rollout Available → `/health` + `/ready` + `/predict` 2xx + metrics smoke | `.github/workflows/golden-path.yml` on release tags / schedule | Shipped; uses an explicit CI-only synthetic model fallback so runtime checks do not depend on cloud buckets |
 | **L4 — Adopter production rollout** | Your cluster, your traffic, your SLOs, your compliance regime | Your CD pipeline + observability stack | **Not assertable from this repo.** Checklist lives in [`VALIDATION_LOG.md`](VALIDATION_LOG.md) §"Template for future entries" and [`docs/runbooks/`](docs/runbooks/). The R4 audit documents which runbooks are still pending execution by the author (secrets-integration-e2e, ground-truth ingestion SLA, Kyverno admission validation, secret history scan). |
 
@@ -180,7 +180,7 @@ is the paper trail for what has already been executed vs. what is only shipped a
 
 ---
 
-### Recent hardening (v0.14.0 → v0.15.x)
+### Recent hardening
 
 Each release reports the gaps it closed against the most recent enterprise audit, with file-level evidence rather than a
 self-given numeric score.

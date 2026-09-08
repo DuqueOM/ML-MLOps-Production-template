@@ -477,8 +477,12 @@ def check_overlay_count() -> list[str]:
         9: "nine",
         10: "ten",
     }
+    # `overlay` as well as `overlays`. README described the smoke lane in the
+    # singular ("… overlay renders …"), which the plural-only pattern walked
+    # straight past — the check added to stop this count drifting missed an
+    # instance of it on the day it shipped.
     claim = re.compile(
-        r"\b(\d+|" + "|".join(words.values()) + r")\s+(?:kustomize\s+|environment\s+)?overlays\b",
+        r"\b(\d+|" + "|".join(words.values()) + r")\s+(?:kustomize\s+|environment\s+)?overlays?\b",
         re.IGNORECASE,
     )
     frozen = (
