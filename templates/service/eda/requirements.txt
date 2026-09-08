@@ -3,7 +3,7 @@
 # For heavy mode with ydata-profiling, install requirements-heavy.txt instead.
 
 pandas~=2.2
-numpy~=1.26
+numpy>=1.26,<3.0
 scipy~=1.11
 scikit-learn~=1.4
 pandera~=0.18
