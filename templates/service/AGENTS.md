@@ -508,21 +508,21 @@ agentic/rules/         # CANONICAL rules: 18 files (humans edit here)
 agentic/skills/        # CANONICAL skills: 26 SKILL.md files
 agentic/workflows/     # CANONICAL workflows: 18 files
 
-.devin/rules/          # generated MIRROR (full bodies): 18 files
-.devin/skills/         # generated MIRROR: 26 SKILL.md files
-.devin/workflows/      # generated MIRROR: 18 files
+.devin/rules/          # generated MIRROR (full bodies): 19 files
+.devin/skills/         # generated MIRROR: 27 SKILL.md files
+.devin/workflows/      # generated MIRROR: 20 files
 
-.cursor/rules/         # generated rule pointers: 18 .mdc files
-.cursor/skills/        # generated skill pointers + INDEX.md: 26 skills
-.cursor/commands/      # generated workflow pointers: 18 commands
+.cursor/rules/         # generated rule pointers: 19 .mdc files
+.cursor/skills/        # generated skill pointers + INDEX.md: 27 skills
+.cursor/commands/      # generated workflow pointers: 20 commands
 
-.claude/rules/         # generated rule pointers: 18 .md files
-.claude/skills/        # generated skill pointers + INDEX.md: 26 skills as <id>/SKILL.md (Claude Code discoverable layout)
-.claude/commands/      # generated workflow pointers: 18 commands
+.claude/rules/         # generated rule pointers: 19 .md files
+.claude/skills/        # generated skill pointers + INDEX.md: 27 skills as <id>/SKILL.md (Claude Code discoverable layout)
+.claude/commands/      # generated workflow pointers: 20 commands
 
-.codex/rules/          # generated rule pointers: 18 .md files
-.codex/skills/         # generated skill pointers: 26 skills
-.codex/workflows/      # generated workflow pointers: 18 workflows
+.codex/rules/          # generated rule pointers: 19 .md files
+.codex/skills/         # generated skill pointers: 27 skills
+.codex/workflows/      # generated workflow pointers: 20 workflows
 .codex/automations/    # Codex-specific schedules/events, never STOP writes
 ```
 

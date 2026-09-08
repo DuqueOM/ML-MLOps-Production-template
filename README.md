@@ -373,9 +373,9 @@ The governance pattern is now single-source:
 - `.cursor/`, `.claude/`, and `.codex/` contain generated pointer adapters only.
 
 Run `make agentic-sync` after changing the manifest or canonical `agentic/` files, then `make validate-agentic` to prove
-parity. Today the manifest exposes the same 18 rule files, 26 skills, and 18 workflows to Devin, Cursor, Claude, and
+parity. Today the manifest exposes the same 19 rules + 27 skills + 20 workflows to Devin, Cursor, Claude, and
 Codex. The project shorthand "18 rules" refers to the numbered policy set; on disk, rule 04 is split into serving and
-training files.
+training files, which is why the file count is 19.
 
 ### Static decision protocol
 
