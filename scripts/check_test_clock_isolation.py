@@ -24,6 +24,26 @@ Each entry in the ALLOWLIST below was reviewed when this script was
 written. The PR that adds a new entry MUST link to evidence (a test
 run, a code-review note) that the new use is fixture-only.
 
+Sleeping is covered too, and was not always
+----------------------------------------
+The pattern originally matched only calls that *read* the clock, while the
+contract in the title says tests must not depend on it. Waiting on the clock
+is the same dependency wearing a different hat, and it produced a real CI
+failure: ``test_flush_on_buffer_full`` slept 0.1s hoping a background flush
+task had run, and intermittently it had not. Worse, the sleep was long enough
+to usually hide a genuine production defect underneath it — an
+``asyncio.create_task`` whose reference nobody kept, so the task could be
+garbage-collected mid-write.
+
+``time.sleep`` and ``asyncio.sleep`` are therefore findings. The fix is almost
+always to wait on the *event you actually care about* — an ``asyncio.Event``,
+a queue, a condition — with a generous timeout as a failsafe. A timeout only
+decides how long the suite waits before declaring something broken; a sleep
+decides whether the test is correct.
+
+A sleep that simulates a slow dependency (inside a fake backend, say) is not
+a clock dependency and belongs in the ALLOWLIST with that justification.
+
 This is a **lightweight signal**, not a proof. It complements (does
 not replace) the freeze_time / monkeypatch patterns that individual
 tests should still apply when accuracy matters.
@@ -43,7 +63,8 @@ PATTERN = re.compile(
     r"""
     \b(
         datetime\.(now|utcnow)
-        | time\.(time|monotonic|monotonic_ns|time_ns)
+        | time\.(time|monotonic|monotonic_ns|time_ns|sleep)
+        | asyncio\.sleep
     )\b
     \s*\(
     """,
@@ -74,7 +95,24 @@ ALLOWLIST: dict[str, list[tuple[int, str, str]]] = {
             "in production code, but tests force off_hours explicitly)",
         ),
     ],
+    "templates/tests/unit/test_prediction_logger.py": [
+        (
+            257,
+            "time.sleep",
+            "inside a fake backend that SIMULATES a slow write, which is the "
+            "condition under test (close() must wait for an in-flight flush); "
+            "the test asserts on what the backend received, never on elapsed time",
+        ),
+    ],
     "templates/service/tests/integration/conftest.py": [
+        (
+            36,
+            "time.sleep",
+            "poll interval inside wait_for_service's deadline loop: the correct "
+            "shape for waiting on an EXTERNAL dependency (poll + timeout), not a "
+            "fixed sleep standing in for synchronisation; no assertion depends on "
+            "how long it slept",
+        ),
         (
             28,
             "time.time",
