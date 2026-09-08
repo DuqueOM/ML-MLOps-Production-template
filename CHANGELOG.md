@@ -15,6 +15,23 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
 
 ## [Unreleased]
 
+### Fixed — `make train` could not have worked in any generated service
+
+- Three Makefile targets ran the trainer as a plain script:
+  `python src/<slug>/training/train.py`. `train.py` opens with
+  `from ..config import QualityGatesConfig`; a file inside a package run as a
+  top-level script has no package context, so Python raises
+  **`ImportError: attempted relative import with no known parent package`**
+  before the first line of logic. Found by actually running it, while
+  verifying something else.
+- Now invoked as a module (`python -m src.<slug>.training.train`), which is
+  what the imports require.
+- **Nothing tested it**, because the suite tests the code the recipes call and
+  never the calling. `test_makefile_entrypoints.py` closes that: for every
+  Makefile recipe that runs a repository Python file, a *script* invocation is
+  only valid if the file has no relative imports. Static — it does not run
+  training, which needs data, EDA artefacts and a configured split.
+
 ### Fixed — a documentation sweep, and a gate I narrowed myself two PRs ago
 
 - **`check_control_claims.py` was scanning 36 anti-patterns instead of 38.**

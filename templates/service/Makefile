@@ -78,7 +78,7 @@ lock: ## Freeze requirements.txt into a hash-pinned lockfile (reproducible rebui
 
 train: ## Run training pipeline
 	@echo "$(GREEN)Running training pipeline...$(NC)"
-	python src/$(SERVICE_SLUG)/training/train.py --data $(DATA_PATH)
+	python -m src.$(SERVICE_SLUG).training.train --data $(DATA_PATH)
 	@echo "$(GREEN)✓ Training complete$(NC)"
 
 serve: ## Start local dev server (uvicorn)
@@ -91,7 +91,7 @@ serve: ## Start local dev server (uvicorn)
 
 local-loop: ## Run train → serve → drift in local mode (no Docker/K8s/TF)
 	@echo "$(GREEN)Running local loop (profile=local)...$(NC)"
-	python src/$(SERVICE_SLUG)/training/train.py --data $(DATA_PATH)
+	python -m src.$(SERVICE_SLUG).training.train --data $(DATA_PATH)
 	@echo "$(GREEN)Starting server...$(NC)"
 	@MODEL_PATH=$(MODEL_PATH) uvicorn app.main:app --host 0.0.0.0 --port $(PORT) &
 	@sleep 2 && curl -sf http://localhost:$(PORT)/health && echo " $(GREEN)✓ healthy$(NC)" || echo " $(RED)✗ unhealthy$(NC)"
@@ -244,7 +244,7 @@ drift-check: ## Run reproducible drift drill against data/production/
 
 retrain: ## Run training pipeline + quality gates (non-agentic equivalent of /retrain)
 	@echo "$(GREEN)Retraining $(SERVICE_SLUG)...$(NC)"
-	python src/$(SERVICE_SLUG)/training/train.py --data $(DATA_PATH)
+	python -m src.$(SERVICE_SLUG).training.train --data $(DATA_PATH)
 	@echo "$(GREEN)Validating quality gates...$(NC)"
 	python scripts/validate_quality_gates.py --require-at-least-one
 	@echo "$(GREEN)✓ Retraining + gate validation complete$(NC)"
