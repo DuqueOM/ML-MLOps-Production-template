@@ -383,6 +383,90 @@ def check_doc_language_and_privacy() -> list[str]:
     return problems
 
 
+def check_overlay_count() -> list[str]:
+    """C8 — no living document may state an overlay count that is not the real one.
+
+    The number six was asserted against this directory in fifteen living
+    places while the tree held seven.
+    ``batch-only`` was consequently absent from three CI lanes, from
+    ``test_scaffold.sh``, and from every test in the repository — it shipped a
+    real NetworkPolicy that nothing verified. The number was not merely stale
+    documentation; it was the shape of the blind spot.
+
+    The loops that used it now discover the directory instead, so this check
+    guards the remaining surface: prose. It scans living documents only —
+    frozen records (CHANGELOG, VALIDATION_LOG, releases/, docs/audit/,
+    docs/decisions/, MIGRATION.md) correctly describe the count at the time
+    they were written, and rewriting them would make them worse records.
+    """
+    overlay_dir = REPO_ROOT / "templates" / "service" / "k8s" / "overlays"
+    if not overlay_dir.is_dir():
+        return []
+    actual = sum(1 for d in overlay_dir.iterdir() if d.is_dir())
+    if actual == 0:
+        return [f"no overlays found under {overlay_dir} — the count cannot be checked"]
+
+    words = {
+        1: "one",
+        2: "two",
+        3: "three",
+        4: "four",
+        5: "five",
+        6: "six",
+        7: "seven",
+        8: "eight",
+        9: "nine",
+        10: "ten",
+    }
+    claim = re.compile(
+        r"\b(\d+|" + "|".join(words.values()) + r")\s+(?:kustomize\s+|environment\s+)?overlays\b",
+        re.IGNORECASE,
+    )
+    frozen = (
+        "CHANGELOG.md",
+        "VALIDATION_LOG.md",
+        "MIGRATION.md",
+        "releases/",
+        "docs/audit/",
+        "docs/decisions/",
+    )
+    # Tracked files only. An untracked or ignored file — private scratch
+    # notes, a virtualenv — is not a claim this repository makes.
+    try:
+        tracked = subprocess.run(
+            ["git", "ls-files", "*.md", "*.py"],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.split()
+    except (OSError, subprocess.CalledProcessError):
+        return ["could not list tracked files (`git ls-files`) to check overlay counts"]
+
+    problems: list[str] = []
+    for rel in sorted(tracked):
+        if rel.startswith(frozen):
+            continue
+        path = REPO_ROOT / rel
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        for lineno, line in enumerate(text.splitlines(), 1):
+            match = claim.search(line)
+            if not match:
+                continue
+            token = match.group(1).lower()
+            stated = int(token) if token.isdigit() else next(n for n, w in words.items() if w == token)
+            if stated != actual:
+                problems.append(
+                    f"{rel}:{lineno}: says {match.group(0)!r}, but "
+                    f"templates/service/k8s/overlays/ holds {actual}. "
+                    f"A wrong count here is how `batch-only` stayed invisible to CI."
+                )
+    return problems
+
+
 CHECKS = [
     ("C1 version-sot", check_version_sot),
     ("C2 llms-version", check_llms_version),
@@ -391,6 +475,7 @@ CHECKS = [
     ("C5 adr-traceability", check_adr_traceability),
     ("C6 release-note-exists", check_release_note_exists),
     ("C7 doc-language-privacy", check_doc_language_and_privacy),
+    ("C8 overlay-count", check_overlay_count),
 ]
 
 
@@ -401,7 +486,9 @@ def main() -> int:
             all_problems.append((label, problem))
 
     if not all_problems:
-        print("[doc-coherence] OK — all 7 cross-document checks pass.")
+        # Derived, not written: this line said "all 7" while CHECKS held 8,
+        # in the script whose job is catching exactly that.
+        print(f"[doc-coherence] OK — all {len(CHECKS)} cross-document checks pass.")
         return 0
 
     print(f"[doc-coherence] {len(all_problems)} coherence violation(s):")

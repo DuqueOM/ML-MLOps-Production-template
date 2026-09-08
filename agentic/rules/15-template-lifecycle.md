@@ -75,7 +75,10 @@ fields are `false`.
 
 {% raw %}1. Zero unreplaced Jinja tokens (`{@ @}`, `{% %}`, `{# #}`) in rendered output.{% endraw %}
 2. Post-gen agentic tasks ran (`.devin/rules/` exists, manifest present).
-3. All 6 Kustomize overlays render from the scaffolded service.
+3. Every Kustomize overlay renders from the scaffolded service. CI discovers
+   them rather than listing them: a hardcoded list named the six cloud x env
+   overlays while the tree held seven, and `batch-only` went unrendered and
+   untested for as long as that list stood.
 4. `ci_verify_workflows.py` passes on the scaffolded service.
 
 ## Upgrade path

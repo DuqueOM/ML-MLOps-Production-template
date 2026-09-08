@@ -303,7 +303,7 @@ flowchart TD
 
 ### Kubernetes and runtime
 
-- Kustomize base plus six overlays: `gcp-dev`, `gcp-staging`, `gcp-prod`, `aws-dev`, `aws-staging`, `aws-prod`.
+- Kustomize base plus seven overlays: `gcp-dev`, `gcp-staging`, `gcp-prod`, `aws-dev`, `aws-staging`, `aws-prod`, and `batch-only`.
 - CPU-only HPA, PodDisruptionBudget, NetworkPolicy, RBAC, non-root security context, and Pod Security Standards labels.
 - Separate liveness, readiness, and startup probes.
 - Digest-based deployment and immutable image flow.

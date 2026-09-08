@@ -160,7 +160,7 @@ gates passing.
 
 **Success criteria**:
 `for o in gcp-dev gcp-staging gcp-prod aws-dev aws-staging aws-prod; do kustomize build k8s/overlays/$o; done` renders
-valid YAML for all 6 overlays.
+valid YAML for every overlay.
 
 ### 8. Infrastructure (Agent-TerraformBuilder)
 
