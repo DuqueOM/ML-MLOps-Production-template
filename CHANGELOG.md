@@ -15,6 +15,42 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
 
 ## [Unreleased]
 
+### Fixed — "6 overlays" was asserted in fifteen places while the tree held seven
+
+- `batch-only` was consequently absent from **three CI lanes**
+  (`validate-templates.yml` digest-pinning, `golden-path.yml` scaffold check,
+  `pr-smoke-lane.yml` render + kubeconform), from `scripts/test_scaffold.sh`,
+  and **from every test in the repository** — `grep -rl batch-only` over the
+  test trees returned nothing.
+- It ships `networkpolicy-batch.yaml`, a real egress control: the base
+  NetworkPolicy selects `app: <service>` while the batch CronJob pod carries
+  `app: <service>-batch`, so the base does not cover it at all. That control
+  was correct and **entirely unverified**.
+- Every loop now discovers the directory. `golden-path.yml` goes further and
+  compares the scaffold against the template, which also catches an overlay
+  *added* to the template and never rendered — something a list cannot do.
+- One step was **deleted rather than fixed**: `validate-templates.yml`
+  §"Validate Kustomize builds (all 6 overlays)" sat in the same job as the
+  shared `scripts/validate_k8s_manifests.sh`, which already builds every
+  overlay *and* runs kubeconform *and* validates the base. Fixing a duplicate
+  in two places is how the two drift.
+
+### Added — C8, so the count cannot drift back
+
+- `check_doc_coherence.py` gains an eighth check: no living document may state
+  an overlay count that is not the real one. It scans **tracked files only**
+  (an ignored scratch file is not a claim the repository makes) and skips
+  frozen records, which correctly describe the count at the time they were
+  written.
+- The egress test now **derives** its overlay list and asserts that *every*
+  overlay controls egress — by patching the default-deny base, or by shipping
+  its own policy — and that none opens `0.0.0.0/0`. It also fails when it
+  discovers nothing: an empty parametrize set is reported as a pass.
+- Found while adding C8: `check_doc_coherence.py` printed *"all 7
+  cross-document checks pass"* from a **hardcoded 7** while `CHECKS` held 8 —
+  a stale count inside the script whose job is catching stale counts. It is
+  now derived from `len(CHECKS)`.
+
 ### Added — the generated service gets the Markdown gate the template holds itself to
 
 - A scaffolded service had **no docs lane at all**: no markdownlint, no

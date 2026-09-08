@@ -10,7 +10,7 @@ name: pr-smoke-lane
 #
 # Per-PR fast feedback that catches the same class of bugs BEFORE merge:
 #   1. Scaffold a service from the template (test_scaffold.sh).
-#   2. For each of the six overlays (gcp-{dev,staging,prod},
+#   2. For each overlay under k8s/overlays/ (discovered, not listed:
 #      aws-{dev,staging,prod}), run `kustomize build` and pipe through
 #      `kubeconform --strict` against Kubernetes 1.29.0.
 #   3. Verify the deploy chain references only binaries the workflow can
@@ -86,14 +86,22 @@ jobs:
           bash scripts/test_scaffold.sh
           ls -la /tmp/scaffold-out 2>/dev/null || true
 
-      - name: Render the six overlays
+      - name: Render every overlay
         id: render-overlays
         run: |
           set -euo pipefail
           OVERLAY_BASE="templates/service/k8s/overlays"
           OUT_DIR="/tmp/overlay-renders"
           mkdir -p "${OUT_DIR}"
-          OVERLAYS=(gcp-dev gcp-staging gcp-prod aws-dev aws-staging aws-prod)
+          # Discovered, not listed: the literal six omitted `batch-only`, so
+          # one of the seven shipped overlays was never rendered or passed
+          # through kubeconform in this lane.
+          mapfile -t OVERLAYS < <(cd "${OVERLAY_BASE}" && ls -d */ | sed 's|/$||')
+          if [ ${#OVERLAYS[@]} -eq 0 ]; then
+            echo "::error::no overlays found under ${OVERLAY_BASE} — a loop over nothing reports the same green as a full pass"
+            exit 1
+          fi
+          echo "Rendering ${#OVERLAYS[@]} overlays: ${OVERLAYS[*]}"
           FAILED=0
           for ov in "${OVERLAYS[@]}"; do
             if [ ! -d "${OVERLAY_BASE}/${ov}" ]; then

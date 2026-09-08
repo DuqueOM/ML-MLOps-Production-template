@@ -160,7 +160,8 @@ The template went through a 15-finding audit covering CI/CD, supply chain,
 testing, security, and infra hygiene. All Critical + High + Medium gaps
 were closed in commits `9d8894e` through `b8708b6`:
 
-- 6 environment overlays + PSS namespaces (was 2 misnamed overlays)
+- Per-environment overlays + PSS namespaces (was 2 misnamed overlays);
+  `batch-only` was added later, and CI discovers the set rather than counting it
 - Image digest pinning end-to-end (push → sign → attest → verify by digest)
 - Cosign installer in deploy workflows (was missing)
 - AWS_ROLE_ARN declared in workflow_call.secrets contract (was lying)

@@ -470,18 +470,6 @@ jobs:
           fi
           exit $status
 
-      - name: Validate Kustomize builds (all 6 overlays)
-        # Each env (dev/staging/prod) for each cloud (gcp/aws) MUST render
-        # cleanly. Catches: missing patches, broken namespace.yaml, image
-        # name typos. Aligned with deploy-{gcp,aws}.yml overlay_path values.
-        run: |
-          set -e
-          for overlay in gcp-dev gcp-staging gcp-prod aws-dev aws-staging aws-prod; do
-            echo "→ Validating templates/service/k8s/overlays/$overlay"
-            kustomize build "templates/service/k8s/overlays/$overlay" > /dev/null
-          done
-          echo "✓ All 6 overlays render cleanly"
-
       - name: Image digest pinning (PR-R2-2, audit R2)
         # Audit finding: init container `google/cloud-sdk:slim` and
         # CronJob `{service}-predictor:latest` lived outside the
@@ -498,7 +486,17 @@ jobs:
         run: |
           set -euo pipefail
           status=0
-          for overlay in gcp-dev gcp-staging gcp-prod aws-dev aws-staging aws-prod; do
+          # Discovered, not listed. The literal six omitted `batch-only`, so
+          # its rendered output was never checked for a `:latest` image — the
+          # hard rule below — even though that overlay ships a CronJob with
+          # its own image reference.
+          mapfile -t OVERLAYS < <(cd templates/service/k8s/overlays && ls -d */ | sed 's|/$||')
+          if [ ${#OVERLAYS[@]} -eq 0 ]; then
+            echo "::error::no overlays found — a loop over nothing reports the same green as a full pass"
+            exit 1
+          fi
+          echo "Checking ${#OVERLAYS[@]} overlays: ${OVERLAYS[*]}"
+          for overlay in "${OVERLAYS[@]}"; do
             rendered=$(kustomize build "templates/service/k8s/overlays/$overlay")
             unpinned=$(echo "$rendered" \
               | grep -E '^[[:space:]]+image:' \

@@ -89,16 +89,32 @@ jobs:
           ls -la "$GITHUB_WORKSPACE/${{ env.SERVICE_NAME }}/" | head -20
           echo "service_dir=${{ env.SERVICE_NAME }}" >> "$GITHUB_OUTPUT"
 
-      - name: Validate scaffolder produced the 6 overlays
+      - name: Validate the scaffolder produced every overlay
         # If this step ever fails, audit Critical-1 has regressed.
+        #
+        # Compared against the template rather than a literal list: the list
+        # said six and the template ships seven, so `batch-only` could have
+        # gone missing from a scaffold without this noticing. Comparing the
+        # two trees also catches an overlay that is ADDED to the template but
+        # never rendered, which a list cannot.
         run: |
           set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          mapfile -t EXPECTED < <(cd templates/service/k8s/overlays && ls -d */ | sed 's|/$||')
+          if [ ${#EXPECTED[@]} -eq 0 ]; then
+            echo "::error::no overlays in the template — nothing to compare against"; exit 1
+          fi
           cd "$GITHUB_WORKSPACE/${{ env.SERVICE_NAME }}"
-          for o in gcp-dev gcp-staging gcp-prod aws-dev aws-staging aws-prod; do
+          for o in "${EXPECTED[@]}"; do
             test -d "k8s/overlays/$o" || { echo "::error::missing overlay $o"; exit 1; }
             test -f "k8s/overlays/$o/namespace.yaml" || { echo "::error::missing namespace.yaml in $o"; exit 1; }
           done
-          echo "✓ All 6 overlays + namespace.yaml present"
+          mapfile -t ACTUAL < <(cd k8s/overlays && ls -d */ | sed 's|/$||')
+          if [ "${#ACTUAL[@]}" -ne "${#EXPECTED[@]}" ]; then
+            echo "::error::scaffold has ${#ACTUAL[@]} overlays, template has ${#EXPECTED[@]}: ${ACTUAL[*]} vs ${EXPECTED[*]}"
+            exit 1
+          fi
+          echo "✓ All ${#EXPECTED[@]} overlays + namespace.yaml present: ${EXPECTED[*]}"
 
       - name: Patch dev overlay for synthetic CI model
         run: |
