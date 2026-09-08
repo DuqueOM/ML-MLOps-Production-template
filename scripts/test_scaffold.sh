@@ -300,7 +300,13 @@ fi
 # Validation 6 — Kustomize overlays render
 # ════════════════════════════════════════════════
 info "Validating Kustomize overlays..."
-OVERLAYS=(gcp-dev gcp-staging gcp-prod aws-dev aws-staging aws-prod)
+# Discovered, not listed. The hardcoded six omitted `batch-only` — the same
+# gap PR #102 closed in the CI workflows, still open here. A list has to be
+# remembered; a glob cannot forget.
+mapfile -t OVERLAYS < <(cd "$SERVICE_DIR/k8s/overlays" 2>/dev/null && ls -d */ 2>/dev/null | sed 's|/$||')
+if [[ ${#OVERLAYS[@]} -eq 0 ]]; then
+  fail "No overlays found under k8s/overlays/ — a loop over nothing reports the same green as a full pass"
+fi
 if command -v kustomize >/dev/null 2>&1; then
   for overlay in "${OVERLAYS[@]}"; do
     overlay_dir="$SERVICE_DIR/k8s/overlays/$overlay"
@@ -356,6 +362,50 @@ if command -v pytest >/dev/null 2>&1; then
   fi
 else
   echo -e "${YELLOW}⚠${NC} pytest not installed — skipping collection check"
+fi
+
+# ════════════════════════════════════════════════
+# Validation 7b — the RENDERED markdown is lint-clean
+# ════════════════════════════════════════════════
+# This has to run against the render, not the template. A `{% raw %}` alone on
+# a line renders to nothing but keeps its newline, so the generated service
+# gained blank lines that do not exist in the source: the template linted clean
+# while every scaffolded service shipped MD012 violations. No template-side
+# check can see that, and the service's own docs-quality lane only runs after
+# an adopter already has the repository.
+info "Linting the rendered service's markdown..."
+if command -v npx >/dev/null 2>&1; then
+  if [[ ! -f "$SERVICE_DIR/.markdownlint-cli2.jsonc" ]]; then
+    fail "Scaffolded service has no .markdownlint-cli2.jsonc — its docs-quality job would lint nothing and pass"
+  else
+    # The service is scaffolded INSIDE the cloned template repo, whose
+    # .gitignore lists the scaffold directory. The shipped config sets
+    # `gitignore: true`, so markdownlint walked up to that enclosing repo,
+    # found the whole service ignored and linted zero files. An adopter's
+    # service is its own repository — Copier's closing message makes
+    # "Initialize git" step 3 — so make it one before linting. This also
+    # brings the smoke run closer to reality for the git-dependent contract
+    # tests that follow.
+    git -C "$SERVICE_DIR" init -q 2>/dev/null || true
+    md_out="$(cd "$SERVICE_DIR" && npx --yes markdownlint-cli2@0.23.2 2>&1)" && md_rc=0 || md_rc=$?
+    md_files="$(echo "$md_out" | sed -n 's/^Linting: \([0-9]*\) files$/\1/p' | head -1)"
+    if [[ "$md_rc" -ne 0 ]]; then
+      fail "Rendered service fails its own markdown lint"
+      echo "$md_out" | grep -E 'MD[0-9]{3}/' | head -10
+    elif [[ -z "$md_files" || "$md_files" -eq 0 ]]; then
+      # A run that linted nothing exits 0 too. Zero files is the failure this
+      # whole validation exists to distinguish from a clean pass.
+      fail "markdownlint linted 0 files in the rendered service — the config's globs match nothing"
+    else
+      pass "Rendered markdown is lint-clean ($md_files files)"
+    fi
+  fi
+elif [[ -n "${CI:-}" ]]; then
+  # Locally npx may be absent; in CI it never is, and a silent skip there
+  # would leave this validation permanently unexercised.
+  fail "npx not available in CI — the rendered-markdown lint could not run"
+else
+  echo -e "${YELLOW}\u26a0${NC} npx not available — skipping rendered-markdown lint (CI enforces it)"
 fi
 
 # ════════════════════════════════════════════════

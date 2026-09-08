@@ -1,0 +1,58 @@
+name: Docs Quality
+
+# Markdown style for this service's documentation.
+#
+# The template that generated this repository blocks on the same rule set —
+# `scripts/check_markdownlint_parity.py` upstream fails if the two rule blocks
+# ever diverge — so this job holds you to exactly the bar the template holds
+# itself to, and no more.
+#
+# Scope is `.markdownlint-cli2.jsonc` at the repository root, not an inline
+# glob list here. Passing `globs:` to the action would shadow that file, and a
+# local `markdownlint-cli2` run would then check a different set of files than
+# CI does.
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "**/*.md"
+      - ".markdownlint-cli2.jsonc"
+      - ".github/workflows/docs-quality.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "**/*.md"
+      - ".markdownlint-cli2.jsonc"
+      - ".github/workflows/docs-quality.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  markdown-lint:
+    name: Markdown Lint (style)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Config must exist and declare a scope
+        # Without `.markdownlint-cli2.jsonc` the action runs with no globs,
+        # finds no files, reports "0 issues in 0 files" and exits 0. Deleting
+        # the config is therefore indistinguishable from passing, which is the
+        # one failure mode this job must not have.
+        run: |
+          set -euo pipefail
+          test -f .markdownlint-cli2.jsonc
+          grep -q '"globs"' .markdownlint-cli2.jsonc
+
+      - name: Run markdownlint-cli2
+        # Blocking. The template ships this repository lint-clean, so the first
+        # run is green; from there it fails only on documentation you changed.
+        #
+        # The action is pinned by commit SHA, which pins markdownlint-cli2 and
+        # therefore the rule set. New rules arrive only when you deliberately
+        # bump this line — upstream, MD060 appeared in one such bump and fired
+        # 3,104 times — so a blocking gate cannot break on a dependency's
+        # release day.
+        uses: DavidAnson/markdownlint-cli2-action@21c1be1b93ad9ed58fa840aacc3f279cde2a72ff # v24.2.0

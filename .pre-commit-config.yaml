@@ -318,6 +318,21 @@ repos:
         language: system
         pass_filenames: false
         files: ^(templates/service/docs/decisions/|scripts/check_service_adr_references\.py)
+      - id: markdownlint-parity
+        name: template and service markdownlint rules agree
+        description: |
+          Two configs exist — this repo's and the one shipped to every
+          generated service — because the two trees are not the same
+          shape, so the globs differ. The RULE block must not. A template
+          that lints itself to a stricter bar than it ships makes its own
+          standard untrue. Also checks that every path-shaped exclusion
+          resolves: the repo config carried
+          `!templates/service/eda/notebooks/**` for a directory that never
+          existed, and nothing was looking.
+        entry: python3 scripts/check_markdownlint_parity.py
+        language: system
+        pass_filenames: false
+        files: markdownlint-cli2\.jsonc$|^scripts/check_markdownlint_parity\.py$
       - id: payload-test-scope
         name: payload tests are about the generated service
         description: |
