@@ -28,7 +28,7 @@ pyyaml               ~= 6.0.0    # ground_truth config loader
 mlflow               ~= 2.18.0
 
 # Testing
-pytest               ~= 8.3.0
+pytest               >= 8.3,< 9.2
 pytest-cov           ~= 6.0.0
 locust               ~= 2.32.0
 httpx                ~= 0.28.0
