@@ -204,17 +204,82 @@ jobs:
       # 5. Trivy filesystem scan — catches CVEs in committed manifests
       #    (e.g. base images referenced in Dockerfile, requirements.txt).
       #    May 2026 audit HIGH-1: exit-code: 1 on CRITICAL/HIGH; baseline
-      #    of accepted CVEs lives in `.security-baselines/.trivyignore`.
-      - name: Trivy filesystem scan
+      #    of accepted CVEs lives in `.security-baselines/trivy-fs.trivyignore`.
+      #
+      #    This used to be ONE step pointed at `templates/`, nominally covering
+      #    both secrets and Python dependency vulnerabilities. It covered
+      #    neither well: every run logged
+      #      `Number of language-specific files  num=0`
+      #      `WARN [report] Supported files for scanner(s) not found. scanners=[vuln]`
+      #    because trivy reads a requirements file only when versions are
+      #    pinned exactly, and this repo mandates `~=` (numpy 2.x silently
+      #    corrupts joblib models) with no lock file. A blocking gate that has
+      #    never examined a dependency is worse than no gate: it produces the
+      #    assurance without the check. It is now two steps that each say what
+      #    they do.
+      - name: Trivy secret scan (templates tree)
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: fs
           scan-ref: templates/
+          scanners: secret
+          severity: CRITICAL,HIGH
+          exit-code: "1"
+          format: table
+
+      - name: Resolve Python dependencies to exact versions
+        # pip resolves; nothing is installed. The script fails when it finds no
+        # requirements files, or when one resolves to no packages — an empty
+        # resolution is indistinguishable from a clean scan, which is the
+        # defect being fixed here.
+        run: python3 scripts/resolve_python_dependencies.py /tmp/resolved-deps
+
+      - name: Trivy dependency vulnerability scan
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: /tmp/resolved-deps
+          scanners: vuln
           severity: CRITICAL,HIGH
           exit-code: "1"
           ignore-unfixed: true
-          trivyignores: .security-baselines/.trivyignore
-          format: table
+          trivyignores: .security-baselines/trivy-fs.trivyignore
+          # `list-all-pkgs` makes the package inventory appear per target even
+          # when a target has no findings. Without it trivy omits clean targets
+          # entirely, and the coverage assertion below could not tell "scanned
+          # and clean" from "never parsed".
+          list-all-pkgs: true
+          format: json
+          output: /tmp/trivy-deps.json
+
+      - name: Scan must have examined every resolved file
+        # The gate this replaces exited 0 having read zero files, and trivy
+        # reports that as success. Counting is the only way to tell "clean"
+        # from "checked nothing" — and an exact comparison, not `> 0`, because
+        # trivy matches `requirements.txt` by name and silently skips anything
+        # else: during this change 3 of 4 files were being parsed and the
+        # difference was invisible.
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, sys
+          from pathlib import Path
+          resolved = sorted(p for p in Path("/tmp/resolved-deps").rglob("requirements.txt"))
+          report = json.loads(Path("/tmp/trivy-deps.json").read_text())
+          parsed = [r.get("Target") for r in (report.get("Results") or [])]
+          if len(parsed) != len(resolved):
+              sys.stderr.write(
+                  f"::error::resolved {len(resolved)} requirements file(s) but trivy "
+                  f"parsed {len(parsed)}. Unparsed files are silently unscanned.\n"
+              )
+              for r in resolved:
+                  rel = r.relative_to("/tmp/resolved-deps").as_posix()
+                  if rel not in parsed:
+                      sys.stderr.write(f"::error::  not parsed: {rel}\n")
+              raise SystemExit(1)
+          pkgs = sum(len(r.get("Packages") or []) for r in report["Results"])
+          print(f"[deps-scan] {len(parsed)} file(s), {pkgs} packages examined")
+          PY
 
       # 6. Toolchain-install hygiene (PR-R2-5, audit R2 §5).
       #    The audit called out `curl -s … | bash` and
