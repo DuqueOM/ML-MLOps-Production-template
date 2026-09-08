@@ -431,24 +431,34 @@ jobs:
           APPLY_RC=$?
           set -e
           cat /tmp/apply.err
-          # `kubectl apply` writes BOTH warnings and errors to stderr. The
-          # previous check treated any stderr line that was not a known-missing
-          # CRD as a failure, so a `Warning:` line failed the job — which is
-          # what happened, silently, for eighteen consecutive weekly runs.
+          # Decide on MEANING, not on leftover lines.
           #
-          # Warnings are surfaced loudly and do not fail; genuine errors do.
+          # The original check subtracted the lines it recognised and failed if
+          # anything remained. Two things always remain: `kubectl` writes
+          # warnings to the same stream, and each "no matches for kind" error
+          # is followed by a continuation line, `ensure CRDs are installed
+          # first`, which carries no kind name and therefore survived every
+          # filter. That is why this job was red for eighteen consecutive
+          # weeks. A line-subtraction check is fragile against a tool that is
+          # free to reformat its own diagnostics.
+          #
+          # So: collect the KINDS that failed to map. If every one is a CRD
+          # this cluster is known not to have, the apply did what it could.
           if grep -q '^Warning:' /tmp/apply.err; then
             echo "→ kubectl warnings (not fatal, but read them):"
             grep '^Warning:' /tmp/apply.err | sed 's/^/::warning::/'
           fi
           if [ "$APPLY_RC" -ne 0 ]; then
-            residue=$(grep -Ev 'no matches for kind "(AnalysisTemplate|PrometheusRule)"' /tmp/apply.err \
-                      | grep -v '^Warning:' | grep -v '^$' || true)
-            if [ -n "$residue" ]; then
+            unmatched=$(grep -oE 'no matches for kind "[^"]+"' /tmp/apply.err \
+                        | sed -E 's/.*"([^"]+)"/\1/' | sort -u)
+            unexpected=$(echo "$unmatched" | grep -Ev '^(AnalysisTemplate|PrometheusRule)$' || true)
+            if [ -z "$unmatched" ] || [ -n "$unexpected" ]; then
               echo "::error::kubectl apply failed for reasons other than known missing CRDs"
-              echo "$residue"
+              [ -n "$unexpected" ] && echo "::error::unexpected unmapped kind(s): $(echo "$unexpected" | tr '\n' ' ')"
+              cat /tmp/apply.err
               exit "$APPLY_RC"
             fi
+            echo "→ unmapped kinds, all expected in a bare kind cluster: $(echo "$unmatched" | tr '\n' ' ')"
           fi
           echo "→ kubectl apply exit code: $APPLY_RC (known missing CRDs only)"
           echo "→ Namespaces:"

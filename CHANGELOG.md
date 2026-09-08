@@ -64,11 +64,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
   `test_pod_security_standards.py` checks every container and initContainer of
   every workload in `k8s/base`, discovered rather than listed, and fails when
   it discovers none.
-- The golden path's own CI patch **appended a second `ENVIRONMENT`** to a
+- The apply-result check **decided on leftover lines instead of on meaning**,
+  and that is the root cause of the eighteen weeks. It subtracted the lines it
+  recognised and failed if anything remained — but `kubectl` always leaves
+  something: it writes warnings to the same stream, and every
+  `no matches for kind` error is followed by `ensure CRDs are installed first`,
+  a continuation line carrying no kind name that survived every filter.
+  My first attempt at this fix removed only the warnings and stayed red for
+  exactly that reason. The check now collects the **kinds** that failed to map
+  and tolerates the run only if every one is a CRD this cluster is known not
+  to have.
+- The golden path's own CI patch also **appended a second `ENVIRONMENT`** to a
   container whose overlay already set one, producing a
-  `hides previous definition` warning on stderr — and the apply-result check
-  treated any stderr residue as a failure. Warnings are now surfaced as
-  warnings; only genuine errors fail.
+  `hides previous definition` warning that the old check counted as residue.
 
 ### Fixed — the supply-chain gate had never examined a Python dependency
 
