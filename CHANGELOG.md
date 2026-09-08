@@ -15,6 +15,41 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
 
 ## [Unreleased]
 
+### Fixed — L3 had been red for eighteen consecutive weeks and nobody was told
+
+- `README.md` offers adopters **"L1 + L2 + L3 are your contract"**. The L3
+  golden-path E2E — scaffold → build → sign → attest → deploy to kind →
+  `/predict` 2xx — failed **every scheduled run from 2026-05-11 to 2026-09-07**.
+  Last success: **2026-05-04**.
+- It was invisible by construction: `golden-path.yml` runs on a weekly schedule
+  and on demand, **never on a pull request**, so its red appeared in no PR's
+  checks and blocked nothing.
+- Its own step summary made it worse: five ✓ marks printed under
+  `if: always()`, so a failed run rendered a summary claiming every stage
+  passed. It now reports each job's real result.
+- **A red L3 now opens an issue** — one issue, commented rather than
+  duplicated, so eighteen weeks of failure is one thread instead of eighteen.
+  Same mechanism the drift-detection workflow already used.
+
+### Fixed — the two defects inside that failure
+
+- **`cronjob-performance.yaml` shipped two containers with no `securityContext`
+  at all** — no `allowPrivilegeEscalation: false`, no `runAsNonRoot`, no
+  dropped capabilities — while every namespace this template creates is
+  labelled `pod-security.kubernetes.io/enforce: restricted` (D-29). The
+  golden path had been printing the violation weekly since May.
+- **Nothing tested it.** `grep -rl allowPrivilegeEscalation` over the test
+  trees returned nothing: the invariant was declared in `AGENTS.md`, labelled
+  on every namespace, and asserted nowhere. New
+  `test_pod_security_standards.py` checks every container and initContainer of
+  every workload in `k8s/base`, discovered rather than listed, and fails when
+  it discovers none.
+- The golden path's own CI patch **appended a second `ENVIRONMENT`** to a
+  container whose overlay already set one, producing a
+  `hides previous definition` warning on stderr — and the apply-result check
+  treated any stderr residue as a failure. Warnings are now surfaced as
+  warnings; only genuine errors fail.
+
 ### Fixed — the supply-chain gate had never examined a Python dependency
 
 - `Self-audit` §"Trivy filesystem scan" was blocking (`exit-code: 1`,
