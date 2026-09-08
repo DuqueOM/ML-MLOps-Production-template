@@ -15,6 +15,54 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
 
 ## [Unreleased]
 
+### Added — the generated service gets the Markdown gate the template holds itself to
+
+- A scaffolded service had **no docs lane at all**: no markdownlint, no
+  configuration. The template blocked on 0 findings across 560 files while
+  shipping adopters nothing — a template holding itself to a bar it does not
+  prescribe, which is the same credibility problem as a gate that does not run.
+- `templates/service/.github/workflows/docs-quality.yml` — blocking, pinned by
+  commit SHA (so the rule set changes only in a deliberate bump), and it
+  asserts its own config exists first: without
+  `.markdownlint-cli2.jsonc` the action finds no files, reports *"0 issues in
+  0 files"* and exits 0.
+- `templates/service/.markdownlint-cli2.jsonc` carries the **identical rule
+  block**. It is not byte-identical to the repo's because the scope
+  legitimately differs — a service has no `releases/` and no `templates/` —
+  so `scripts/check_markdownlint_parity.py` compares the half that must match
+  and ignores the half that must not.
+
+### Fixed — a render-only defect no template-side check could see
+
+- **`{% raw %}` alone on a line renders to nothing but keeps its newline.**
+  `agentic/rules/15-template-lifecycle.md` had four such markers, so every
+  generated service shipped **6 MD012 violations** in 2 files while the
+  template itself linted clean. The markers are now inline with their content.
+- This is the class the new **validation 7b in `scripts/test_scaffold.sh`**
+  exists for: it lints the **rendered** service, not the template. Its four
+  states are all verified — clean (301 files), lint findings, a missing
+  config, and **zero files linted**, which exits 0 on its own and is the
+  failure this validation was written to tell apart from a pass.
+- Finding zero files was not hypothetical: the smoke test scaffolds *inside*
+  the cloned template repo, whose `.gitignore` lists the scaffold directory,
+  so `gitignore: true` correctly ignored the entire service. The harness now
+  runs `git init` first — which is what Copier's own closing message tells the
+  adopter to do as step 3.
+
+### Fixed — two more exclusions and lists that were narrower than they looked
+
+- The repository's markdownlint config excluded
+  `templates/service/eda/notebooks/**`, **a directory that does not exist and
+  never did** — inherited verbatim from the workflow's old inline globs in the
+  previous release. An exclusion for a path that is not there is
+  indistinguishable from one that is working, and `check_doc_path_refs.py`
+  does not scan `.jsonc`. The parity gate now checks that every path-shaped
+  exclusion resolves in its own tree.
+- `scripts/test_scaffold.sh` validated **6 of 7** Kustomize overlays from a
+  hardcoded list, omitting `batch-only` — the same gap closed in the CI
+  workflows one release earlier, still open here. It now discovers the
+  overlays and fails when it finds none.
+
 ### Fixed — a generated service shipped 19 test files about the template repository
 
 - Measured on a freshly scaffolded service before this change:

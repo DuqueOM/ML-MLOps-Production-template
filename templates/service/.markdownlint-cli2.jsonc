@@ -1,34 +1,30 @@
-// markdownlint-cli2 configuration
+// markdownlint-cli2 configuration — generated service
 // ============================================================================
-// The `Markdown Lint (style)` job in `.github/workflows/docs-quality.yml` ran
-// with **no configuration file at all** — every default rule, at every default
-// setting — and carried `continue-on-error: true` with the comment
-// "warn-only first run; flip to false after triage". The triage never
-// happened. It reported 8,584 issues in 474 files on every run, and blocked
-// nothing.
+// Shipped by the ML-MLOps template. The rule block below is IDENTICAL to the
+// template repository's own `.markdownlint-cli2.jsonc`, byte for byte, and
+// `scripts/check_markdownlint_parity.py` in the template fails if the two ever
+// diverge. A template that lints itself to a stricter bar than it ships is the
+// same credibility problem as a gate that does not run.
 //
-// This file is that triage. Every rule that is off is off with a reason
-// written here, because a lint config is the easiest place in a repository to
-// hide a narrowed scope behind a green check.
+// Only the SCOPE differs, because the two trees are not the same shape: this
+// repository has no `releases/` and no `templates/`, and its documentation is
+// yours to change.
 //
-// The rule set is pinned: the workflow pins `markdownlint-cli2-action` by
-// commit SHA, which pins markdownlint-cli2 v0.23.2 (markdownlint v0.41.1).
-// New rules therefore arrive only in an explicit PR — MD060 landed that way
-// and fired 3,104 times — so a blocking gate cannot break on a dependency's
-// release day.
+// Enforced by `.github/workflows/docs-quality.yml`, which blocks. If a rule
+// here fights your house style, change it deliberately and say why in a
+// comment — that is what this file is for. What you should not do is delete
+// the file: without it markdownlint-cli2 finds no files, reports
+// "0 issues in 0 files" and exits 0, so the job passes by checking nothing.
+// The workflow asserts the file exists for exactly that reason.
 // ============================================================================
 {
-  // What is linted. Declared here rather than only in the workflow so a local
-  // `markdownlint-cli2` run checks exactly what CI checks — the two drifting
-  // apart is how a gate ends up green in one place and red in the other.
+  // Declared here rather than in the workflow so a local `markdownlint-cli2`
+  // run checks exactly what CI checks. Passing `globs:` to the action would
+  // shadow this list and let the two drift apart.
   //
-  // `.venv` is not cosmetic: the workflow's globs excluded only `node_modules`
-  // and `.git`, so a local run linted every LICENSE.md and README.md in
-  // site-packages and reported third-party formatting as repository debt.
-  // Untracked/ignored files are not part of the repository, and CI never
-  // checks them out. Without this, a local run lints private scratch files
-  // and reports them as repository debt — the same local-vs-CI divergence
-  // the explicit globs above exist to prevent.
+  // `gitignore: true` keeps the linter off anything git already ignores —
+  // `mlruns/`, virtualenvs, scratch notes — so a local run does not report
+  // third-party or private formatting as your debt.
   "gitignore": true,
 
   "globs": [
@@ -37,11 +33,9 @@
     "!node_modules",
     "!.venv",
     "!venv",
-    "!**/site-packages/**",
-    // Shipped release notes are immutable records of what was released.
-    // Reformatting them would edit a published artefact.
-    "!releases/**"
+    "!**/site-packages/**"
   ],
+
   "config": {
     // Everything on, then subtract with a stated reason.
     "default": true,

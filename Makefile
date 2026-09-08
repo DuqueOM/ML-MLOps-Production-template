@@ -184,6 +184,7 @@ GATES := \
 	check_service_adr_references \
 	check_template_render_safety \
 	check_payload_test_scope \
+	check_markdownlint_parity \
 	check_test_clock_isolation \
 	validate_agentic
 

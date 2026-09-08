@@ -28,8 +28,7 @@ templates/scripts/new-service.sh` must return zero hits.
 
 ## D-34 — Unquoted Jinja tokens in YAML lists
 
-{% raw %}
-Copier's custom delimiters `{@ @}` produce valid YAML **only when
+{% raw %}Copier's custom delimiters `{@ @}` produce valid YAML **only when
 quoted** in list contexts. An unquoted `- {@ service_name @}` is invalid
 YAML because the `@` character cannot start a token.
 
@@ -46,8 +45,7 @@ service:
 ```
 
 **Check**: `rg -n '^\s+- \{@' templates/service/ --glob "*.yml"` must
-return zero hits. Every match is an unquoted Jinja token in a YAML list.
-{% endraw %}
+return zero hits. Every match is an unquoted Jinja token in a YAML list.{% endraw %}
 
 ## D-35 — Local profile accepting cloud credentials or targeting a cluster
 
@@ -74,10 +72,8 @@ fields are `false`.
 ## Scaffolding invariant
 
 `scripts/test_scaffold.sh` MUST validate:
-{% raw %}
 
-1. Zero unreplaced Jinja tokens (`{@ @}`, `{% %}`, `{# #}`) in rendered output.
-{% endraw %}
+{% raw %}1. Zero unreplaced Jinja tokens (`{@ @}`, `{% %}`, `{# #}`) in rendered output.{% endraw %}
 2. Post-gen agentic tasks ran (`.devin/rules/` exists, manifest present).
 3. All 6 Kustomize overlays render from the scaffolded service.
 4. `ci_verify_workflows.py` passes on the scaffolded service.
