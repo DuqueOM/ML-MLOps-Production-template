@@ -75,7 +75,7 @@ Uniform bins can produce empty bins at extremes → PSI dominated by epsilon noi
 ## Step 2: Run Drift Detection Manually
 
 ```bash
-python src/{service}/monitoring/drift_detection.py \
+python -m src.{service}.monitoring.drift_detection \
   --reference data/reference/{service}_reference.csv \
   --current data/production/{service}_latest.csv \
   --output drift_report.json

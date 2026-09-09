@@ -13,7 +13,7 @@
 pip install -r requirements.txt
 
 # Train model
-python src/{@ service_slug @}/training/train.py --data data/raw/dataset.csv
+python -m src.{@ service_slug @}.training.train --data data/raw/dataset.csv
 
 # Run API locally
 uvicorn app.main:app --host 0.0.0.0 --port 8000

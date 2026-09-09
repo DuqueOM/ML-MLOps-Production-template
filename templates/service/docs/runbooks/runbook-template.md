@@ -64,7 +64,7 @@ gh run list --workflow=retrain-{@ service_slug @}.yml --limit=1
 
 ```bash
 # 1. Run detailed drift analysis (Python module — snake-case {@ service_slug @})
-python src/{@ service_slug @}/monitoring/drift_detection.py \
+python -m src.{@ service_slug @}.monitoring.drift_detection \
   --reference data/reference/reference.csv \
   --current data/production/latest.csv \
   --output drift_report.json

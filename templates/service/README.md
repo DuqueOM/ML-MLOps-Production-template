@@ -11,7 +11,7 @@ uv sync
 # Option B: pip (compatible, e.g. air-gapped environments)
 pip install -r requirements.txt
 
-python src/{@ service_slug @}/training/train.py --data data/raw/dataset.csv
+python -m src.{@ service_slug @}.training.train --data data/raw/dataset.csv
 uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
