@@ -1,15 +1,41 @@
-# EDA module — lightweight dependencies (default mode)
-# ~50MB total. Sufficient for datasets up to ~1M rows.
-# For heavy mode with ydata-profiling, install requirements-heavy.txt instead.
+# EDA module — lightweight dependencies (default mode).
+#
+# This lane runs in the SAME environment as the service: `docs/TUTORIAL.md` §3
+# installs this file on top of `../requirements.txt` and §4 then runs
+# `make train` there. So every package below that also appears in
+# `../requirements.txt` MUST carry a byte-identical specifier, and
+# `scripts/check_dependency_pin_coherence.py` fails the build if it does not.
+#
+# It was not identical, and pip does not complain, because the tutorial issues
+# two separate install commands: the second silently upgraded the first. The
+# adopter trained against scikit-learn 1.9 and served from an image built with
+# 1.5.2 — the joblib version skew that the `~=` policy (D-05) exists to
+# prevent. See ADR-048.
+#
+# The list is what `eda_pipeline.py` and its tests import (verified by AST, not
+# by reading), plus two that no import statement reveals: pyarrow, which pandas
+# reaches for when the pipeline writes its parquet artifact, and chardet, which
+# the `eda-analysis` skill instructs the agent to use for encoding detection.
+# The pyarrow omission was found by running the pipeline in a venv built from
+# this file alone — a static reading of the imports cannot see it.
+#
+# scipy, scikit-learn, pandera and matplotlib were declared here and imported
+# by nothing. The only mention of pandera in the pipeline is the string literal
+# it *writes into* the generated schema file, which the service later validates
+# with the service's own pandera. Two of those four unused pins were the ones
+# that diverged.
 
-pandas~=2.2
-numpy~=1.26
-scipy~=1.11
-scikit-learn~=1.9
-pandera~=0.33
-matplotlib~=3.11
-pyyaml~=6.0
-chardet~=7.6
+pandas               ~= 2.2.0     # shared with ../requirements.txt
+numpy                ~= 1.26.0    # shared — numpy 2.x silently corrupts joblib models
+pyyaml               ~= 6.0.0     # shared — artifact + config emitters
+pyarrow              ~= 18.0.0    # shared — parquet engine for
+                                  # baseline_distributions.parquet (CONTRACT.md).
+                                  # pandas reaches it, so no `import pyarrow`
+                                  # appears in the pipeline and it was never
+                                  # declared here: the lane only ever worked
+                                  # because the service set happened to carry it.
+
+chardet              ~= 7.6       # EDA-only: encoding detection (eda-analysis skill)
 
 # Optional (uncomment for interactive notebook use):
 # jupyter~=1.0

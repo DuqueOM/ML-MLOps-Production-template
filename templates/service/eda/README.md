@@ -86,7 +86,10 @@ Or in agentic mode:
 
 ### Lightweight (default)
 
-- `pandas`, `scipy`, `scikit-learn`, `matplotlib`, `pandera`
+- `pandas`, `numpy`, `pyyaml` — the three the pipeline imports, pinned
+  identically to the service's `requirements.txt` because §3 of the
+  tutorial installs both into one environment (ADR-048)
+- `chardet` — encoding detection, used by the `eda-analysis` skill
 - ~50MB total
 - Phase 1 produces a Markdown profile, not ydata-profiling HTML
 - **Recommended for CI and small-to-medium datasets (< 1M rows)**

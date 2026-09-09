@@ -15,6 +15,52 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
 
 ## [Unreleased]
 
+### Fixed — the EDA lane and the service could not be installed together
+
+- `templates/service/requirements.txt` pinned `scikit-learn ~= 1.5.0` and
+  `pandera ~= 0.23.0`; `templates/service/eda/requirements.txt` pinned
+  `~= 1.9` and `~= 0.33`. Together: **`ResolutionImpossible`**.
+- **pip never said so.** `docs/TUTORIAL.md` installs them in two separate
+  commands, so the second silently *upgrades* the first. Measured on a clean
+  venv following the documented sequence: scikit-learn 1.5.2 → **1.9.0**,
+  pandera 0.23.1 → **0.33.1**. The adopter trained on 1.9 and served from an
+  image built with 1.5.2 — the joblib version skew `~=` pinning (D-05) exists
+  to prevent, through the one door nothing was watching.
+- Dependabot merged the bump on the EDA lane (#116, #135) and it was closed on
+  the service lane (#132, #134). Each call was defensible alone; **no gate
+  compared the two files**, so the gap was invisible from the moment it opened.
+- **`scripts/check_dependency_pin_coherence.py`** (gate 16) groups requirements
+  files by the environment they are installed into and fails when a group
+  disagrees on a shared pin — *identical* specifiers, not merely compatible
+  ones, because `~=1.26` (>=1.26,<2.0) and `~=1.26.0` (>=1.26.0,<1.27.0) read
+  alike and resolve differently. It also fails on any tracked requirements file
+  that belongs to **no** group, so a new file cannot join unchecked. Tested by
+  reintroducing the defect, not only by passing on a clean tree.
+- The EDA lane declared eight packages and imported four of them. scipy,
+  scikit-learn, pandera and matplotlib were dead weight — **two of those four
+  dead pins were the ones that diverged**. The only mention of pandera in the
+  pipeline is the string literal it writes *into* the generated schema file.
+- **pyarrow was missing and nobody could have seen it statically.** The
+  pipeline writes `baseline_distributions.parquet`; pandas reaches for pyarrow,
+  so no `import pyarrow` exists to find. The lane only ever worked because the
+  service set happened to carry it — installed standalone, as its own README
+  presents it, it crashed in Phase 0. Found by running it. AST proves a package
+  is *used*, never that the declared set is *sufficient*.
+- See [ADR-048](docs/decisions/ADR-048-requirements-co-installation-groups.md).
+
+### Verified — the full training pipeline runs end to end
+
+- ADR-047 recorded "the full training pipeline end to end" as **not verified**;
+  four configuration guards stood between the CLI and the MLflow call. All four
+  were satisfied and the ~700-line path was run whole: EDA gate → split policy
+  → Optuna HPO → cross-validation → fit → evaluation → quality gates →
+  `model.joblib` + `training_manifest.json` → an MLflow run carrying metrics,
+  params, tags and a registered model. The `roc_auc >= 0.8` gate correctly
+  **failed** the run at 0.796 — the gate works, on a deliberately weak signal.
+- Golden Path E2E (L3) was run on `main` for the first time since the registry
+  fix (#137) merged: **green** — scaffold, build + sign by digest, kind +
+  Kyverno admission + smoke, audit trail.
+
 ### Fixed — `make train` could not have worked in any generated service
 
 - Three Makefile targets ran the trainer as a plain script:
