@@ -773,6 +773,12 @@ jobs:
       - name: Check test clock isolation
         run: python3 scripts/check_test_clock_isolation.py
 
+      - name: Check dependency partition
+        # The served image installs requirements.txt. An unguarded import of a
+        # training-only package on a path the image runs would put mlflow and
+        # optuna back into every inference pod (ADR-049).
+        run: python3 scripts/check_dependency_partition.py
+
       - name: Check dependency pin coherence
         # Two requirements files installed into one environment disagreed on
         # scikit-learn and pandera, so the tutorial's own install sequence
