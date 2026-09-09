@@ -1,0 +1,211 @@
+#!/usr/bin/env python3
+"""Verify that requirements files installed into the SAME environment agree on pins.
+
+Why this exists
+---------------
+A generated service ships more than one requirements file, and
+``docs/TUTORIAL.md`` walks the adopter through installing several of them into
+one environment. Nothing checked that they could coexist. They could not::
+
+    ERROR: Cannot install scikit-learn~=1.5.0 and scikit-learn~=1.9 because
+    these package versions have conflicting dependencies.
+    ERROR: ResolutionImpossible
+
+``templates/service/requirements.txt`` pinned ``scikit-learn ~= 1.5.0`` and
+``pandera ~= 0.23.0``; ``templates/service/eda/requirements.txt`` pinned
+``~= 1.9`` and ``~= 0.33``. pip does not error, because the tutorial installs
+them in two separate commands — it silently *upgrades* the first set. So the
+adopter trains a model against scikit-learn 1.9 and serves it from an image
+built with 1.5.2. That is precisely the joblib version-skew failure the
+``~=`` policy (D-05) exists to prevent, arriving through the one door nothing
+was watching.
+
+How it got there is the part worth designing against: Dependabot raised the
+bump on both lanes. The EDA-lane PRs were merged (#116, #135) and the
+service-lane PRs for the same packages were closed (#132, #134). Each decision
+was defensible alone; together they opened a gap, and no gate compared the two
+files, so the gap was invisible.
+
+What this checks
+----------------
+1. **Pin coherence.** Within a co-installation group, a distribution declared
+   in more than one file must carry a byte-identical specifier. Identical, not
+   merely compatible: ``~=1.26`` (>=1.26,<2.0) and ``~=1.26.0``
+   (>=1.26.0,<1.27.0) are both "numpy 1.x" to a reader and different resolvers
+   to pip, and the looser one silently readmits the version the tighter one
+   was written to exclude.
+
+2. **Group membership is total.** Every tracked ``*requirements*.txt`` must
+   belong to a declared group. A new requirements file cannot join the tree
+   without a human deciding what it is installed alongside — otherwise this
+   gate would narrow exactly the way the defects it hunts do, and would keep
+   reporting OK at its smaller size.
+
+What this deliberately does NOT check
+-------------------------------------
+Transitive resolvability. Two files can agree on every shared *direct* pin and
+still conflict three levels down. Catching that needs a resolver and a network,
+which the CI already spends once in
+``scripts/resolve_python_dependencies.py``. This gate is the static, offline,
+sub-second half: it catches the class that actually occurred, on every commit,
+including pre-push.
+
+Exit codes
+----------
+- 0: every co-installation group is internally coherent.
+- 1: a group disagrees on a shared pin, or a requirements file belongs to no
+  group.
+"""
+
+from __future__ import annotations
+
+import re
+import subprocess
+import sys
+from collections import defaultdict
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+
+# Files installed into a SHARED environment, and therefore required to agree.
+#
+# Membership is a claim about how the files are USED, so each group cites the
+# instruction that puts them in one environment. Splitting a group is a
+# decision: it asserts that two files never meet, and that assertion is what
+# stops being true when someone writes a new tutorial step.
+CO_INSTALLATION_GROUPS: dict[str, tuple[str, tuple[str, ...]]] = {
+    "generated-service": (
+        "docs/TUTORIAL.md §3 installs eda/requirements.txt into the environment "
+        "created from requirements.txt, then §4 runs `make train` in it; "
+        "eda/requirements-heavy.txt opens with `-r requirements.txt`",
+        (
+            "templates/service/requirements.txt",
+            "templates/service/eda/requirements.txt",
+            "templates/service/eda/requirements-heavy.txt",
+        ),
+    ),
+    "minimal-example": (
+        "examples/minimal is a standalone runnable demo with its own venv "
+        "(README: `cd examples/minimal && pip install -r requirements.txt`); "
+        "it never shares an environment with the generated service, which is "
+        "why its pins may differ",
+        ("examples/minimal/requirements.txt",),
+    ),
+}
+
+# `name spec` on one line, ignoring comments, blank lines, `-r` includes and
+# pip flags. Extras and environment markers are kept out of the name so
+# `foo[bar] ~= 1.0` and `foo ~= 1.0` are recognised as the same distribution.
+_REQ = re.compile(
+    r"""^\s*
+    (?P<name>[A-Za-z0-9][A-Za-z0-9._-]*)      # distribution name
+    \s*(?:\[[^\]]*\])?                        # optional extras
+    \s*(?P<spec>[~=<>!][^;#]*?)?              # optional version specifier
+    \s*(?:;[^#]*)?                            # optional environment marker
+    \s*(?:\#.*)?$                             # optional trailing comment
+    """,
+    re.VERBOSE,
+)
+
+
+def _normalise(name: str) -> str:
+    """PEP 503 normalisation — `scikit_learn` and `scikit-learn` are one name."""
+    return re.sub(r"[-_.]+", "-", name).lower()
+
+
+def _declarations(path: Path) -> dict[str, str]:
+    """Direct pins in one file: normalised name -> specifier as written."""
+    found: dict[str, str] = {}
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith(("#", "-", "--")):
+            continue
+        match = _REQ.match(line)
+        if not match:
+            continue
+        spec = (match.group("spec") or "").strip()
+        found[_normalise(match.group("name"))] = re.sub(r"\s+", "", spec)
+    return found
+
+
+def _tracked_requirements() -> list[str]:
+    """Discovered from git, not listed here — a listed set cannot notice a new file."""
+    proc = subprocess.run(
+        ["git", "ls-files", "*requirements*.txt"],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return sorted(line for line in proc.stdout.split() if line)
+
+
+def main() -> int:
+    tracked = _tracked_requirements()
+    declared = {p for _, members in CO_INSTALLATION_GROUPS.values() for p in members}
+
+    failures: list[str] = []
+
+    ungrouped = sorted(set(tracked) - declared)
+    if ungrouped:
+        failures.append(
+            "requirements file(s) belong to no co-installation group:\n"
+            + "\n".join(f"    - {p}" for p in ungrouped)
+            + "\n  Add each to a group in CO_INSTALLATION_GROUPS, or open a new one.\n"
+            "  An ungrouped file is unchecked, and an unchecked file is how the\n"
+            "  scikit-learn 1.5/1.9 split happened in the first place."
+        )
+
+    missing = sorted(declared - set(tracked))
+    if missing:
+        failures.append(
+            "group member(s) are declared but not tracked by git:\n"
+            + "\n".join(f"    - {p}" for p in missing)
+            + "\n  Either the file was removed and the group is stale, or it was\n"
+            "  never committed."
+        )
+
+    compared = 0
+    for group, (rationale, members) in CO_INSTALLATION_GROUPS.items():
+        pins: dict[str, list[tuple[str, str]]] = defaultdict(list)
+        for member in members:
+            path = REPO_ROOT / member
+            if not path.is_file():
+                continue
+            for name, spec in _declarations(path).items():
+                pins[name].append((member, spec))
+
+        for name, sites in sorted(pins.items()):
+            if len(sites) < 2:
+                continue
+            compared += 1
+            specs = {spec for _, spec in sites}
+            if len(specs) == 1:
+                continue
+            detail = "\n".join(f"    {spec or '(unpinned)':<16} {member}" for member, spec in sorted(sites))
+            failures.append(
+                f"group '{group}' disagrees on '{name}':\n{detail}\n"
+                f"  These files are installed into one environment:\n"
+                f"    {rationale}.\n"
+                f"  Make the specifiers identical. Whichever version wins, the\n"
+                f"  environment that trains the model and the image that serves it\n"
+                f"  must resolve to the same one."
+            )
+
+    if failures:
+        print("FAIL: requirements files that share an environment disagree on their pins.")
+        print()
+        for item in failures:
+            print(f"  - {item}\n")
+        return 1
+
+    print(
+        f"[dependency-pins] OK — {len(tracked)} requirements file(s) in "
+        f"{len(CO_INSTALLATION_GROUPS)} co-installation group(s); "
+        f"{compared} shared pin(s) agree."
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

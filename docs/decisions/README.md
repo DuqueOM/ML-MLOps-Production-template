@@ -16,7 +16,7 @@ Numbering is dense and gaps are deliberate — a withdrawn ADR keeps its
 number and says so, rather than being deleted and leaving a hole
 (`scripts/check_doc_coherence.py` C5 enforces this).
 
-**47 decisions recorded.**
+**48 decisions recorded.**
 
 | ADR | Decision |
 | --- | --- |
@@ -67,3 +67,4 @@ number and says so, rather than being deleted and leaving a hole
 | 045 | [Separate the release-channel tag namespace from frozen audit snapshots](ADR-045-tag-namespace-separation.md) |
 | 046 | [Replace archived tfsec with Trivy config for Terraform IaC scanning](ADR-046-tfsec-to-trivy-config-migration.md) |
 | 047 | [Migrating the template from MLflow 2.18 to 3.x](ADR-047-mlflow-3-migration.md) |
+| 048 | [Requirements files that share an environment must agree on their pins](ADR-048-requirements-co-installation-groups.md) |

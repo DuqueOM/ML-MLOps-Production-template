@@ -773,6 +773,12 @@ jobs:
       - name: Check test clock isolation
         run: python3 scripts/check_test_clock_isolation.py
 
+      - name: Check dependency pin coherence
+        # Two requirements files installed into one environment disagreed on
+        # scikit-learn and pandera, so the tutorial's own install sequence
+        # silently upgraded the service's pins out from under it (ADR-048).
+        run: python3 scripts/check_dependency_pin_coherence.py
+
   agentic-adapter-drift:
     name: Agentic Adapter Drift Gate
     runs-on: ubuntu-latest

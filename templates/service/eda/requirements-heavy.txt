@@ -4,6 +4,11 @@
 
 -r requirements.txt
 
+# Plotting lives here, not in the base lane: eda_pipeline.py imports no
+# plotting library (verified by AST). matplotlib was declared in the base
+# lane and used by nothing; seaborn pulls it in anyway, and it is named
+# explicitly so the dependency is a decision rather than a side effect.
+matplotlib~=3.11
 ydata-profiling~=4.6
 plotly~=7.0
 seaborn~=0.13

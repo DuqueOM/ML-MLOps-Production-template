@@ -256,6 +256,20 @@ repos:
         language: system
         pass_filenames: false
         files: ^(\.security-baselines/|scripts/check_baselines_expiry\.py)
+      - id: dependency-pin-coherence
+        name: requirements files sharing an environment agree on pins
+        description: |
+          templates/service/requirements.txt and eda/requirements.txt are
+          installed into ONE environment by docs/TUTORIAL.md, and disagreed on
+          scikit-learn (~=1.5.0 vs ~=1.9) and pandera (~=0.23.0 vs ~=0.33).
+          pip does not object — the second install silently upgrades the first
+          — so the adopter trained on 1.9 and served from an image built with
+          1.5.2. Dependabot merged the bump on one lane and it was closed on
+          the other; nothing compared the two files.
+        entry: python3 scripts/check_dependency_pin_coherence.py
+        language: system
+        pass_filenames: false
+        files: requirements.*\.txt$|^scripts/check_dependency_pin_coherence\.py$
       - id: test-clock-isolation
         name: tests do not depend on the wall clock
         entry: python3 scripts/check_test_clock_isolation.py
