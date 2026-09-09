@@ -80,7 +80,6 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
 - ADR-033 carries a dated correction: the `local-loop` recipe it records could
   never have run.
 
-
 ### Fixed — the EDA lane and the service could not be installed together
 
 - `templates/service/requirements.txt` pinned `scikit-learn ~= 1.5.0` and
