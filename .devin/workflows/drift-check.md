@@ -22,7 +22,7 @@ gsutil cp gs://${DATA_BUCKET}/${SERVICE}/production_data_latest.csv data/product
 ## 3. Run Drift Detection
 
 ```bash
-python src/${SERVICE_SLUG}/monitoring/drift_detection.py \
+python -m src.${SERVICE_SLUG}.monitoring.drift_detection \
   --reference data/reference/${SERVICE_SLUG}_reference.csv \
   --current data/production/production_data_latest.csv \
   --output drift_report_$(date +%Y%m%d).json
@@ -41,7 +41,7 @@ PSI ≥ 0.20:  🚨 Alert — action required
 ## 5. Push Metrics to Prometheus
 
 ```bash
-python src/${SERVICE_SLUG}/monitoring/drift_detection.py --push-metrics
+python -m src.${SERVICE_SLUG}.monitoring.drift_detection --push-metrics
 ```
 
 // turbo

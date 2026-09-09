@@ -107,6 +107,17 @@ local-loop: ## Run train → serve → drift in local mode (no Docker/K8s/TF)
     python scripts/drills/run_drift_drill.py
 ```
 
+> **Correction (2026-09-09).** The recipe as written above could never have
+> run. `train.py` opens with `from ..config import QualityGatesConfig`, and a
+> file inside a package invoked as a top-level script has no package context,
+> so Python raises `ImportError: attempted relative import with no known parent
+> package` before the first line of logic. The shipped Makefile now uses
+> `python -m src.$(SERVICE_SLUG).training.train`. The decision this ADR records
+> — a `local` profile that runs the full cycle with no cloud — stands; only the
+> invocation form was wrong. `tests/test_python_entrypoint_invocations.py`
+> covers every surface that invokes a repository Python file, not just the
+> Makefile, which is why this snippet was found.
+
 ### 2.5 Governance mapping
 
 | Profile | Scaffold | Train | Serve | Deploy | Drift | Retrain |

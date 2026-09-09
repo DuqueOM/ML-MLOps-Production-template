@@ -90,7 +90,7 @@ If validation fails → investigate upstream data changes before proceeding.
 ## Step 4: Execute Training
 
 ```bash
-python src/{service}/training/train.py \
+python -m src.{service}.training.train \
   --data data/raw/production_data_latest.csv \
   --experiment "{service}-retraining-$(date +%Y%m%d)" \
   --optuna-trials 50
@@ -201,6 +201,6 @@ gh issue create \
 
 ```bash
 # Update drift reference to new training data distribution
-python src/{service}/monitoring/drift_detection.py --update-reference
+python -m src.{service}.monitoring.drift_detection --update-reference
 gsutil cp data/reference/{service}_reference.csv gs://{data-bucket}/{service}/reference/
 ```

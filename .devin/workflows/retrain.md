@@ -35,7 +35,7 @@ print(f'OK: {len(df)} rows')
 ## 4. Execute Training
 
 ```bash
-python src/${SERVICE_SLUG}/training/train.py \
+python -m src.${SERVICE_SLUG}.training.train \
   --data data/raw/production_data_latest.csv \
   --experiment "${SERVICE}-retrain-$(date +%Y%m%d)" \
   --optuna-trials 50
@@ -97,7 +97,7 @@ gh issue create \
 ## 7. Update Reference Data
 
 ```bash
-python src/${SERVICE_SLUG}/monitoring/drift_detection.py --update-reference
+python -m src.${SERVICE_SLUG}.monitoring.drift_detection --update-reference
 ```
 
 ## 8. Verify Deployment

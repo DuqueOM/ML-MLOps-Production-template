@@ -15,6 +15,71 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
 
 ## [Unreleased]
 
+### Fixed — the CLI was dead, and `dvc repro` had never worked
+
+- **`src/<slug>/evaluation.py` and `src/<slug>/evaluation/` both existed.** A
+  package always beats a module of the same name, so `<slug>.evaluation`
+  resolved to the package — whose `__init__.py` held one docstring. `cli.py`
+  opens with `from .evaluation import ModelEvaluator` and therefore raised
+  **`ImportError: cannot import name 'ModelEvaluator'`** on import. The whole
+  CLI was unreachable and all 224 lines of `evaluation.py` were dead. It
+  arrived when `champion_challenger.py` was added as a package beside a module
+  already there; the package docstring has read "base metrics +
+  champion/challenger comparison" ever since, describing a layout that only now
+  exists. Nothing warns — this is specified import behaviour.
+  `evaluation.py` → `evaluation/metrics.py`, re-exported.
+  `tests/test_no_module_package_shadowing.py` scans the whole tree, not the one
+  pair that broke.
+- **`dvc.yaml` declared four stages and three could not run.** `validate` ran
+  `training/validate_data.py` (never existed); `featurize` ran
+  `training/features.py` (real file, no `__main__`, no parser — exits 0 having
+  produced nothing, and DVC then fails on the missing output and blames the
+  output); `train` ran `training/train.py` as a script (`ImportError`); and
+  `evaluate` pointed at `training/evaluate.py`, also non-existent. `dvc repro`
+  had never completed in any generated service. **No test read the file.**
+  The two "missing" stages were never missing capability — `train.py` validates
+  with `ServiceInputSchema` and applies `FeatureEngineer` itself. Now two
+  stages, through the `cli.py` subcommands that already existed and were
+  unreachable, both executed end to end. `tests/test_dvc_pipeline_is_runnable.py`
+  checks that each stage's target exists, is invoked in a form that works, and
+  has an entrypoint at all — the third check is the one that catches `featurize`.
+
+### Fixed — the drift job silently ran with schema validation off
+
+- `drift_detection.py` imports `..schemas.ServiceInputSchema` inside a
+  `try/except ImportError`. Run as a **script** — which is what the shipped
+  `drift-detection.yml` workflow and five agentic documents did — it does not
+  crash. It binds the schema to `None`, and `validate_drift_dataframe` skips
+  every check while logging a warning whose own text says that branch
+  "exists only for template-level tests". Measured: script form →
+  `ServiceInputSchema is None`; module form → the schema. So every generated
+  service ran drift detection with input validation off, producing what that
+  function's docstring calls **"a phantom alert (or worse, a phantom
+  all-clear)"**. All invocations are now the module form.
+
+### Fixed — the guard for this defect class was narrower than the defect
+
+- `test_makefile_entrypoints.py` read the Makefile and nothing else. The
+  Makefile was fixed, the guard went green, and the identical broken invocation
+  stayed live in **thirteen other places** — the retraining workflow (whose
+  *same file* used the correct form four steps later), `dvc.yaml`, both
+  READMEs, the drift workflow, a runbook, and six agentic documents across
+  their three copies. A control scoped to one file while the defect lives
+  across workflows, pipeline definitions and documentation is the same shape as
+  the bug it was written to catch.
+- Now `tests/test_python_entrypoint_invocations.py`, over every shipped surface
+  that can invoke a repository Python file: **39 invocations checked, up from
+  3**. It asserts the scan was non-empty, because a glob that matches nothing
+  reports as a pass.
+- Found while writing it: the widened guard had a hole of its own. It discarded
+  any path still containing `{` after expansion, and in the *template* repo the
+  package directory is literally named `{@ service_slug @}`, so every
+  Copier-token invocation expanded to itself and was thrown away — `dvc.yaml`
+  was scanned and silently skipped, and the negative control passed when it
+  should have failed. Existence on disk is now the only test.
+- ADR-033 carries a dated correction: the `local-loop` recipe it records could
+  never have run.
+
 ### Fixed — the EDA lane and the service could not be installed together
 
 - `templates/service/requirements.txt` pinned `scikit-learn ~= 1.5.0` and
