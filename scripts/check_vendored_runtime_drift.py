@@ -354,7 +354,10 @@ def main() -> int:
         sys.stderr.write("\nFix: python3 scripts/check_vendored_runtime_drift.py --fix\n")
         return 1
 
-    sys.stdout.write("[vendored-drift] OK — all vendored runtime files match canonical originals.\n")
+    sys.stdout.write(
+        f"[vendored-drift] OK — {len(VENDORED_PAIRS)} vendored file(s) and "
+        f"{len(VENDORED_DIRS)} vendored director(y/ies) match their canonical originals.\n"
+    )
     return 0
 
 

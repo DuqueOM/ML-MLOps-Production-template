@@ -15,6 +15,31 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
 
 ## [Unreleased]
 
+### Added — the fifteen gates now have a test, and a floor they cannot slip below
+
+- This repository relies on **fifteen gates** to detect its own drift, and
+  **none of them was tested**: `grep -rl "import scripts"` over both test trees
+  returned nothing. Every control that catches a regression could itself
+  regress, silently.
+- Not hypothetical. Twice in one week a gate narrowed and reported success at
+  its smaller size: `check_control_claims.py` scanned **36** anti-patterns
+  instead of 38 after two table rows gained a Jinja `raw` wrapper its pattern
+  no longer matched, and `check_doc_coherence.py`'s overlay check matched
+  `N overlays` but not `N overlay renders`. Both are the shape those gates
+  hunt — a control narrower than the surface it guards.
+- `test_gate_scope_ratchet.py` runs every gate, reads the count it reports and
+  compares it against a **recorded floor** — a ratchet at the measured value,
+  exactly like `fail_under` for coverage. Growth passes; shrinkage fails and
+  has to be lowered deliberately, in a diff someone reviews.
+- Two gates did not report a scope at all. `check_baselines_expiry` now says
+  how many entries across how many files, and `check_vendored_runtime_drift`
+  how many vendored files and directories it compared. **A gate that reports
+  "OK" without saying how much it looked at cannot be told apart from one that
+  looked at nothing.**
+- The gate list is read from the Makefile, not retyped, and a new gate must
+  declare a floor or a stated reason it has none — otherwise adding one would
+  silently opt it out of the ratchet, narrowing the registry the same way.
+
 ### Fixed — a documentation sweep, and a gate I narrowed myself two PRs ago
 
 - **`check_control_claims.py` was scanning 36 anti-patterns instead of 38.**

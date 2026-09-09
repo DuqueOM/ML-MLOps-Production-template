@@ -208,14 +208,25 @@ def main(argv: list[str] | None = None) -> int:
     # green. Anything dropped into this directory is now scanned, and an
     # unrecognised shape is a failure rather than a silent skip.
     findings: list[BaselineFinding] = []
+    # Counted so the success line states its own scope. A gate that reports
+    # "OK" without saying how much it looked at cannot be told apart from one
+    # that looked at nothing — the failure mode this repository keeps finding.
+    scanned_files = 0
+    scanned_entries = 0
     unknown: list[str] = []
     for path in sorted(BASELINE_DIR.iterdir()):
         if not path.is_file() or path.name == "README.md":
             continue
+        scanned_files += 1
         if path.suffix in (".yml", ".yaml"):
             findings.extend(_scan_yaml(path, today))
         elif path.suffix == ".trivyignore" or path.name == ".trivyignore":
             findings.extend(_scan_trivy(path, today))
+            scanned_entries += sum(
+                1
+                for line in path.read_text(encoding="utf-8").splitlines()
+                if line.strip() and not line.lstrip().startswith("#")
+            )
         else:
             unknown.append(path.name)
 
@@ -229,7 +240,10 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     if not findings:
-        print(f"[baselines] OK — no expired or unannotated entries (as of {today.isoformat()}).")
+        print(
+            f"[baselines] OK — {scanned_entries} entr(y/ies) across {scanned_files} baseline "
+            f"file(s), none expired or unannotated (as of {today.isoformat()})."
+        )
         return 0
 
     print(f"[baselines] {len(findings)} issue(s) — see ADR-024 §'Review':")
