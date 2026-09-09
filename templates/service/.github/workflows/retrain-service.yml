@@ -100,7 +100,7 @@ jobs:
           MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
         run: |
           cd ${{ env.SERVICE }}
-          python src/${{ env.SERVICE_SLUG }}/training/train.py \
+          python -m src.${{ env.SERVICE_SLUG }}.training.train \
             --data data/raw/latest.csv \
             --experiment "${{ env.SERVICE }}-retrain-$(date +%Y%m%d)" \
             --optuna-trials ${{ github.event.inputs.optuna_trials }} \

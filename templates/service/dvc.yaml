@@ -12,51 +12,72 @@
 #   dvc pull               # Pull data/models from remote
 #   dvc dag                # View pipeline DAG
 #
-# TODO: Replace {@ service_slug @} and {@ service_name @} with your values.
+# Why two stages and not four
+# ---------------------------
+# This file used to declare `validate`, `featurize`, `train` and `evaluate`.
+# Three of the four could not run:
+#
+#   - `validate` invoked `training/validate_data.py`  — no such file, ever.
+#   - `featurize` invoked `training/features.py`      — real file, but it
+#     defines `FeatureEngineer` and has no CLI, so the stage would exit 0
+#     having produced nothing and DVC would fail on the missing output.
+#   - `train` invoked `training/train.py` as a script — `ImportError:
+#     attempted relative import with no known parent package`.
+#
+# The two missing stages were never missing capability: `train.py` validates
+# with `ServiceInputSchema` (Pandera) and applies `FeatureEngineer` itself, in
+# one process. Splitting them out would mean writing two entrypoints that only
+# exist to satisfy a DAG shape.
+#
+# The commands below go through `src/{@ service_slug @}/cli.py`, which already
+# carries `train`, `evaluate` and `predict` subcommands. It was itself
+# unreachable until recently — a package shadowed the module it imported — so
+# this pipeline was written against a CLI that could not be called. Both are
+# fixed, and `tests/test_dvc_pipeline_is_runnable.py` now asserts every stage
+# command resolves to something that exists and can be invoked the way the
+# stage invokes it.
+#
 # TODO: Update paths and parameters for your actual pipeline.
 
 stages:
-  validate:
-    cmd: python src/{@ service_slug @}/training/validate_data.py --input data/raw/dataset.csv
+  train:
+    # Validation (Pandera) and feature engineering happen inside this stage —
+    # see the header. Module form, never `python src/.../train.py`.
+    cmd: >-
+      python -m src.{@ service_slug @}.cli train
+      --config configs/config.yaml
+      --input data/raw/dataset.csv
+      --model-dir models
+      --metrics-output reports/metrics.json
     deps:
       - data/raw/dataset.csv
+      - configs/config.yaml
+      - configs/quality_gates.yaml
       - src/{@ service_slug @}/schemas.py
-    outs:
-      - data/validated/dataset.csv:
-          cache: true
-
-  featurize:
-    cmd: python src/{@ service_slug @}/training/features.py --input data/validated/dataset.csv --output data/processed/features.csv
-    deps:
-      - data/validated/dataset.csv
       - src/{@ service_slug @}/training/features.py
-    outs:
-      - data/processed/features.csv:
-          cache: true
-
-  train:
-    cmd: python src/{@ service_slug @}/training/train.py --data data/processed/features.csv
-    deps:
-      - data/processed/features.csv
       - src/{@ service_slug @}/training/model.py
       - src/{@ service_slug @}/training/train.py
     outs:
       - models/model.joblib:
           cache: true
-      - models/metadata.json:
+      - models/model_metadata.json:
           cache: false
     metrics:
       - reports/metrics.json:
           cache: false
-    plots:
-      - reports/plots/:
-          cache: false
 
   evaluate:
-    cmd: python src/{@ service_slug @}/training/evaluate.py --model models/model.joblib --data data/processed/features.csv
+    cmd: >-
+      python -m src.{@ service_slug @}.cli evaluate
+      --config configs/config.yaml
+      --input data/raw/dataset.csv
+      --model models/model.joblib
+      --output reports/evaluation.json
     deps:
       - models/model.joblib
-      - data/processed/features.csv
+      - data/raw/dataset.csv
+      - configs/config.yaml
+      - src/{@ service_slug @}/evaluation/metrics.py
     metrics:
       - reports/evaluation.json:
           cache: false

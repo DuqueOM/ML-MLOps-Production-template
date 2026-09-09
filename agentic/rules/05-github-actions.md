@@ -87,7 +87,7 @@ jobs:
       matrix:
         service: [ServiceA, ServiceB, ServiceC]
     steps:
-      - run: python src/{service}/monitoring/drift_detection.py
+      - run: python -m src.{service}.monitoring.drift_detection
         continue-on-error: true
       - if: steps.drift.outcome == 'failure'
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7

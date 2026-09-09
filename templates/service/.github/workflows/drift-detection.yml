@@ -101,7 +101,24 @@ jobs:
         continue-on-error: true
         run: |
           cd ${{ matrix.service }}
-          python src/*/monitoring/drift_detection.py \
+          # Module form, never `python src/*/.../drift_detection.py`. That file
+          # imports `..schemas.ServiceInputSchema` inside a try/except, so run as
+          # a script it does not crash — it silently binds the schema to None and
+          # `validate_drift_dataframe` skips every check, logging a warning whose
+          # own text says the branch "exists only for template-level tests". The
+          # PSI that comes out is then, in that function's words, "a phantom
+          # alert (or worse, a phantom all-clear)".
+          #
+          # The slug is discovered rather than hardcoded, because this workflow
+          # also runs over a multi-service repo via the matrix above. Ambiguity
+          # is a hard failure: guessing which package to run is how a drift job
+          # silently scores the wrong service.
+          SLUG=$(find src -mindepth 1 -maxdepth 1 -type d ! -name '__pycache__' -printf '%f\n')
+          if [ "$(printf '%s' "$SLUG" | grep -c .)" -ne 1 ]; then
+            echo "::error::expected exactly one package under src/, found: $SLUG"
+            exit 1
+          fi
+          python -m "src.${SLUG}.monitoring.drift_detection" \
             --reference data/reference/reference.csv \
             --current data/production/latest.csv \
             --output drift_report.json \
