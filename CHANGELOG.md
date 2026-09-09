@@ -61,7 +61,6 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
   fix (#137) merged: **green** — scaffold, build + sign by digest, kind +
   Kyverno admission + smoke, audit trail.
 
-
 ### Fixed — `make train` could not have worked in any generated service
 
 - Three Makefile targets ran the trainer as a plain script:
