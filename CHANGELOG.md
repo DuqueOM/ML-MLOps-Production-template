@@ -67,6 +67,29 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
   that every entrypoint imports cleanly with all three blocked from
   `sys.meta_path`.
 
+### Fixed — the split broke two lanes, and the second one taught the gate a check
+
+- `.github/workflows/template-context-tests.yml` installed only
+  `templates/service/requirements.txt` and relied on httpx and locust arriving
+  through it. Found by reading, fixed before pushing.
+- **`scripts/test_scaffold.sh` had the same defect and CI found it — after the
+  first fix had already shipped.** Its smoke chain installed the runtime set
+  into a venv and then ran `pytest`, which resolved to the *system* interpreter
+  outside that venv and reported `ModuleNotFoundError: No module named 'numpy'`
+  — blaming a package that *was* installed, because the one that was not
+  (pytest) never got as far as being missing.
+- So `check_dependency_partition.py` gained a third check: **no lane may install
+  the runtime set and then invoke a tool only `requirements-dev.txt` provides.**
+  Scoped per *job*, not per file, because `validate-templates.yml` installs the
+  service requirements in one job and runs ruff, mypy and bandit in others — a
+  file-wide check flagged five pairs that never share a runner, and a gate that
+  cries wolf five times gets deleted rather than obeyed. `examples/minimal` is
+  excluded by path: it is its own co-installation group (ADR-048) and its
+  `pytest ~= 9.1.1` is legitimately different.
+- Both real failures are now regression-tested by reintroducing them.
+- `copier.yml`'s closing message and the `README` quick start told the adopter to
+  install and then train; training needs `requirements-train.txt`.
+
 ### Fixed — the split would have broken this repository's own test lane
 
 - `.github/workflows/template-context-tests.yml` installed only

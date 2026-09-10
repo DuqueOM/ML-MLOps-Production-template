@@ -35,7 +35,22 @@ What this checks
    google-cloud and opentelemetry: the package is optional, absence is handled,
    and the image does not need it.
 
-3. **The closure is not empty.** A walk that resolves nothing reports as a
+3. **No script or workflow installs the runtime set and then runs a dev tool.**
+   Before the split, ``requirements.txt`` carried pytest, httpx and locust, so
+   any lane could install one file and run the suite. Two lanes were doing
+   exactly that, and the split broke both: this repository's own
+   ``template-context-tests.yml``, and ``scripts/test_scaffold.sh``, whose
+   smoke chain installed the runtime set into a venv and then invoked ``pytest``
+   — which resolved to the *system* interpreter outside that venv and reported
+
+       ModuleNotFoundError: No module named 'numpy'
+
+   pointing at numpy, which was installed, rather than at pytest, which was
+   not. The first was caught by reading; the second by CI, after the fix for
+   the first had already shipped. So this is the third check: a control as wide
+   as the surface, rather than one fix per consumer.
+
+4. **The closure is not empty.** A walk that resolves nothing reports as a
    pass, which is the failure mode every gate in this repository has had at
    least once.
 
@@ -64,6 +79,8 @@ import re
 import sys
 from pathlib import Path
 
+import yaml
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SERVICE = REPO_ROOT / "templates" / "service"
 DOCKERFILE = SERVICE / "Dockerfile"
@@ -88,6 +105,22 @@ _IMPORT_NAME = {
 _NOT_IMPORTABLE = {"ruff", "mypy", "bandit", "pre_commit", "locust"}
 
 _REQ_LINE = re.compile(r"^\s*(?P<name>[A-Za-z0-9][A-Za-z0-9._-]*)\s*(?:\[[^\]]*\])?\s*(?:[~=<>!].*)?$")
+
+# Files that install dependencies and then run things. Scanned for the
+# "installs runtime, invokes dev tooling" mistake described above.
+_LANE_GLOBS = (
+    "scripts/*.sh",
+    "templates/scripts/*.sh",
+    ".github/workflows/*.yml",
+    "templates/service/.github/workflows/*.yml",
+)
+# `pip install -r <...>requirements.txt` — the SERVICE runtime set only.
+# `examples/minimal/requirements.txt` is its own co-installation group
+# (ADR-048) and legitimately carries its own pytest pin, so it is excluded by
+# path rather than by hoping the pattern misses it.
+_INSTALLS_RUNTIME = re.compile(r"(?:pip|uv pip)\s+install[^\n]*?-r\s+(?!\S*examples/)(\S*?)(?<![-\w])requirements\.txt")
+_INSTALLS_SUPERSET = re.compile(r"(?:pip|uv pip)\s+install[^\n]*?-r\s+\S*requirements-(?:dev|train)\.txt")
+_DEV_TOOLS = re.compile(r"(?<![-\w/])(?:pytest|locust|ruff|mypy|bandit|pre-commit)(?![-\w])")
 
 
 def _declared(path: Path) -> set[str]:
@@ -203,6 +236,51 @@ def _dotted(path: Path) -> str:
     return ".".join(parts)
 
 
+def _strip_comments(text: str) -> str:
+    """Comment lines carry the explanation for these very rules — a mention is not a call."""
+    return "\n".join(line for line in text.splitlines() if not line.lstrip().startswith("#"))
+
+
+def _scopes(path: Path) -> list[tuple[str, str]]:
+    """(scope label, shell text) pairs to check independently.
+
+    A workflow is split per JOB, not per file. `validate-templates.yml`
+    installs the service requirements in one job and runs ruff, mypy and bandit
+    in others; treating the file as one scope would flag five pairs that never
+    share a runner, and a gate that cries wolf five times gets deleted rather
+    than obeyed. A shell script is a single scope, because it is one process.
+    """
+    text = path.read_text(encoding="utf-8")
+    if path.suffix != ".yml":
+        return [(path.name, _strip_comments(text))]
+    try:
+        doc = yaml.safe_load(text) or {}
+    except yaml.YAMLError:  # pragma: no cover - other gates own YAML validity
+        return []
+    scopes: list[tuple[str, str]] = []
+    for job_name, job in (doc.get("jobs") or {}).items():
+        if not isinstance(job, dict):
+            continue
+        runs = [str(s.get("run", "")) for s in (job.get("steps") or []) if isinstance(s, dict)]
+        scopes.append((f"job '{job_name}'", _strip_comments("\n".join(runs))))
+    return scopes
+
+
+def _lane_mismatches() -> list[tuple[str, str, str]]:
+    """Scopes that install the runtime set and then invoke dev-only tooling."""
+    found: list[tuple[str, str, str]] = []
+    for pattern in _LANE_GLOBS:
+        for path in sorted(REPO_ROOT.glob(pattern)):
+            if not path.is_file():
+                continue
+            for label, body in _scopes(path):
+                if not _INSTALLS_RUNTIME.search(body) or _INSTALLS_SUPERSET.search(body):
+                    continue
+                for tool in sorted(set(_DEV_TOOLS.findall(body))):
+                    found.append((path.relative_to(REPO_ROOT).as_posix(), label, tool))
+    return found
+
+
 def main() -> int:
     seeds = _seeds()
     if not seeds:
@@ -216,18 +294,36 @@ def main() -> int:
         for name in _declared(req) - _declared(RUNTIME_REQ) - _NOT_IMPORTABLE:
             excluded[name] = req
 
+    lane_failures = _lane_mismatches()
+
     modules, external = _walk(seeds)
     if not modules:
         print(f"FAIL: the import walk resolved no modules from {seeds}.")
         return 1
 
     violations = [(p, ln, mod) for p, ln, mod in external if mod in excluded]
+
+    if lane_failures:
+        print("FAIL: a lane installs the runtime dependency set and then runs a dev tool.")
+        print()
+        for lane, scope, tool in sorted(lane_failures):
+            print(f"  - {lane} ({scope}) installs `-r requirements.txt` and invokes '{tool}'")
+        print()
+        print("  requirements.txt is the SERVING set (ADR-049). pytest, httpx, locust and")
+        print("  the linters live in requirements-dev.txt, which opens with")
+        print("  `-r requirements.txt` and is therefore a strict superset. Install that.")
+        print()
+        print("  This exact mistake broke two lanes when the split landed, and the second")
+        print("  one blamed numpy — a package that WAS installed — because `pytest` fell")
+        print("  through to an interpreter outside the venv.")
+        return 1
+
     if violations:
         print("FAIL: code the served image runs imports a package the image does not install.")
         print()
-        for path, lineno, mod in sorted(violations):
-            req = excluded[mod].relative_to(REPO_ROOT)
-            print(f"  - {path.relative_to(REPO_ROOT)}:{lineno} imports '{mod}', declared in {req}")
+        for module_path, lineno, mod in sorted(violations):
+            declared_in = excluded[mod].relative_to(REPO_ROOT)
+            print(f"  - {module_path.relative_to(REPO_ROOT)}:{lineno} imports '{mod}', declared in {declared_in}")
         print()
         print("  These packages are deliberately absent from the image: they carried 20 of the")
         print("  24 fixable CRITICAL/HIGH advisories a generated service reported, and all 7")
